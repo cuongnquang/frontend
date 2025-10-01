@@ -2,7 +2,7 @@
 
 import { AuthGuard, PermissionGate } from '@/lib/AuthGuard'
 import { Role } from '@/types/emuns'
-import { useAuth } from '@/components/auth/AuthContext'
+import { useAuth } from '@/lib/AuthContext'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {

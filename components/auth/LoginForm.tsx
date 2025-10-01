@@ -7,11 +7,11 @@ import { Eye, EyeOff, Mail, Lock, AlertCircle, Facebook, ArrowLeft } from 'lucid
 import Alert from '@/components/ui/Alert'
 import InputField from '../ui/InputField'
 import PasswordField from '../ui/PasswordField'
-import { useAuth } from '@/components/auth/AuthContext'
+import { useAuth } from '@/lib/AuthContext'
 
 export default function LoginPage() {
     const router = useRouter()
-    const { setCurrentUser } = useAuth()
+    const { login } = useAuth()
     const [showPassword, setShowPassword] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [alert, setAlert] = useState<{ message: string, type: 'success' | 'error' | null }>({ message: '', type: null })
@@ -56,7 +56,7 @@ export default function LoginPage() {
                 setAlert({ message: data.error || "Đăng nhập thất bại", type: "error" });
                 return;
             }
-            setCurrentUser(data.user)
+            login(data.user)
             setAlert({ message: "Đăng nhập thành công!", type: "success" });
             router.push("/");
         } catch (error) {

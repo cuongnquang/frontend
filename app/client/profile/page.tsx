@@ -18,7 +18,7 @@ import CancelAppointmentModal from '@/components/profile/CancelAppointmentModal'
 import DeleteAccountModal from '@/components/profile/DeleteAccountModal'
 // Import hooks
 import { useDeleteAccount } from '@/hooks/useDeleteAccount';
-import AuthGuard from '@/components/auth/AuthGuard'
+import { AuthGuard } from '@/lib/AuthGuard'
 
 // Interface Data (Được giữ lại ở đây để dễ quản lý state)
 interface Userprofile {
@@ -204,7 +204,7 @@ export default function profilePage() {
     }
 
     return (
-        <AuthGuard publicRoute={true}>
+        <AuthGuard requireAuth={true}>
             <Header />
 
             <div className="container mx-auto px-4 py-8">

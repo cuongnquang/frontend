@@ -17,7 +17,7 @@ import {
     Check,
     AlertCircle
 } from 'lucide-react'
-import AuthGuard from '@/components/auth/AuthGuard'
+import { AuthGuard } from '@/lib/AuthGuard'
 
 interface Doctor {
     id: number

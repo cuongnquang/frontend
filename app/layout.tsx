@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import { AuthProvider } from '@/components/auth/AuthContext'
+import { AuthProvider } from '@/lib/AuthContext'
 
 const inter = Inter({ subsets: ['latin', 'vietnamese'] })
 
@@ -16,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html className="mdl-js">
+    <html className="mdl-js" lang='vi'>
       <body className={inter.className}>
         <AuthProvider>{children}</AuthProvider>
       </body>

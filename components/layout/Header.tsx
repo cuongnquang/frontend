@@ -4,13 +4,13 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Menu, X, Phone, MapPin, User, LogOut, Settings, ChevronDown } from 'lucide-react'
-import { useAuth } from '@/components/auth/AuthContext'
+import { useAuth } from '@/lib/AuthContext'
 
 export default function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
     const router = useRouter()
-    const { currentUser, logout } = useAuth()
+    const { user, logout } = useAuth()
 
     return (
         <header className="bg-white shadow-sm border-b">
@@ -70,7 +70,7 @@ export default function Header() {
 
                     {/* User Profile or Auth buttons */}
                     <div className="hidden md:flex items-center space-x-3">
-                        {currentUser ? (
+                        {user ? (
                             <div className="relative">
                                 <button
                                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
@@ -78,10 +78,10 @@ export default function Header() {
                                 >
                                     {/* Avatar */}
                                     <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200">
-                                        {currentUser.avatar ? (
+                                        {user.avatar ? (
                                             <img
-                                                src={currentUser.avatar}
-                                                alt={currentUser.name}
+                                                src={user.avatar}
+                                                alt={user.name}
                                                 className="w-full h-full object-cover"
                                             />
                                         ) : (
@@ -91,7 +91,7 @@ export default function Header() {
                                         )}
                                     </div>
                                     {/* User name */}
-                                    <span className="text-gray-700 font-medium">{currentUser.name}</span>
+                                    <span className="text-gray-700 font-medium">{user.name}</span>
                                     <ChevronDown className="w-4 h-4 text-gray-500" />
                                 </button>
 
@@ -101,13 +101,13 @@ export default function Header() {
                                         <div className="py-2">
                                             {/* User info */}
                                             <div className="px-4 py-2 border-b border-gray-100">
-                                                <p className="font-medium text-gray-900">{currentUser.name}</p>
-                                                <p className="text-sm text-gray-500">{currentUser.email}</p>
+                                                <p className="font-medium text-gray-900">{user.name}</p>
+                                                <p className="text-sm text-gray-500">{user.email}</p>
                                             </div>
 
                                             {/* Menu items */}
                                             <Link
-                                                href="/client/profile"
+                                                href="/client/profile/"
                                                 className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                                                 onClick={() => setIsUserMenuOpen(false)}
                                             >
@@ -182,14 +182,14 @@ export default function Header() {
 
                             {/* Mobile user section */}
                             <div className="pt-4 border-t">
-                                {currentUser ? (
+                                {user ? (
                                     <div className="space-y-2">
                                         <div className="flex items-center space-x-3 px-2 py-2">
                                             <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200">
-                                                {currentUser.avatar ? (
+                                                {user.avatar ? (
                                                     <img
-                                                        src={currentUser.avatar}
-                                                        alt={currentUser.name}
+                                                        src={user.avatar}
+                                                        alt={user.name}
                                                         className="w-full h-full object-cover"
                                                     />
                                                 ) : (
@@ -199,8 +199,8 @@ export default function Header() {
                                                 )}
                                             </div>
                                             <div>
-                                                <p className="font-medium text-gray-900">{currentUser.name}</p>
-                                                <p className="text-sm text-gray-500">{currentUser.email}</p>
+                                                <p className="font-medium text-gray-900">{user.name}</p>
+                                                <p className="text-sm text-gray-500">{user.email}</p>
                                             </div>
                                         </div>
 
