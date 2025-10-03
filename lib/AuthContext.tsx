@@ -1,78 +1,51 @@
-"use client";
+"use client"
+import { createContext, useContext, useState, ReactNode } from "react"
+import { apiRequest } from "./api"
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { Role } from "@/types/emuns";
-import { User } from "@/types/types"
-
-interface AuthContextProps {
-    user: User | null;
-    isAuthenticated: boolean;
-    isLoading: boolean;
-    login: (userData: User) => void;
-    logout: () => void;
-    checkRole: (role: Role) => boolean;
-    checkPermission: (permission: string) => boolean;
+interface AuthContextType {
+    user: any | null
+    login: (email: string, password: string) => Promise<void>
+    register: (data: any) => Promise<void>
+    logout: () => Promise<void>
 }
 
-const AuthContext = createContext<AuthContextProps | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// ✅ Provider
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [user, setUser] = useState<any | null>(null)
 
-    // Giả lập fetch user từ localStorage hoặc API
-    useEffect(() => {
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-            setUser(JSON.parse(storedUser));
-        }
-        setIsLoading(false);
-    }, []);
+    const login = async (email: string, password: string) => {
+        const data = await apiRequest("/v1/auth/login", {
+            method: "POST",
+            body: JSON.stringify({ email, password })
+        })
+        setUser(data.user)
+        localStorage.setItem("accessToken", data.accessToken) // store access token
+    }
 
-    const login = (userData: User) => {
-        setUser(userData);
-        localStorage.setItem("user", JSON.stringify(userData));
-    };
+    const register = async (formData: any) => {
+        const data = await apiRequest("/v1/auth/register", {
+            method: "POST",
+            body: JSON.stringify(formData)
+        })
+        setUser(data.user)
+    }
 
-    const logout = () => {
-        setUser(null);
-        localStorage.removeItem("user");
-    };
-
-    const checkRole = (role: Role): boolean => {
-        return user?.role === role;
-    };
-
-    const checkPermission = (permission: string): boolean => {
-        if (!user) return false;
-        // Import động để tránh vòng lặp
-        const { hasPermission } = require("./permissions");
-        return hasPermission(user.role, permission);
-    };
+    const logout = async () => {
+        await apiRequest("/v1/auth/logout", { method: "POST" })
+        setUser(null)
+        localStorage.removeItem("accessToken")
+    }
 
     return (
-        <AuthContext.Provider
-            value={{
-                user,
-                isAuthenticated: !!user,
-                isLoading,
-                login,
-                logout,
-                checkRole,
-                checkPermission,
-            }}
-        >
+        <AuthContext.Provider value={{ user, login, register, logout }}>
             {children}
         </AuthContext.Provider>
-    );
+    )
 }
 
-// ✅ Hook để dùng AuthContext
 export function useAuth() {
-    const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error("useAuth must be used within an AuthProvider");
-    }
-    return context;
+    const context = useContext(AuthContext)
+    if (!context) throw new Error("useAuth must be used within AuthProvider")
+    return context
 }

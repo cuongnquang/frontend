@@ -1,0 +1,167 @@
+'use client'
+
+import { useState, useMemo } from 'react'
+import { Doctor } from '@/components/admin/doctors/DoctorTypes'
+import DoctorPageHeader from '@/components/admin/doctors/DoctorPageHeader'
+import DoctorStatistics from '@/components/admin/doctors/DoctorStatistics'
+import DoctorFilters from '@/components/admin/doctors/DoctorFilters'
+import DoctorTable from '@/components/admin/doctors/DoctorTable'
+import { DoctorForm } from '@/components/admin/doctors/form/DoctorForm'
+
+// --- Hàm tiện ích ---
+const getAvailabilityColor = (availability: Doctor['availability']) => {
+    switch (availability) {
+        case 'available': return 'bg-green-100 text-green-800'
+        case 'busy': return 'bg-yellow-100 text-yellow-800'
+        case 'off': return 'bg-red-100 text-red-800'
+        default: return 'bg-gray-100 text-gray-800'
+    }
+}
+
+// Mock doctors data (sử dụng dữ liệu gốc bạn cung cấp, đã sửa lỗi cú pháp)
+const mockDoctors: Doctor[] = [
+    {
+        id: 'BS001',
+        name: 'BS. Nguyễn Văn An',
+        email: 'nva@youmed.vn',
+        phone: '0901234567',
+        specialization: 'Tim mạch',
+        licenseNumber: 'BS-001-2024',
+        qualification: 'Thạc sĩ',
+        experience: 15,
+        consultationFee: 500000,
+        rating: 4.9,
+        totalPatients: 1250,
+        availability: 'available',
+        status: 'active',
+        joinDate: '2020-01-15'
+    },
+    {
+        id: 'BS002',
+        name: 'BS. Trần Thị Bình',
+        email: 'ttb@youmed.vn',
+        phone: '0901234568',
+        specialization: 'Da liễu',
+        licenseNumber: 'BS-002-2023',
+        qualification: 'Tiến sĩ',
+        experience: 8,
+        consultationFee: 750000,
+        rating: 4.5,
+        totalPatients: 800,
+        availability: 'busy',
+        status: 'active',
+        joinDate: '2021-05-20'
+    },
+    {
+        id: 'BS003',
+        name: 'BS. Lê Văn Cường',
+        email: 'lvc@youmed.vn',
+        phone: '0901234569',
+        specialization: 'Nhi khoa',
+        licenseNumber: 'BS-003-2022',
+        qualification: 'Chuyên khoa I',
+        experience: 5,
+        consultationFee: 400000,
+        rating: 4.2,
+        totalPatients: 1500,
+        availability: 'off',
+        status: 'inactive',
+        joinDate: '2022-11-01'
+    },
+    {
+        id: 'BS004',
+        name: 'BS. Phạm Thị Duyên',
+        email: 'ptd@youmed.vn',
+        phone: '0901234570',
+        specialization: 'Tim mạch',
+        licenseNumber: 'BS-004-2021',
+        qualification: 'Bác sĩ',
+        experience: 10,
+        consultationFee: 500000,
+        rating: 4.8,
+        totalPatients: 950,
+        availability: 'available',
+        status: 'active',
+        joinDate: '2019-03-10'
+    }
+]
+
+export default function AdminDoctors() {
+    const [searchTerm, setSearchTerm] = useState('')
+    const [statusFilter, setStatusFilter] = useState('all')
+    const [specializationFilter, setSpecializationFilter] = useState('all')
+    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [currentDoctor, setCurrentDoctor] = useState<Doctor | undefined>(undefined);
+    const [formMode, setFormMode] = useState<'create' | 'edit' | 'view'>('create');
+    const [doctors, setDoctors] = useState(mockDoctors);
+
+    // Lấy danh sách chuyên khoa duy nhất cho bộ lọc
+    const availableSpecializations = useMemo(() => {
+        const specs = new Set(doctors.map(d => d.specialization))
+        return Array.from(specs).sort()
+    }, [doctors])
+
+    // Logic lọc
+    const filteredDoctors = useMemo(() => {
+        return doctors.filter(doctor => {
+            const matchesSearch = doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                doctor.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                doctor.phone.includes(searchTerm)
+            const matchesStatus = statusFilter === 'all' || doctor.status === statusFilter
+            const matchesSpecialization = specializationFilter === 'all' || doctor.specialization === specializationFilter
+
+            return matchesSearch && matchesStatus && matchesSpecialization
+        })
+    }, [doctors, searchTerm, statusFilter, specializationFilter])
+
+    // --- Action Handlers ---
+    const handleAddDoctor = () => console.log('Mở form thêm bác sĩ')
+    const handleExport = () => console.log('Tiến hành xuất dữ liệu bác sĩ')
+    const handleImport = () => console.log('Mở dialog nhập dữ liệu bác sĩ')
+    const handleViewDoctor = (id: string) => { }
+    const handleEditDoctor = (id: string) => {
+
+    }
+    const handleDeleteDoctor = (id: string) => {
+        if (window.confirm(`Bạn có chắc chắn muốn xóa bác sĩ ${id} không?`)) {
+            console.log(`Đã gửi yêu cầu xóa bác sĩ ${id}`)
+            // Thực hiện logic xóa API
+        }
+    }
+
+
+    return (
+        <div className="space-y-6 p-6 md:p-8 bg-gray-50 min-h-screen">
+
+            {/* 1. Header & Actions */}
+            <DoctorPageHeader
+                onAddDoctor={handleAddDoctor}
+                onExport={handleExport}
+                onImport={handleImport}
+            />
+
+            {/* 2. Statistics Cards */}
+            <DoctorStatistics doctors={doctors} />
+
+            {/* 3. Filters & Search */}
+            <DoctorFilters
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                statusFilter={statusFilter}
+                setStatusFilter={setStatusFilter}
+                specializationFilter={specializationFilter}
+                setSpecializationFilter={setSpecializationFilter}
+                availableSpecializations={availableSpecializations}
+            />
+
+            {/* 4. Doctors Table */}
+            <DoctorTable
+                filteredDoctors={filteredDoctors}
+                getAvailabilityColor={getAvailabilityColor}
+                onViewDoctor={handleViewDoctor}
+                onEditDoctor={handleEditDoctor}
+                onDeleteDoctor={handleDeleteDoctor}
+            />
+        </div>
+    )
+}

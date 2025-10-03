@@ -22,7 +22,7 @@ import {
 } from 'lucide-react'
 
 export default function DoctorProfile() {
-    const { user, updateProfile } = useAuth()
+    const { user } = useAuth()
     const [isEditing, setIsEditing] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [activeTab, setActiveTab] = useState('personal')

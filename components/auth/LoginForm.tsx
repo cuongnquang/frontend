@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { SetStateAction, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Mail, Lock, AlertCircle, Facebook, ArrowLeft } from 'lucide-react'
@@ -16,11 +16,8 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false)
     const [alert, setAlert] = useState<{ message: string, type: 'success' | 'error' | null }>({ message: '', type: null })
     const [errors, setErrors] = useState<Record<string, string>>({})
-    const [loginData, setLoginData] = useState({
-        email: '',
-        password: '',
-        rememberMe: false,
-    })
+    const [email, setEmail] = useState("")
+    const [password, setPassword] = useState("")
 
     const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
@@ -30,9 +27,9 @@ export default function LoginPage() {
         setErrors({})
         const newErrors: Record<string, string> = {}
 
-        if (!loginData.email) newErrors.email = 'Vui lòng nhập email'
-        else if (!validateEmail(loginData.email)) newErrors.email = 'Email không hợp lệ'
-        if (!loginData.password) newErrors.password = 'Vui lòng nhập mật khẩu'
+        if (!email) newErrors.email = 'Vui lòng nhập email'
+        else if (!validateEmail(email)) newErrors.email = 'Email không hợp lệ'
+        if (!password) newErrors.password = 'Vui lòng nhập mật khẩu'
 
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors)
@@ -41,22 +38,7 @@ export default function LoginPage() {
         }
 
         try {
-            const res = await fetch("/api/auth/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    email: loginData.email,
-                    password: loginData.password,
-                })
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-                setAlert({ message: data.error || "Đăng nhập thất bại", type: "error" });
-                return;
-            }
-            login(data.user)
+            await login(email, password)
             setAlert({ message: "Đăng nhập thành công!", type: "success" });
             router.push("/");
         } catch (error) {
@@ -86,15 +68,15 @@ export default function LoginPage() {
                         icon={<Mail />}
                         label="Email"
                         type="email"
-                        value={loginData.email}
-                        onChange={(v: any) => setLoginData({ ...loginData, email: v })}
+                        value={email}
+                        onChange={(e: { target: { value: SetStateAction<string> } }) => setEmail(e.target.value)}
                         error={errors.email}
                         placeholder="email@example.com"
                     />
                     <PasswordField
                         label="Mật khẩu"
-                        value={loginData.password}
-                        onChange={(v: any) => setLoginData({ ...loginData, password: v })}
+                        value={password}
+                        onChange={(e: { target: { value: SetStateAction<string> } }) => setPassword(e.target.value)}
                         show={showPassword}
                         setShow={setShowPassword}
                         error={errors.password}
@@ -102,15 +84,6 @@ export default function LoginPage() {
 
                     {/* Options */}
                     <div className="flex items-center justify-between">
-                        <label className="flex items-center text-sm text-gray-600">
-                            <input
-                                type="checkbox"
-                                checked={loginData.rememberMe}
-                                onChange={(e) => setLoginData({ ...loginData, rememberMe: e.target.checked })}
-                                className="mr-2 rounded border-gray-300 text-blue-600"
-                            />
-                            Ghi nhớ
-                        </label>
                         <Link href="/auth/forgot-password" className="text-sm text-blue-600 hover:text-blue-700">
                             Quên mật khẩu?
                         </Link>

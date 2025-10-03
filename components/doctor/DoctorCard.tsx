@@ -22,7 +22,7 @@ import {
 import Alert from '@/components/ui/Alert'
 
 interface Doctor {
-    id: number
+    id: string
     name: string
     title: string
     specialty: string
@@ -31,11 +31,11 @@ interface Doctor {
     rating: number
     reviews: number
     totalPatients: number
-    experience: number
+    experience: string
     price: {
-        consultation: string
-        online: string
-    }
+        consultation: string | { consultation?: string; online?: string };
+        online: string;
+    };
     image: string
     description: string
     education: string[]
@@ -62,8 +62,8 @@ interface DoctorCardProps {
     doctor: Doctor
     variant?: 'default' | 'compact' | 'featured' | 'list'
     showBookButton?: boolean
-    onBookAppointment?: (doctorId: number) => void
-    onViewProfile?: (doctorId: number) => void
+    onBookAppointment?: (doctorId: string) => void
+    onViewProfile?: (doctorId: string) => void
 }
 
 export default function DoctorCard({
@@ -75,7 +75,7 @@ export default function DoctorCard({
     const [showAlert, setShowAlert] = useState(false)
     const [isFavorite, setIsFavorite] = useState(false)
     const [showFullDescription, setShowFullDescription] = useState(false)
-    const [favoriteDoctors, setFavoriteDoctors] = useState<number[]>([])
+    const [favoriteDoctors, setFavoriteDoctors] = useState<string[]>([])
 
 
     const handleBookAppointment = () => {
@@ -127,7 +127,7 @@ export default function DoctorCard({
                             <span className="ml-1 text-sm text-gray-500">({doctor.reviews} đánh giá)</span>
                         </div>
                         <div className="text-right">
-                            <p className="text-lg font-semibold text-blue-600">{doctor.price.consultation}</p>
+                            <p className="text-lg font-semibold text-blue-600">{doctor.price.online}</p>
                             <p className="text-xs text-gray-500">/ lần khám</p>
                         </div>
                     </div>
@@ -188,7 +188,7 @@ export default function DoctorCard({
                                     {doctor.rating} ({doctor.reviews})
                                 </span>
                                 <span className="text-gray-500">{doctor.experience} năm KN</span>
-                                <span className="text-blue-600 font-medium">{doctor.price.consultation}</span>
+                                <span className="text-blue-600 font-medium">{doctor.price.online}</span>
                             </div>
                             <div className="flex items-center text-sm text-green-600 mt-1">
                                 <Calendar className="w-4 h-4 mr-1" />
@@ -266,7 +266,7 @@ export default function DoctorCard({
                 </div>
                 <div className="mb-4">
                     <div className="text-lg font-bold text-blue-600 mb-1">
-                        {doctor.price.consultation}
+                        {doctor.price.online}
                     </div>
                     <div className="flex items-center text-sm text-green-600">
                         <Calendar className="w-4 h-4 mr-1" />
@@ -487,7 +487,7 @@ export default function DoctorCard({
                     <div className="space-y-1">
                         <div className="flex items-baseline space-x-2">
                             <span className="text-2xl font-bold text-blue-600">
-                                {doctor.price.consultation}
+                                {doctor.price.online}
                             </span>
                             <span className="text-sm text-gray-500">/ lần khám</span>
                         </div>
