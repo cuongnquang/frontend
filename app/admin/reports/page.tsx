@@ -1,16 +1,131 @@
 'use client'
 
 import { useState } from 'react'
-import { BarChart3 } from 'lucide-react' // Chỉ giữ lại icon cần dùng trong component gốc
-import ReportPageHeader from '@/components/admin/reports/ReportPageHeader'
-import ReportStatistics from '@/components/admin/reports/ReportStatistics'
-import TopPerformers from '@/components/admin/reports/TopPerformers'
+import { ExportReportModal } from '@/components/admin/reports/form/ExportReport'
+import {
+    FileText,
+    Download,
+    Calendar,
+    TrendingUp,
+    Users,
+    DollarSign,
+    Activity,
+    BarChart3,
+    PieChart,
+    Filter,
+    RefreshCw
+} from 'lucide-react'
 
-export default function AdminReports() {
+export default function AdminReportsEnhanced() {
     const [dateRange, setDateRange] = useState('month')
-    // const [reportType, setReportType] = useState('overview') // Không dùng đến, có thể xóa
+    const [showExportModal, setShowExportModal] = useState(false)
+    const [selectedReport, setSelectedReport] = useState<{
+        type: 'doctors' | 'patients' | 'appointments' | 'revenue'
+        data: any[]
+        title: string
+    } | null>(null)
 
-    // --- Mock Data ---
+    // Mock data
+    const revenueData = [
+        { date: '2024-02-01', revenue: 15000000, appointments: 45, newPatients: 12, expenses: 5000000, profit: 10000000 },
+        { date: '2024-02-02', revenue: 18000000, appointments: 52, newPatients: 15, expenses: 6000000, profit: 12000000 },
+        { date: '2024-02-03', revenue: 16000000, appointments: 48, newPatients: 10, expenses: 5500000, profit: 10500000 }
+    ]
+
+    const doctorsData = [
+        {
+            id: 'BS001',
+            name: 'BS. Nguyễn Văn An',
+            email: 'nva@youmed.vn',
+            phone: '0901234567',
+            specialization: 'Tim mạch',
+            qualification: 'Thạc sĩ',
+            experience: 15,
+            consultationFee: 500000,
+            rating: 4.9,
+            totalPatients: 1250,
+            status: 'active'
+        }
+    ]
+
+    const patientsData = [
+        {
+            id: 'BN001',
+            name: 'Nguyễn Văn An',
+            email: 'nva@email.com',
+            phone: '0901234567',
+            dateOfBirth: '1985-03-15',
+            gender: 'male',
+            address: 'Hà Nội',
+            insuranceNumber: 'INS001',
+            bloodType: 'O+',
+            totalVisits: 15,
+            riskLevel: 'high'
+        }
+    ]
+
+    const appointmentsData = [
+        {
+            id: 'APP001',
+            patientName: 'Nguyễn Văn An',
+            doctorName: 'BS. Trần Thị Bình',
+            appointmentDate: '2024-02-15',
+            appointmentTime: '09:00',
+            type: 'Khám tổng quát',
+            symptoms: 'Đau đầu',
+            status: 'confirmed',
+            room: 'Phòng 201'
+        }
+    ]
+
+    const reportTypes = [
+        {
+            id: 'revenue',
+            title: 'Báo cáo Doanh thu',
+            description: 'Chi tiết doanh thu, chi phí và lợi nhuận',
+            icon: DollarSign,
+            color: 'bg-green-100 text-green-600',
+            data: revenueData,
+            type: 'revenue' as const
+        },
+        {
+            id: 'doctors',
+            title: 'Báo cáo Bác sĩ',
+            description: 'Danh sách và hiệu suất bác sĩ',
+            icon: Users,
+            color: 'bg-blue-100 text-blue-600',
+            data: doctorsData,
+            type: 'doctors' as const
+        },
+        {
+            id: 'patients',
+            title: 'Báo cáo Bệnh nhân',
+            description: 'Thống kê và danh sách bệnh nhân',
+            icon: Activity,
+            color: 'bg-purple-100 text-purple-600',
+            data: patientsData,
+            type: 'patients' as const
+        },
+        {
+            id: 'appointments',
+            title: 'Báo cáo Lịch hẹn',
+            description: 'Chi tiết các lịch hẹn khám',
+            icon: Calendar,
+            color: 'bg-orange-100 text-orange-600',
+            data: appointmentsData,
+            type: 'appointments' as const
+        }
+    ]
+
+    const handleExportReport = (report: typeof reportTypes[0]) => {
+        setSelectedReport({
+            type: report.type,
+            data: report.data,
+            title: report.title
+        })
+        setShowExportModal(true)
+    }
+
     const overviewStats = {
         revenue: {
             current: 45000000,
@@ -34,99 +149,256 @@ export default function AdminReports() {
         }
     }
 
-    const recentReports = [
-        {
-            id: 1,
-            name: 'Báo cáo doanh thu tháng 1/2024',
-            type: 'Tài chính',
-            createdDate: '2024-02-01',
-            size: '2.5 MB',
-            status: 'completed'
-        },
-        {
-            id: 2,
-            name: 'Thống kê bệnh nhân tháng 1/2024',
-            type: 'Bệnh nhân',
-            createdDate: '2024-02-01',
-            size: '1.8 MB',
-            status: 'completed'
-        },
-        {
-            id: 3,
-            name: 'Báo cáo hiệu suất bác sĩ Q4/2023',
-            type: 'Nhân sự',
-            createdDate: '2024-01-15',
-            size: '3.2 MB',
-            status: 'completed'
-        }
-    ]
-
-    const topDoctors = [
-        { name: 'BS. Nguyễn Văn An', patients: 125, revenue: 12500000, rating: 4.9 },
-        { name: 'BS. Trần Thị Bình', patients: 98, revenue: 9800000, rating: 4.8 },
-        { name: 'PGS.TS Lê Văn Cường', patients: 87, revenue: 15400000, rating: 5.0 }
-    ]
-
-    const topServices = [
-        { name: 'Khám tim mạch', count: 245, revenue: 12250000 },
-        { name: 'Khám nhi khoa', count: 189, revenue: 7560000 },
-        { name: 'Khám tổng quát', count: 156, revenue: 7800000 }
-    ]
-
-    const handleExport = () => {
-        console.log(`Xuất báo cáo loại ${dateRange} đang được chọn...`)
-        // Logic gọi API hoặc tạo file báo cáo
-    }
-
     return (
-        <div className="space-y-6 p-6 md:p-8 bg-gray-50 min-h-screen">
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex justify-between items-center">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Báo cáo & Thống kê</h1>
+                    <p className="text-gray-600">Phân tích dữ liệu và xuất báo cáo chi tiết</p>
+                </div>
+                <div className="flex space-x-3">
+                    <select
+                        value={dateRange}
+                        onChange={(e) => setDateRange(e.target.value)}
+                        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                        <option value="today">Hôm nay</option>
+                        <option value="week">Tuần này</option>
+                        <option value="month">Tháng này</option>
+                        <option value="quarter">Quý này</option>
+                        <option value="year">Năm này</option>
+                        <option value="custom">Tùy chỉnh</option>
+                    </select>
+                    <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center" onClick={() => handleExportReport(reportTypes[0])}>
+                        <Download className='w-4 h-4 mr-2' />
+                        Xuất báo cáo
+                    </button>
+                    <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center">
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Làm mới
+                    </button>
+                </div>
+            </div>
 
-            {/* 1. Header & Actions */}
-            <ReportPageHeader
-                dateRange={dateRange}
-                setDateRange={setDateRange}
-                onExport={handleExport}
-            />
-
-            {/* 2. Overview Stats */}
-            <ReportStatistics overviewStats={overviewStats} />
-
-            {/* 3. Charts Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-                {/* Revenue Chart */}
+            {/* Overview Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="bg-white rounded-xl shadow-sm p-6">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-semibold text-gray-900">Biểu đồ doanh thu theo ngày/tuần</h3>
-                        <BarChart3 className="w-5 h-5 text-gray-400" />
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 rounded-lg bg-green-100 text-green-600">
+                            <DollarSign className="w-6 h-6" />
+                        </div>
+                        <div className="flex items-center text-green-600">
+                            <TrendingUp className="w-4 h-4 mr-1" />
+                            <span className="text-sm font-medium">{overviewStats.revenue.change}%</span>
+                        </div>
                     </div>
-                    {/* Placeholder cho Biểu đồ Cột/Đường thực tế (nên dùng thư viện như Recharts/Nivo) */}
-                    <div className="h-64 flex items-end justify-between space-x-2 border-b border-l pb-2 pl-2">
-                        {[65, 80, 70, 90, 85, 95, 88].map((height, index) => (
-                            <div key={index} className="flex-1 flex flex-col items-center group cursor-pointer" title={`Doanh thu ngày/tuần ${index + 1}: ${height}M`}>
-                                <div
-                                    className="w-full bg-blue-500 rounded-t hover:bg-blue-600 transition-colors relative"
-                                    style={{ height: `${height}%` }}
-                                />
-                                <span className="text-xs text-gray-500 mt-2">T{index + 1}</span>
+                    <h3 className="text-sm text-gray-600 mb-1">Doanh thu</h3>
+                    <p className="text-2xl font-bold text-gray-900">
+                        ₫{(overviewStats.revenue.current / 1000000).toFixed(1)}M
+                    </p>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 rounded-lg bg-blue-100 text-blue-600">
+                            <Calendar className="w-6 h-6" />
+                        </div>
+                        <div className="flex items-center text-green-600">
+                            <TrendingUp className="w-4 h-4 mr-1" />
+                            <span className="text-sm font-medium">{overviewStats.appointments.change}%</span>
+                        </div>
+                    </div>
+                    <h3 className="text-sm text-gray-600 mb-1">Lượt khám</h3>
+                    <p className="text-2xl font-bold text-gray-900">{overviewStats.appointments.current}</p>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 rounded-lg bg-purple-100 text-purple-600">
+                            <Users className="w-6 h-6" />
+                        </div>
+                        <div className="flex items-center text-green-600">
+                            <TrendingUp className="w-4 h-4 mr-1" />
+                            <span className="text-sm font-medium">{overviewStats.newPatients.change}%</span>
+                        </div>
+                    </div>
+                    <h3 className="text-sm text-gray-600 mb-1">Bệnh nhân mới</h3>
+                    <p className="text-2xl font-bold text-gray-900">{overviewStats.newPatients.current}</p>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 rounded-lg bg-yellow-100 text-yellow-600">
+                            <Activity className="w-6 h-6" />
+                        </div>
+                        <div className="flex items-center text-green-600">
+                            <TrendingUp className="w-4 h-4 mr-1" />
+                            <span className="text-sm font-medium">{overviewStats.satisfaction.change}%</span>
+                        </div>
+                    </div>
+                    <h3 className="text-sm text-gray-600 mb-1">Đánh giá TB</h3>
+                    <p className="text-2xl font-bold text-gray-900">{overviewStats.satisfaction.current}/5</p>
+                </div>
+            </div>
+
+            {/* Report Types */}
+            <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Các loại báo cáo</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {reportTypes.map((report) => {
+                        const IconComponent = report.icon
+                        return (
+                            <div key={report.id} className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="flex items-start space-x-4">
+                                        <div className={`p-3 rounded-lg ${report.color}`}>
+                                            <IconComponent className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold text-gray-900 mb-1">{report.title}</h3>
+                                            <p className="text-sm text-gray-600">{report.description}</p>
+                                            <p className="text-xs text-gray-500 mt-2">
+                                                {report.data.length} bản ghi
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex space-x-2">
+                                    <button
+                                        onClick={() => handleExportReport(report)}
+                                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center"
+                                    >
+                                        <Download className="w-4 h-4 mr-2" />
+                                        Xuất báo cáo
+                                    </button>
+                                    <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                                        <FileText className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
-                        ))}
+                        )
+                    })}
+                </div>
+            </div>
+
+            {/* Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                    <div className="bg-white rounded-xl shadow-sm p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-lg font-semibold text-gray-900">Biểu đồ doanh thu</h3>
+                            <button className="text-blue-600 hover:text-blue-700 text-sm">
+                                Xem chi tiết
+                            </button>
+                        </div>
+                        <div className="h-64 flex items-end justify-between space-x-2">
+                            {[65, 80, 70, 90, 85, 95, 88].map((height, index) => (
+                                <div key={index} className="flex-1 flex flex-col items-center">
+                                    <div
+                                        className="w-full bg-blue-500 rounded-t hover:bg-blue-600 transition-colors cursor-pointer"
+                                        style={{ height: `${height}%` }}
+                                        title={`Tuần ${index + 1}: ${height}%`}
+                                    />
+                                    <span className="text-xs text-gray-500 mt-2">T{index + 1}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-sm p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-lg font-semibold text-gray-900">Thống kê theo chuyên khoa</h3>
+                            <button className="text-blue-600 hover:text-blue-700 text-sm">
+                                Xem chi tiết
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            {[
+                                { name: 'Tim mạch', value: 245, color: 'bg-blue-500' },
+                                { name: 'Nhi khoa', value: 189, color: 'bg-green-500' },
+                                { name: 'Da liễu', value: 156, color: 'bg-yellow-500' },
+                                { name: 'Ngoại khoa', value: 132, color: 'bg-purple-500' }
+                            ].map((item, index) => (
+                                <div key={index}>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="text-sm font-medium text-gray-900">{item.name}</span>
+                                        <span className="text-sm text-gray-600">{item.value} lượt</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                        <div
+                                            className={`${item.color} h-2 rounded-full transition-all`}
+                                            style={{ width: `${(item.value / 245) * 100}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
-                {/* Top Services Chart (Đã chuyển sang TopPerformers để dễ quản lý bố cục) */}
-                {/* Giữ lại đây nếu muốn tách riêng TopPerformers chỉ cho Doctors và Reports */}
-                {/* Trong trường hợp này, tôi đã gộp TopServices vào TopPerformers để tiết kiệm không gian */}
-
+                {/* Recent Reports History */}
+                <div className="bg-white rounded-xl shadow-sm">
+                    <div className="px-6 py-4 border-b border-gray-200">
+                        <h2 className="text-lg font-semibold text-gray-900">Lịch sử xuất báo cáo</h2>
+                    </div>
+                    <div className="p-6">
+                        <div className="space-y-3">
+                            {[
+                                {
+                                    name: 'Báo cáo doanh thu tháng 1/2024',
+                                    type: 'Excel',
+                                    date: '2024-02-01 10:30',
+                                    size: '2.5 MB',
+                                    user: 'Admin System'
+                                },
+                                {
+                                    name: 'Thống kê bệnh nhân Q4/2023',
+                                    type: 'PDF',
+                                    date: '2024-01-15 14:20',
+                                    size: '1.8 MB',
+                                    user: 'Admin System'
+                                },
+                                {
+                                    name: 'Báo cáo hiệu suất bác sĩ',
+                                    type: 'CSV',
+                                    date: '2024-01-10 09:15',
+                                    size: '856 KB',
+                                    user: 'Admin System'
+                                }
+                            ].map((report, index) => (
+                                <div key={index} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                                    <div className="flex items-center space-x-4">
+                                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                            <FileText className="w-5 h-5 text-blue-600" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-medium text-gray-900">{report.name}</h4>
+                                            <p className="text-sm text-gray-600">
+                                                {report.type} • {report.date} • {report.size} • Bởi {report.user}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button className="text-blue-600 hover:text-blue-700">
+                                        <Download className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            {/* 4. Top Performers & Recent Reports */}
-            <TopPerformers
-                topDoctors={topDoctors}
-                recentReports={recentReports}
-                topServices={topServices}
-            />
-
+            {/* Export Modal */}
+            {showExportModal && selectedReport && (
+                <ExportReportModal
+                    isOpen={showExportModal}
+                    onClose={() => setShowExportModal(false)}
+                    reportType={selectedReport.type}
+                    data={selectedReport.data}
+                    title={selectedReport.title}
+                />
+            )}
         </div>
     )
 }

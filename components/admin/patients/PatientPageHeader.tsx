@@ -3,7 +3,7 @@ import React from 'react'
 
 interface PatientPageHeaderProps {
     onAddPatient: () => void
-    onExport: () => void
+    onExport: (type: any) => void
     onImport: () => void
 }
 

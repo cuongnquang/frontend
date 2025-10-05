@@ -108,10 +108,10 @@ export default function AdminLayout({
                     {/* Navigation */}
                     <nav className="flex-1 p-4">
                         <ul className="space-y-2">
-                            {navigation.map((item) => {
+                            {navigation.map((item, i) => {
                                 const IconComponent = item.icon
                                 return (
-                                    <li>
+                                    <li key={i}>
                                         <Link
                                             href={item.href}
                                             className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${pathname === item.href
@@ -193,6 +193,6 @@ export default function AdminLayout({
                     {children}
                 </main>
             </div>
-        </div>
+        </div >
     )
 }

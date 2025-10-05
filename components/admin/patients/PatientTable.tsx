@@ -8,9 +8,9 @@ interface PatientTableRowProps {
     getRiskColor: (risk: string) => string
     getRiskText: (risk: string) => string
     calculateAge: (dob: string) => number
-    onView: (id: string) => void
-    onEdit: (id: string) => void
-    onDelete: (id: string) => void
+    onView: (patient: Patient) => void
+    onEdit: (patient: Patient) => void
+    onDelete: (patient: Patient) => void
 }
 
 const PatientTableRow: React.FC<PatientTableRowProps> = ({
@@ -81,13 +81,13 @@ const PatientTableRow: React.FC<PatientTableRowProps> = ({
         {/* Cột 6: Thao tác */}
         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
             <div className="flex space-x-2">
-                <button onClick={() => onView(patient.id)} className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition">
+                <button onClick={() => onView(patient)} className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition">
                     <Eye className="w-5 h-5" />
                 </button>
-                <button onClick={() => onEdit(patient.id)} className="text-yellow-600 hover:text-yellow-900 p-1 rounded hover:bg-yellow-50 transition">
+                <button onClick={() => onEdit(patient)} className="text-yellow-600 hover:text-yellow-900 p-1 rounded hover:bg-yellow-50 transition">
                     <Edit className="w-5 h-5" />
                 </button>
-                <button onClick={() => onDelete(patient.id)} className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition">
+                <button onClick={() => onDelete(patient)} className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition">
                     <Trash2 className="w-5 h-5" />
                 </button>
             </div>
@@ -102,9 +102,9 @@ interface PatientTableProps {
     calculateAge: (dob: string) => number
     getRiskColor: (risk: string) => string
     getRiskText: (risk: string) => string
-    onViewPatient: (id: string) => void
-    onEditPatient: (id: string) => void
-    onDeletePatient: (id: string) => void
+    onViewPatient: (patient: Patient) => void
+    onEditPatient: (patient: Patient) => void
+    onDeletePatient: (patient: Patient) => void
 }
 
 export default function PatientTable({

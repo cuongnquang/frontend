@@ -2,7 +2,7 @@ import React from 'react'
 import { Plus, Download, Upload } from 'lucide-react'
 interface DoctorPageHeaderProps {
     onAddDoctor: () => void
-    onExport: () => void
+    onExport: (type: any) => void
     onImport: () => void
 }
 

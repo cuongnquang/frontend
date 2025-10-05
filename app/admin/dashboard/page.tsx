@@ -1,10 +1,180 @@
 'use client'
 
+import { Doctor } from '@/components/admin/doctors/DoctorTypes'
+import { DoctorForm } from '@/components/admin/doctors/form/DoctorForm'
+import { PatientForm } from '@/components/admin/patients/form/PatientForm'
+import { Patient } from '@/components/admin/patients/PatientTypes'
 import { Users, UserCheck, Calendar, TrendingUp, Activity } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
+const mockDoctors: Doctor[] = [
+    {
+        id: 'BS001',
+        name: 'BS. Nguyễn Văn An',
+        email: 'nva@youmed.vn',
+        phone: '0901234567',
+        specialization: 'Tim mạch',
+        licenseNumber: 'BS-001-2024',
+        qualification: 'Thạc sĩ',
+        experience: 15,
+        consultationFee: 500000,
+        rating: 4.9,
+        totalPatients: 1250,
+        availability: 'available',
+        status: 'active',
+        joinDate: '2020-01-15'
+    },
+    {
+        id: 'BS002',
+        name: 'BS. Trần Thị Bình',
+        email: 'ttb@youmed.vn',
+        phone: '0901234568',
+        specialization: 'Da liễu',
+        licenseNumber: 'BS-002-2023',
+        qualification: 'Tiến sĩ',
+        experience: 8,
+        consultationFee: 750000,
+        rating: 4.5,
+        totalPatients: 800,
+        availability: 'busy',
+        status: 'active',
+        joinDate: '2021-05-20'
+    },
+    {
+        id: 'BS003',
+        name: 'BS. Lê Văn Cường',
+        email: 'lvc@youmed.vn',
+        phone: '0901234569',
+        specialization: 'Nhi khoa',
+        licenseNumber: 'BS-003-2022',
+        qualification: 'Chuyên khoa I',
+        experience: 5,
+        consultationFee: 400000,
+        rating: 4.2,
+        totalPatients: 1500,
+        availability: 'off',
+        status: 'inactive',
+        joinDate: '2022-11-01'
+    },
+    {
+        id: 'BS004',
+        name: 'BS. Phạm Thị Duyên',
+        email: 'ptd@youmed.vn',
+        phone: '0901234570',
+        specialization: 'Tim mạch',
+        licenseNumber: 'BS-004-2021',
+        qualification: 'Bác sĩ',
+        experience: 10,
+        consultationFee: 500000,
+        rating: 4.8,
+        totalPatients: 950,
+        availability: 'available',
+        status: 'active',
+        joinDate: '2019-03-10'
+    }
+]
+
+const calculateAge = (dateOfBirth: string) => {
+    const today = new Date()
+    const birth = new Date(dateOfBirth)
+    let age = today.getFullYear() - birth.getFullYear()
+    const monthDiff = today.getMonth() - birth.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--
+    }
+    return age
+}
+const getRiskColor = (risk: string) => {
+    switch (risk) {
+        case 'low': return 'bg-green-100 text-green-800'
+        case 'medium': return 'bg-yellow-100 text-yellow-800'
+        case 'high': return 'bg-red-100 text-red-800'
+        default: return 'bg-gray-100 text-gray-800'
+    }
+}
+const getRiskText = (risk: string) => {
+    switch (risk) {
+        case 'low': return 'Thấp'
+        case 'medium': return 'TB'
+        case 'high': return 'Cao'
+        default: return risk
+    }
+}
+
+const mockPatients: Patient[] = [
+    {
+        id: 'BN001',
+        name: 'Nguyễn Văn An',
+        email: 'nva@email.com',
+        phone: '0901234567',
+        dateOfBirth: '1985-03-15',
+        gender: 'male',
+        address: 'Hà Nội',
+        insuranceNumber: 'INS001',
+        bloodType: 'O+',
+        lastVisit: '2024-02-10',
+        nextAppointment: '2024-02-20',
+        totalVisits: 15,
+        status: 'active',
+        riskLevel: 'high'
+    },
+    {
+        id: 'BN002',
+        name: 'Trần Thị Bình',
+        email: 'ttb@email.com',
+        phone: '0901234568',
+        dateOfBirth: '1990-07-22',
+        gender: 'female',
+        address: 'TP.HCM',
+        insuranceNumber: 'INS002',
+        bloodType: 'A+',
+        lastVisit: '2024-02-08',
+        totalVisits: 8,
+        status: 'active',
+        riskLevel: 'medium'
+    },
+    {
+        id: 'BN003',
+        name: 'Lê Văn Cường',
+        email: 'lvc@email.com',
+        phone: '0901234569',
+        dateOfBirth: '1995-12-05',
+        gender: 'male',
+        address: 'Đà Nẵng',
+        insuranceNumber: 'INS003',
+        bloodType: 'B+',
+        lastVisit: '2024-02-12',
+        totalVisits: 3,
+        status: 'active',
+        riskLevel: 'low'
+    },
+    {
+        id: 'BN004',
+        name: 'Phạm Thị Duyên',
+        email: 'ptd@email.com',
+        phone: '0901234570',
+        dateOfBirth: '1970-01-01',
+        gender: 'female',
+        address: 'Cần Thơ',
+        insuranceNumber: 'INS004',
+        bloodType: 'AB-',
+        lastVisit: '2024-01-01',
+        totalVisits: 25,
+        status: 'inactive',
+        riskLevel: 'high'
+    }
+]
 export default function AdminDashboard() {
     const route = useRouter()
+    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [currentDoctor, setCurrentDoctor] = useState<Doctor | undefined>(undefined);
+    const [currentPatient, setCurrentPatient] = useState<Patient | undefined>(undefined);
+    const [formMode, setFormMode] = useState();
+    const [doctors, setDoctors] = useState(mockDoctors);
+    const [patients, setPatients] = useState(mockPatients);
+
+
     const stats = [
         {
             name: 'Tổng số Bác sĩ',
@@ -82,6 +252,58 @@ export default function AdminDashboard() {
         }
         return colors[color as keyof typeof colors] || colors.blue
     }
+    const handleOpenDoctor = () => {
+        setCurrentDoctor(undefined);
+        setIsFormOpen(true);
+    };
+    // Hàm đóng Form
+    const handleCloseDoctor = () => {
+        setIsFormOpen(false);
+        setCurrentDoctor(undefined); // Reset bác sĩ hiện tại khi đóng
+    };
+    const handleOpenPatient = () => {
+        setCurrentDoctor(undefined);
+        setIsFormOpen(true);
+    };
+    // Hàm đóng Form
+    const handleClosePatient = () => {
+        setIsFormOpen(false);
+        setCurrentPatient(undefined); // Reset bác sĩ hiện tại khi đóng
+    };
+
+    // --- HÀM XỬ LÝ GỬI DỮ LIỆU (SUBMIT) ---
+    const handleDoctorSubmit = (data: any) => {
+        console.log('Dữ liệu form đã gửi:', data);
+
+        if (formMode === 'create') {
+            // Logic thêm mới
+            const newDoctor = { ...data, id: Date.now() } as Doctor;
+            setDoctors(prev => [...prev, newDoctor]);
+            alert(`Đã thêm bác sĩ: ${data.name}`);
+        } else if (formMode === 'edit' && currentDoctor) {
+            // Logic chỉnh sửa
+            setDoctors(prev => prev.map(d => d.id === currentDoctor.id ? { ...currentDoctor, ...data } : d));
+            alert(`Đã cập nhật bác sĩ: ${data.name}`);
+        }
+
+        handleCloseDoctor(); // Đóng form sau khi submit thành công
+    };
+    const handlePatientSubmit = (data: any) => {
+        console.log('Dữ liệu form đã gửi:', data);
+
+        if (formMode === 'create') {
+            // Logic thêm mới
+            const newPatient = { ...data, id: Date.now() } as Patient;
+            setPatients(prev => [...prev, newPatient]);
+            alert(`Đã thêm bác sĩ: ${data.name}`);
+        } else if (formMode === 'edit' && currentPatient) {
+            // Logic chỉnh sửa
+            setPatients(prev => prev.map(p => p.id === currentPatient.id ? { ...currentPatient, ...data } : p));
+            alert(`Đã cập nhật bác sĩ: ${data.name}`);
+        }
+
+        handleClosePatient(); // Đóng form sau khi submit thành công
+    };
 
     return (
         <div>
@@ -95,10 +317,10 @@ export default function AdminDashboard() {
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                {stats.map((stat) => {
+                {stats.map((stat, i) => {
                     const IconComponent = stat.icon
                     return (
-                        <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow">
+                        <div key={i} className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow">
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm font-medium text-gray-600">{stat.name}</p>
@@ -158,7 +380,7 @@ export default function AdminDashboard() {
                     <div className="bg-white rounded-xl shadow-sm p-6">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">Thao tác nhanh</h3>
                         <div className="space-y-3">
-                            <button className="w-full text-left p-3 rounded-lg hover:bg-gray-50 transition-colors border">
+                            <button className="w-full text-left p-3 rounded-lg hover:bg-gray-50 transition-colors border" onClick={handleOpenDoctor}>
                                 <div className="flex items-center">
                                     <UserCheck className="w-5 h-5 text-blue-600 mr-3" />
                                     <div>
@@ -167,7 +389,7 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
                             </button>
-                            <button className="w-full text-left p-3 rounded-lg hover:bg-gray-50 transition-colors border">
+                            <button onClick={handleOpenPatient} className="w-full text-left p-3 rounded-lg hover:bg-gray-50 transition-colors border">
                                 <div className="flex items-center">
                                     <Users className="w-5 h-5 text-green-600 mr-3" />
                                     <div>
@@ -217,6 +439,26 @@ export default function AdminDashboard() {
                     </div>
                 </div>
             </div>
+            {isFormOpen && (
+                <DoctorForm
+                    doctor={currentDoctor}
+                    onClose={handleCloseDoctor}
+                    onSubmit={handleDoctorSubmit}
+                    mode='create'
+                />
+            )}
+            {isFormOpen && (
+                <PatientForm
+                    patient={currentPatient}
+                    onClose={handleClosePatient}
+                    onSubmit={handlePatientSubmit}
+                    mode='create'
+                />
+            )}
         </div>
     )
+}
+
+function setPatients(arg0: (prev: any) => any[]) {
+    throw new Error('Function not implemented.')
 }

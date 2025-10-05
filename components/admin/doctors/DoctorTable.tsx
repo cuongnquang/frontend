@@ -6,9 +6,9 @@ import { Doctor } from './DoctorTypes'
 interface DoctorTableRowProps {
     doctor: Doctor
     getAvailabilityColor: (availability: Doctor['availability']) => string
-    onView: (id: string) => void
-    onEdit: (id: string) => void
-    onDelete: (id: string) => void
+    onView: (doctor: Doctor) => void
+    onEdit: (doctor: Doctor) => void
+    onDelete: (doctor: Doctor) => void
 }
 
 const getAvailabilityText = (availability: Doctor['availability']) => {
@@ -83,13 +83,13 @@ const DoctorTableRow: React.FC<DoctorTableRowProps> = ({
         {/* Cột 6: Thao tác */}
         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
             <div className="flex space-x-2">
-                <button onClick={() => onView(doctor.id)} className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition" title="Xem">
+                <button onClick={() => onView(doctor)} className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition" title="Xem">
                     <Eye className="w-5 h-5" />
                 </button>
-                <button onClick={() => onEdit(doctor.id)} className="text-yellow-600 hover:text-yellow-900 p-1 rounded hover:bg-yellow-50 transition" title="Sửa">
+                <button onClick={() => onEdit(doctor)} className="text-yellow-600 hover:text-yellow-900 p-1 rounded hover:bg-yellow-50 transition" title="Sửa">
                     <Edit className="w-5 h-5" />
                 </button>
-                <button onClick={() => onDelete(doctor.id)} className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition" title="Xóa">
+                <button onClick={() => onDelete(doctor)} className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition" title="Xóa">
                     <Trash2 className="w-5 h-5" />
                 </button>
             </div>
@@ -101,9 +101,9 @@ const DoctorTableRow: React.FC<DoctorTableRowProps> = ({
 interface DoctorTableProps {
     filteredDoctors: Doctor[]
     getAvailabilityColor: (availability: Doctor['availability']) => string
-    onViewDoctor: (id: string) => void
-    onEditDoctor: (id: string) => void
-    onDeleteDoctor: (id: string) => void
+    onViewDoctor: (doctor: Doctor) => void
+    onEditDoctor: (doctor: Doctor) => void
+    onDeleteDoctor: (doctor: Doctor) => void
 }
 
 export default function DoctorTable({

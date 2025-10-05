@@ -7,6 +7,8 @@ import DoctorStatistics from '@/components/admin/doctors/DoctorStatistics'
 import DoctorFilters from '@/components/admin/doctors/DoctorFilters'
 import DoctorTable from '@/components/admin/doctors/DoctorTable'
 import { DoctorForm } from '@/components/admin/doctors/form/DoctorForm'
+import { ExportReportModal } from '@/components/admin/reports/form/ExportReport'
+import { Users } from 'lucide-react'
 
 // --- Hàm tiện ích ---
 const getAvailabilityColor = (availability: Doctor['availability']) => {
@@ -94,14 +96,18 @@ export default function AdminDoctors() {
     const [currentDoctor, setCurrentDoctor] = useState<Doctor | undefined>(undefined);
     const [formMode, setFormMode] = useState<'create' | 'edit' | 'view'>('create');
     const [doctors, setDoctors] = useState(mockDoctors);
+    const [showExportModal, setShowExportModal] = useState(false)
+    const [selectedReport, setSelectedReport] = useState<{
+        type: 'doctors' | 'patients' | 'appointments' | 'revenue'
+        data: any[]
+        title: string
+    } | null>(null)
 
-    // Lấy danh sách chuyên khoa duy nhất cho bộ lọc
     const availableSpecializations = useMemo(() => {
         const specs = new Set(doctors.map(d => d.specialization))
         return Array.from(specs).sort()
     }, [doctors])
 
-    // Logic lọc
     const filteredDoctors = useMemo(() => {
         return doctors.filter(doctor => {
             const matchesSearch = doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -114,36 +120,75 @@ export default function AdminDoctors() {
         })
     }, [doctors, searchTerm, statusFilter, specializationFilter])
 
-    // --- Action Handlers ---
-    const handleAddDoctor = () => console.log('Mở form thêm bác sĩ')
-    const handleExport = () => console.log('Tiến hành xuất dữ liệu bác sĩ')
-    const handleImport = () => console.log('Mở dialog nhập dữ liệu bác sĩ')
-    const handleViewDoctor = (id: string) => { }
-    const handleEditDoctor = (id: string) => {
-
+    const handleAddDoctor = () => {
+        setCurrentDoctor(undefined);
+        setFormMode('create');
+        setIsFormOpen(true);
     }
-    const handleDeleteDoctor = (id: string) => {
-        if (window.confirm(`Bạn có chắc chắn muốn xóa bác sĩ ${id} không?`)) {
-            console.log(`Đã gửi yêu cầu xóa bác sĩ ${id}`)
-            // Thực hiện logic xóa API
+    const handleImport = () => console.log('Mở dialog nhập dữ liệu bác sĩ')
+
+    const handleViewDoctor = (doctor: Doctor) => {
+        setCurrentDoctor(doctor);
+        setFormMode('view');
+        setIsFormOpen(true);
+    }
+    const handleEditDoctor = (doctor: Doctor) => {
+        setCurrentDoctor(doctor);
+        setFormMode('edit');
+        setIsFormOpen(true);
+    }
+    const handleDeleteDoctor = (doctor: Doctor) => {
+        if (window.confirm(`Bạn có chắc chắn muốn xóa bác sĩ ${doctor.name} không?`)) {
+            console.log(`Đã gửi yêu cầu xóa bác sĩ ${doctor.name}`)
         }
+    }
+    const handleFormClose = () => {
+        setIsFormOpen(false);
+        setCurrentDoctor(undefined); // Reset bác sĩ hiện tại khi đóng
+    };
+    const handleFormSubmit = (data: any) => {
+        console.log('Dữ liệu form đã gửi:', data);
+
+        if (formMode === 'create') {
+            // Logic thêm mới
+            const newDoctor = { ...data, id: Date.now() } as Doctor;
+            setDoctors(prev => [...prev, newDoctor]);
+            alert(`Đã thêm bác sĩ: ${data.name}`);
+        } else if (formMode === 'edit' && currentDoctor) {
+            // Logic chỉnh sửa
+            setDoctors(prev => prev.map(d => d.id === currentDoctor.id ? { ...currentDoctor, ...data } : d));
+            alert(`Đã cập nhật bác sĩ: ${data.name}`);
+        }
+
+        handleFormClose(); // Đóng form sau khi submit thành công
+    };
+    const reportTypes = {
+        id: 'doctors',
+        title: 'Báo cáo Bác sĩ',
+        description: 'Danh sách và hiệu suất bác sĩ',
+        icon: Users,
+        color: 'bg-blue-100 text-blue-600',
+        data: mockDoctors,
+        type: 'doctors' as const
+    }
+    const handleExport = (report: typeof reportTypes) => {
+        setSelectedReport({
+            type: reportTypes.type,
+            data: reportTypes.data,
+            title: reportTypes.title
+        })
+        setShowExportModal(true)
     }
 
 
     return (
         <div className="space-y-6 p-6 md:p-8 bg-gray-50 min-h-screen">
-
-            {/* 1. Header & Actions */}
             <DoctorPageHeader
                 onAddDoctor={handleAddDoctor}
                 onExport={handleExport}
                 onImport={handleImport}
             />
-
-            {/* 2. Statistics Cards */}
             <DoctorStatistics doctors={doctors} />
-
-            {/* 3. Filters & Search */}
             <DoctorFilters
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
@@ -153,8 +198,6 @@ export default function AdminDoctors() {
                 setSpecializationFilter={setSpecializationFilter}
                 availableSpecializations={availableSpecializations}
             />
-
-            {/* 4. Doctors Table */}
             <DoctorTable
                 filteredDoctors={filteredDoctors}
                 getAvailabilityColor={getAvailabilityColor}
@@ -162,6 +205,23 @@ export default function AdminDoctors() {
                 onEditDoctor={handleEditDoctor}
                 onDeleteDoctor={handleDeleteDoctor}
             />
+            {isFormOpen && (
+                <DoctorForm
+                    doctor={currentDoctor}
+                    onClose={handleFormClose}
+                    onSubmit={handleFormSubmit}
+                    mode={formMode}
+                />
+            )}
+            {showExportModal && selectedReport && (
+                <ExportReportModal
+                    isOpen={showExportModal}
+                    onClose={() => setShowExportModal(false)}
+                    reportType={selectedReport.type}
+                    data={selectedReport.data}
+                    title={selectedReport.title}
+                />
+            )}
         </div>
     )
 }

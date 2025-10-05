@@ -2,12 +2,15 @@
 
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, Activity } from 'react'
 import { Patient } from '@/components/admin/patients/PatientTypes'
 import PatientPageHeader from '@/components/admin/patients/PatientPageHeader'
 import PatientStatistics from '@/components/admin/patients/PatientStatistics'
 import PatientFilters from '@/components/admin/patients/PatientFilters'
 import PatientTable from '@/components/admin/patients/PatientTable'
+import { PatientForm } from '@/components/admin/patients/form/PatientForm'
+import { ExportReportModal } from '@/components/admin/reports/form/ExportReport'
+import { Calendar, Users } from 'lucide-react'
 // import các utils nếu chúng nằm trong file riêng
 // import { calculateAge, getRiskColor, getRiskText } from '../../utils/patientUtils'
 
@@ -110,8 +113,16 @@ export default function AdminPatients() {
     const [searchTerm, setSearchTerm] = useState('')
     const [statusFilter, setStatusFilter] = useState('all')
     const [riskFilter, setRiskFilter] = useState('all')
-
-    const patients = mockPatients // Trong thực tế, đây sẽ là state hoặc kết quả từ hook API
+    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [currentPatient, setCurrentPatient] = useState<Patient | undefined>(undefined);
+    const [formMode, setFormMode] = useState<'create' | 'edit' | 'view'>('create');
+    const [patients, setPatients] = useState(mockPatients);
+    const [showExportModal, setShowExportModal] = useState(false)
+    const [selectedReport, setSelectedReport] = useState<{
+        type: 'patients'
+        data: any[]
+        title: string
+    } | null>(null)
 
     const filteredPatients = useMemo(() => {
         return patients.filter(patient => {
@@ -126,16 +137,66 @@ export default function AdminPatients() {
     }, [patients, searchTerm, statusFilter, riskFilter])
 
     // --- Action Handlers ---
-    const handleAddPatient = () => alert('Mở form thêm bệnh nhân')
-    const handleExport = () => alert('Tiến hành xuất dữ liệu')
+    const handleAddPatient = () => {
+        setCurrentPatient(undefined);
+        setFormMode('create');
+        setIsFormOpen(true);
+    }
     const handleImport = () => alert('Mở dialog nhập dữ liệu')
-    const handleViewPatient = (id: string) => alert(`Xem chi tiết bệnh nhân: ${id}`)
-    const handleEditPatient = (id: string) => alert(`Chỉnh sửa bệnh nhân: ${id}`)
-    const handleDeletePatient = (id: string) => {
-        if (confirm(`Bạn có chắc chắn muốn xóa bệnh nhân ${id}?`)) {
-            alert(`Xóa bệnh nhân ${id}`)
+    const handleViewPatient = (patient: Patient) => {
+        setCurrentPatient(patient);
+        setFormMode('view');
+        setIsFormOpen(true);
+    }
+    const handleEditPatient = (patient: Patient) => {
+        setCurrentPatient(patient);
+        setFormMode('view');
+        setIsFormOpen(true);
+    }
+    const handleDeletePatient = (patient: Patient) => {
+        if (confirm(`Bạn có chắc chắn muốn xóa bệnh nhân ${patient.name}?`)) {
+            alert(`Xóa bệnh nhân ${patient.name}`)
             // Thực hiện logic xóa API
         }
+    }
+    const handleFormClose = () => {
+        setIsFormOpen(false);
+        setCurrentPatient(undefined); // Reset bác sĩ hiện tại khi đóng
+    };
+    const handleFormSubmit = (data: any) => {
+        console.log('Dữ liệu form đã gửi:', data);
+
+        if (formMode === 'create') {
+            // Logic thêm mới
+            const newPatient = { ...data, id: Date.now() } as Patient;
+            setPatients(prev => [...prev, newPatient]);
+            alert(`Đã thêm bác sĩ: ${data.name}`);
+        } else if (formMode === 'edit' && currentPatient) {
+            // Logic chỉnh sửa
+            setPatients(prev => prev.map(p => p.id === currentPatient.id ? { ...currentPatient, ...data } : p));
+            alert(`Đã cập nhật bác sĩ: ${data.name}`);
+        }
+
+        handleFormClose(); // Đóng form sau khi submit thành công
+    };
+    const reportTypes = {
+        id: 'patients',
+        title: 'Báo cáo Bệnh nhân',
+        description: 'Thống kê và danh sách bệnh nhân',
+        icon: Activity,
+        color: 'bg-purple-100 text-purple-600',
+        data: mockPatients,
+        type: 'patients' as const
+    }
+
+
+    const handleExport = (report: typeof reportTypes) => {
+        setSelectedReport({
+            type: reportTypes.type,
+            data: reportTypes.data,
+            title: reportTypes.title
+        })
+        setShowExportModal(true)
     }
 
     return (
@@ -170,6 +231,24 @@ export default function AdminPatients() {
                 onEditPatient={handleEditPatient}
                 onDeletePatient={handleDeletePatient}
             />
+            {isFormOpen && (
+                <PatientForm
+                    patient={currentPatient}
+                    onClose={handleFormClose}
+                    onSubmit={handleFormSubmit}
+                    mode={formMode}
+                />
+            )}
+            {showExportModal && selectedReport && (
+                <ExportReportModal
+                    isOpen={showExportModal}
+                    onClose={() => setShowExportModal(false)}
+                    reportType={selectedReport.type}
+                    data={selectedReport.data}
+                    title={selectedReport.title}
+                />
+            )}
         </div>
+
     )
 }
