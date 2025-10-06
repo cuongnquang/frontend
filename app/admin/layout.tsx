@@ -1,6 +1,6 @@
 'use client'
 
-import { AuthProvider, useAuth } from '@/lib/AuthContext'
+import { useAuth } from '@/lib/AuthContext'
 import { Role } from '@/types/emuns'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -14,7 +14,8 @@ import {
     Menu,
     X,
     Bell,
-    Search
+    Search,
+    CalendarDays
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -43,6 +44,11 @@ export default function AdminLayout({
             name: 'Quản lý Bệnh nhân',
             href: '/admin/patients',
             icon: Users,
+        },
+        {
+            name: 'Quản lý Lịch hẹn',
+            href: '/admin/appointments',
+            icon: CalendarDays,
         },
         {
             name: 'Báo cáo',

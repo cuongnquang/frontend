@@ -42,7 +42,7 @@ export default function PatientStatistics({ patients }: PatientStatisticsProps) 
     return (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {stats.map((stat) => (
-                <div key={stat.label} className="bg-white rounded-xl shadow-sm p-6">
+                <div key={stat.label} className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-l-gray-200 hover:border-l-blue-400 transition-all duration-300">
                     <div className="flex items-center">
                         <div className={`p-3 rounded-lg bg-${stat.color}-100 text-${stat.color}-600 mr-4`}>
                             <stat.icon className="w-6 h-6" />

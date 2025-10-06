@@ -54,9 +54,6 @@ export default function Header() {
                         <Link href="/client/doctors" className="text-gray-700 hover:text-blue-600 font-medium">
                             Bác sĩ
                         </Link>
-                        <Link href="/client/hospitals" className="text-gray-700 hover:text-blue-600 font-medium">
-                            Bệnh viện
-                        </Link>
                         <Link href="/client/specialties" className="text-gray-700 hover:text-blue-600 font-medium">
                             Chuyên khoa
                         </Link>

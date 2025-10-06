@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-    Mail, Phone, User, AlertCircle, Shield, Stethoscope, Facebook
+    Mail, Phone, User, Facebook
 } from 'lucide-react'
 import Alert from '@/components/ui/Alert'
 import InputField from '@/components/ui/InputField'

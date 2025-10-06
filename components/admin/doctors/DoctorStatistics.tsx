@@ -64,7 +64,6 @@ export default function DoctorStatistics({ doctors }: DoctorStatisticsProps) {
                                 {stat.value}
                                 {stat.unit && <span className="text-base font-normal ml-1 text-gray-600">{stat.unit}</span>}
                             </p>
-                            {stat.total && <p className="text-xs text-gray-400 mt-1">Tổng cộng: {stat.total} BS</p>}
                         </div>
                     </div>
                 </div>

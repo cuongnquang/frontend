@@ -144,7 +144,7 @@ export default function AdminDoctors() {
     }
     const handleFormClose = () => {
         setIsFormOpen(false);
-        setCurrentDoctor(undefined); // Reset bác sĩ hiện tại khi đóng
+        setCurrentDoctor(undefined);
     };
     const handleFormSubmit = (data: any) => {
         console.log('Dữ liệu form đã gửi:', data);
@@ -173,9 +173,9 @@ export default function AdminDoctors() {
     }
     const handleExport = (report: typeof reportTypes) => {
         setSelectedReport({
-            type: reportTypes.type,
-            data: reportTypes.data,
-            title: reportTypes.title
+            type: report.type,
+            data: report.data,
+            title: report.title
         })
         setShowExportModal(true)
     }

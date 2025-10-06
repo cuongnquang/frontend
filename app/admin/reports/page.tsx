@@ -25,99 +25,25 @@ export default function AdminReportsEnhanced() {
         title: string
     } | null>(null)
 
-    // Mock data
     const revenueData = [
         { date: '2024-02-01', revenue: 15000000, appointments: 45, newPatients: 12, expenses: 5000000, profit: 10000000 },
         { date: '2024-02-02', revenue: 18000000, appointments: 52, newPatients: 15, expenses: 6000000, profit: 12000000 },
         { date: '2024-02-03', revenue: 16000000, appointments: 48, newPatients: 10, expenses: 5500000, profit: 10500000 }
     ]
 
-    const doctorsData = [
-        {
-            id: 'BS001',
-            name: 'BS. Nguyễn Văn An',
-            email: 'nva@youmed.vn',
-            phone: '0901234567',
-            specialization: 'Tim mạch',
-            qualification: 'Thạc sĩ',
-            experience: 15,
-            consultationFee: 500000,
-            rating: 4.9,
-            totalPatients: 1250,
-            status: 'active'
-        }
-    ]
+    const reportTypes = {
+        id: 'revenue',
+        title: 'Báo cáo Doanh thu',
+        description: 'Chi tiết doanh thu, chi phí và lợi nhuận',
+        icon: DollarSign,
+        color: 'bg-green-100 text-green-600',
+        data: revenueData,
+        type: 'revenue' as const
+    }
 
-    const patientsData = [
-        {
-            id: 'BN001',
-            name: 'Nguyễn Văn An',
-            email: 'nva@email.com',
-            phone: '0901234567',
-            dateOfBirth: '1985-03-15',
-            gender: 'male',
-            address: 'Hà Nội',
-            insuranceNumber: 'INS001',
-            bloodType: 'O+',
-            totalVisits: 15,
-            riskLevel: 'high'
-        }
-    ]
 
-    const appointmentsData = [
-        {
-            id: 'APP001',
-            patientName: 'Nguyễn Văn An',
-            doctorName: 'BS. Trần Thị Bình',
-            appointmentDate: '2024-02-15',
-            appointmentTime: '09:00',
-            type: 'Khám tổng quát',
-            symptoms: 'Đau đầu',
-            status: 'confirmed',
-            room: 'Phòng 201'
-        }
-    ]
 
-    const reportTypes = [
-        {
-            id: 'revenue',
-            title: 'Báo cáo Doanh thu',
-            description: 'Chi tiết doanh thu, chi phí và lợi nhuận',
-            icon: DollarSign,
-            color: 'bg-green-100 text-green-600',
-            data: revenueData,
-            type: 'revenue' as const
-        },
-        {
-            id: 'doctors',
-            title: 'Báo cáo Bác sĩ',
-            description: 'Danh sách và hiệu suất bác sĩ',
-            icon: Users,
-            color: 'bg-blue-100 text-blue-600',
-            data: doctorsData,
-            type: 'doctors' as const
-        },
-        {
-            id: 'patients',
-            title: 'Báo cáo Bệnh nhân',
-            description: 'Thống kê và danh sách bệnh nhân',
-            icon: Activity,
-            color: 'bg-purple-100 text-purple-600',
-            data: patientsData,
-            type: 'patients' as const
-        },
-        {
-            id: 'appointments',
-            title: 'Báo cáo Lịch hẹn',
-            description: 'Chi tiết các lịch hẹn khám',
-            icon: Calendar,
-            color: 'bg-orange-100 text-orange-600',
-            data: appointmentsData,
-            type: 'appointments' as const
-        }
-    ]
-
-    const handleExportReport = (report: typeof reportTypes[0]) => {
+    const handleExportReport = (report: typeof reportTypes) => {
         setSelectedReport({
             type: report.type,
             data: report.data,
@@ -151,7 +77,6 @@ export default function AdminReportsEnhanced() {
 
     return (
         <div className="space-y-6">
-            {/* Header */}
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Báo cáo & Thống kê</h1>
@@ -170,7 +95,7 @@ export default function AdminReportsEnhanced() {
                         <option value="year">Năm này</option>
                         <option value="custom">Tùy chỉnh</option>
                     </select>
-                    <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center" onClick={() => handleExportReport(reportTypes[0])}>
+                    <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center" onClick={() => handleExportReport(reportTypes)}>
                         <Download className='w-4 h-4 mr-2' />
                         Xuất báo cáo
                     </button>
@@ -181,7 +106,6 @@ export default function AdminReportsEnhanced() {
                 </div>
             </div>
 
-            {/* Overview Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="bg-white rounded-xl shadow-sm p-6">
                     <div className="flex items-center justify-between mb-4">
@@ -242,47 +166,6 @@ export default function AdminReportsEnhanced() {
                 </div>
             </div>
 
-            {/* Report Types */}
-            <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Các loại báo cáo</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {reportTypes.map((report) => {
-                        const IconComponent = report.icon
-                        return (
-                            <div key={report.id} className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow">
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="flex items-start space-x-4">
-                                        <div className={`p-3 rounded-lg ${report.color}`}>
-                                            <IconComponent className="w-6 h-6" />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-semibold text-gray-900 mb-1">{report.title}</h3>
-                                            <p className="text-sm text-gray-600">{report.description}</p>
-                                            <p className="text-xs text-gray-500 mt-2">
-                                                {report.data.length} bản ghi
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex space-x-2">
-                                    <button
-                                        onClick={() => handleExportReport(report)}
-                                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center"
-                                    >
-                                        <Download className="w-4 h-4 mr-2" />
-                                        Xuất báo cáo
-                                    </button>
-                                    <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-                                        <FileText className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        )
-                    })}
-                </div>
-            </div>
-
-            {/* Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white rounded-xl shadow-sm p-6">
                     <div className="bg-white rounded-xl shadow-sm p-6">
@@ -337,7 +220,6 @@ export default function AdminReportsEnhanced() {
                     </div>
                 </div>
 
-                {/* Recent Reports History */}
                 <div className="bg-white rounded-xl shadow-sm">
                     <div className="px-6 py-4 border-b border-gray-200">
                         <h2 className="text-lg font-semibold text-gray-900">Lịch sử xuất báo cáo</h2>
@@ -389,7 +271,6 @@ export default function AdminReportsEnhanced() {
                 </div>
             </div>
 
-            {/* Export Modal */}
             {showExportModal && selectedReport && (
                 <ExportReportModal
                     isOpen={showExportModal}
