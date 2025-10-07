@@ -79,7 +79,7 @@ export function AdminHeader({ setSidebarOpen }: AdminHeaderProps) {
                             <input
                                 type="text"
                                 placeholder="Tìm kiếm..."
-                                className="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-100 text-black"
+                                className="pl-10 pr-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-100 text-black"
                             />
                         </div>
                     </div>
