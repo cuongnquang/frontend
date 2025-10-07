@@ -25,7 +25,7 @@ export function DoctorProfessionalInfo({ formData, setFormData, isReadOnly }: Do
                         disabled={isReadOnly}
                         value={formData.specialization}
                         onChange={(e) => handleChange('specialization', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                        className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     >
                         <option value="">Chọn chuyên khoa</option>
                         <option value="Tim mạch">Tim mạch</option>
@@ -45,7 +45,7 @@ export function DoctorProfessionalInfo({ formData, setFormData, isReadOnly }: Do
                         disabled={isReadOnly}
                         value={formData.licenseNumber}
                         onChange={(e) => handleChange('licenseNumber', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                        className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     />
                 </div>
                 {/* Trình độ */}
@@ -55,7 +55,7 @@ export function DoctorProfessionalInfo({ formData, setFormData, isReadOnly }: Do
                         disabled={isReadOnly}
                         value={formData.qualification}
                         onChange={(e) => handleChange('qualification', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                        className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     >
                         <option value="">Chọn trình độ</option>
                         <option value="Bác sĩ">Bác sĩ</option>
@@ -72,7 +72,7 @@ export function DoctorProfessionalInfo({ formData, setFormData, isReadOnly }: Do
                         disabled={isReadOnly}
                         value={formData.experience}
                         onChange={(e) => handleChange('experience', parseInt(e.target.value))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                        className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     />
                 </div>
                 {/* Phí khám */}
@@ -83,7 +83,7 @@ export function DoctorProfessionalInfo({ formData, setFormData, isReadOnly }: Do
                         disabled={isReadOnly}
                         value={formData.consultationFee}
                         onChange={(e) => handleChange('consultationFee', parseInt(e.target.value))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                        className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     />
                 </div>
             </div>
@@ -95,7 +95,7 @@ export function DoctorProfessionalInfo({ formData, setFormData, isReadOnly }: Do
                     disabled={isReadOnly}
                     value={formData.bio}
                     onChange={(e) => handleChange('bio', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                    className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                 />
             </div>
         </div>

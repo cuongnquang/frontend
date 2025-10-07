@@ -21,12 +21,11 @@ import {
 } from 'lucide-react'
 import SpecialtyCard from '@/components/specialty/SpecialtyCard'
 import DoctorCard from '@/components/doctor/DoctorCard'
-import HospitalCard from '@/components/hospital/HospitalCard'
 
 export default function Features() {
     const router = useRouter()
     const [favoriteDocotors, setFavoriteDoctors] = useState<number[]>([])
-    const [favoriteHospitals, setFavoriteHospitals] = useState<number[]>([])
+
 
     // Featured Doctors Data
     const featuredDoctors = [
@@ -88,82 +87,6 @@ export default function Features() {
             nextAvailable: 'Thứ 5, 28/09',
             isOnline: false,
             achievements: ['Phó Giáo sư', 'Chuyên gia đầu ngành']
-        }
-    ]
-
-    // Featured Hospitals Data
-    const featuredHospitals = [
-        {
-            id: 1,
-            name: 'Bệnh viện Chợ Rẫy',
-            type: 'Công lập' as const,
-            level: 'Hạng I' as const,
-            address: '201B Nguyễn Chí Thanh, Phường 12',
-            district: 'Quận 5',
-            rating: 4.6,
-            reviews: 1250,
-            beds: 1200,
-            doctors: 450,
-            established: 1900,
-            emergency: true,
-            specialties: ['Tim mạch', 'Thần kinh', 'Ung bướu', 'Ngoại khoa'],
-            priceRange: '50.000đ - 500.000đ',
-            averageWait: '45 phút',
-            satisfactionRate: 92
-        },
-        {
-            id: 2,
-            name: 'Vinmec Central Park',
-            type: 'Tư nhân' as const,
-            level: 'Đặc biệt' as const,
-            address: '208 Nguyễn Hữu Cảnh, Phường 22',
-            district: 'Quận Bình Thạnh',
-            rating: 4.8,
-            reviews: 756,
-            beds: 500,
-            doctors: 280,
-            established: 2014,
-            emergency: true,
-            specialties: ['Tim mạch', 'Ung bướu', 'IVF', 'Check-up'],
-            priceRange: '200.000đ - 1.500.000đ',
-            averageWait: '20 phút',
-            satisfactionRate: 96
-        },
-        {
-            id: 3,
-            name: 'Bệnh viện FV',
-            type: 'Tư nhân' as const,
-            level: 'Hạng I' as const,
-            address: '6 Nguyễn Lương Bằng, Phường Tân Phú',
-            district: 'Quận 7',
-            rating: 4.7,
-            reviews: 892,
-            beds: 350,
-            doctors: 180,
-            established: 2003,
-            emergency: true,
-            specialties: ['Tim mạch', 'Nhi khoa', 'Sản khoa', 'Cấp cứu'],
-            priceRange: '150.000đ - 800.000đ',
-            averageWait: '30 phút',
-            satisfactionRate: 94
-        },
-        {
-            id: 4,
-            name: 'Bệnh viện Từ Dũ',
-            type: 'Công lập' as const,
-            level: 'Hạng I' as const,
-            address: '284 Cống Quỳnh, Phường Phạm Ngũ Lão',
-            district: 'Quận 1',
-            rating: 4.3,
-            reviews: 1050,
-            beds: 400,
-            doctors: 150,
-            established: 1956,
-            emergency: false,
-            specialties: ['Sản khoa', 'Phụ khoa', 'Sơ sinh', 'IVF'],
-            priceRange: '30.000đ - 300.000đ',
-            averageWait: '60 phút',
-            satisfactionRate: 88
         }
     ]
 
@@ -245,14 +168,6 @@ export default function Features() {
         )
     }
 
-    const toggleHospitalFavorite = (hospitalId: number) => {
-        setFavoriteHospitals(prev =>
-            prev.includes(hospitalId)
-                ? prev.filter(id => id !== hospitalId)
-                : [...prev, hospitalId]
-        )
-    }
-
     const getTypeColor = (type: string) => {
         return type === 'Công lập'
             ? 'bg-green-100 text-green-800 border-green-200'
@@ -270,10 +185,6 @@ export default function Features() {
             default:
                 return 'bg-gray-100 text-gray-800 border-gray-200'
         }
-    }
-
-    function handleBookHospital(hospitalId: number): void {
-        router.push(`/client/appointments?hospitalId=${hospitalId}`)
     }
 
     // Adapters to satisfy detailed card prop types
@@ -308,51 +219,9 @@ export default function Features() {
         acceptsInsurance: true
     })
 
-    const toHospitalCardHospital = (h: any) => ({
-        id: h.id,
-        name: h.name,
-        type: h.type || 'Công lập',
-        level: h.level || 'Hạng I',
-        address: h.address,
-        district: h.district,
-        city: 'TP.HCM',
-        rating: h.rating,
-        reviews: h.reviews || 0,
-        phone: '1900 1234',
-        website: undefined,
-        image: '/api/placeholder/400/250',
-        description: 'Bệnh viện uy tín với đội ngũ bác sĩ giàu kinh nghiệm và thiết bị hiện đại.',
-        specialties: h.specialties || [],
-        beds: h.beds || 200,
-        doctors: h.doctors || 100,
-        established: h.established || 2000,
-        certifications: ['ISO'],
-        facilities: [],
-        services: [{ emergency: !!h.emergency, icu: true, surgery: true, maternity: true, pediatric: true, cardiology: true, oncology: true, imaging: true }],
-        workingHours: { weekday: '6:00 - 20:00', weekend: '6:00 - 18:00', emergency: '24/7' },
-        pricing: { consultation: { min: h.priceRange?.split(' - ')[0] || '50.000đ', max: h.priceRange?.split(' - ')[1] || '500.000đ' }, emergency: '200.000đ', room: { standard: '800.000đ', vip: '2.500.000đ' } },
-        insurance: ['BHYT'],
-        distance: undefined,
-        averageWaitTime: h.averageWait || '30 phút',
-        satisfactionRate: h.satisfactionRate || 90,
-        isPartner: true,
-        promotions: [],
-        contactInfo: { hotline: '1900 1234', email: 'contact@example.com' },
-        emergency: h.emergency,
-        averageWait: h.averageWait || '',
-        priceRange: h.priceRange || ''
-    })
 
-    function handleViewHospital(hospitalId: number): void {
-        router.push(`/client/hospitals/${hospitalId}`)
-    }
-
-    function handleGetDirections(hospitalId: number): void {
-        router.push(`/client/hospitals?hospitalId=${hospitalId}&tab=directions`)
-    }
 
     const goAllDoctors = () => router.push('/client/doctors')
-    const goAllHospitals = () => router.push('/client/hospitals')
     const goAllSpecialties = () => router.push('/client/specialties')
     const handleViewSpecialty = () => router.push(`/client/specialties`)
 
@@ -382,35 +251,6 @@ export default function Features() {
                                 key={doctor.id}
                                 doctor={toDoctorCardDoctor(doctor)}
                                 variant="featured"
-                            />
-                        ))}
-                    </div>
-                </div>
-            </section>
-            <section className="py-16 bg-gray-50">
-                <div className="container mx-auto px-4">
-                    <div className="flex items-center justify-between mb-8">
-                        <div>
-                            <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                                Bệnh viện uy tín
-                            </h2>
-                            <p className="text-gray-600">
-                                Các bệnh viện hàng đầu với trang thiết bị hiện đại
-                            </p>
-                        </div>
-                        <button onClick={goAllHospitals} className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                            Xem tất cả
-                            <ArrowRight className="w-5 h-5 ml-2" />
-                        </button>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-6">
-                        {featuredHospitals.map((hospital) => (
-                            <HospitalCard
-                                key={hospital.id}
-                                hospital={toHospitalCardHospital(hospital)}
-                                variant="featured"
-                                onGetDirections={handleGetDirections}
                             />
                         ))}
                     </div>

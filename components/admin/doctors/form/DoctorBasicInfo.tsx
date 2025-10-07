@@ -26,7 +26,7 @@ export function DoctorBasicInfo({ formData, setFormData, isReadOnly }: DoctorBas
                         disabled={isReadOnly}
                         value={formData.name}
                         onChange={(e) => handleChange('name', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                        className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     />
                 </div>
                 {/* Email */}
@@ -38,7 +38,7 @@ export function DoctorBasicInfo({ formData, setFormData, isReadOnly }: DoctorBas
                         disabled={isReadOnly}
                         value={formData.email}
                         onChange={(e) => handleChange('email', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                        className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     />
                 </div>
                 {/* Số điện thoại */}
@@ -50,7 +50,7 @@ export function DoctorBasicInfo({ formData, setFormData, isReadOnly }: DoctorBas
                         disabled={isReadOnly}
                         value={formData.phone}
                         onChange={(e) => handleChange('phone', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                        className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     />
                 </div>
                 {/* Ngày sinh */}
@@ -61,7 +61,7 @@ export function DoctorBasicInfo({ formData, setFormData, isReadOnly }: DoctorBas
                         disabled={isReadOnly}
                         value={formData.dateOfBirth}
                         onChange={(e) => handleChange('dateOfBirth', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                        className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     />
                 </div>
                 {/* Giới tính */}
@@ -71,7 +71,7 @@ export function DoctorBasicInfo({ formData, setFormData, isReadOnly }: DoctorBas
                         disabled={isReadOnly}
                         value={formData.gender}
                         onChange={(e) => handleChange('gender', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                        className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     >
                         <option value="male">Nam</option>
                         <option value="female">Nữ</option>
@@ -86,7 +86,7 @@ export function DoctorBasicInfo({ formData, setFormData, isReadOnly }: DoctorBas
                         disabled={isReadOnly}
                         value={formData.address}
                         onChange={(e) => handleChange('address', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                        className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     />
                 </div>
             </div>

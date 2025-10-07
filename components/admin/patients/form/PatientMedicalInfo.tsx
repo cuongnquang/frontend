@@ -14,7 +14,7 @@ export function PatientMedicalInfo({ formData, setFormData, isReadOnly }: Patien
                         disabled={isReadOnly}
                         value={formData.insuranceNumber}
                         onChange={(e) => setFormData({ ...formData, insuranceNumber: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                        className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     />
                 </div>
 
@@ -26,7 +26,7 @@ export function PatientMedicalInfo({ formData, setFormData, isReadOnly }: Patien
                         disabled={isReadOnly}
                         value={formData.bloodType}
                         onChange={(e) => setFormData({ ...formData, bloodType: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                        className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     >
                         <option value="">Chọn nhóm máu</option>
                         <option value="A+">A+</option>
@@ -50,7 +50,7 @@ export function PatientMedicalInfo({ formData, setFormData, isReadOnly }: Patien
                         disabled={isReadOnly}
                         value={formData.height}
                         onChange={(e) => setFormData({ ...formData, height: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                        className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     />
                 </div>
 
@@ -64,7 +64,7 @@ export function PatientMedicalInfo({ formData, setFormData, isReadOnly }: Patien
                         disabled={isReadOnly}
                         value={formData.weight}
                         onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                        className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     />
                 </div>
             </div>

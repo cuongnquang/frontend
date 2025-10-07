@@ -10,8 +10,6 @@ import PatientFilters from '@/components/admin/patients/PatientFilters'
 import PatientTable from '@/components/admin/patients/PatientTable'
 import { PatientForm } from '@/components/admin/patients/form/PatientForm'
 import { ExportReportModal } from '@/components/admin/reports/form/ExportReport'
-import { Calendar, Users } from 'lucide-react'
-// import các utils nếu chúng nằm trong file riêng
 // import { calculateAge, getRiskColor, getRiskText } from '../../utils/patientUtils'
 
 // Các hàm tiện ích (tạm thời giữ trong component gốc)
@@ -205,7 +203,6 @@ export default function AdminPatients() {
             <PatientPageHeader
                 onAddPatient={handleAddPatient}
                 onExport={handleExport}
-                onImport={handleImport}
             />
 
             {/* 2. Statistics */}
@@ -228,8 +225,8 @@ export default function AdminPatients() {
                 getRiskColor={getRiskColor}
                 getRiskText={getRiskText}
                 onViewPatient={handleViewPatient}
-                onEditPatient={handleEditPatient}
-                onDeletePatient={handleDeletePatient}
+                // onEditPatient={handleEditPatient}
+                // onDeletePatient={handleDeletePatient}
             />
             {isFormOpen && (
                 <PatientForm

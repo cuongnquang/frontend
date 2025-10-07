@@ -398,15 +398,6 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
                             </button>
-                            <button className="w-full text-left p-3 rounded-lg hover:bg-gray-50 transition-colors border">
-                                <div className="flex items-center">
-                                    <TrendingUp className="w-5 h-5 text-purple-600 mr-3" />
-                                    <div>
-                                        <p className="text-sm font-medium text-gray-900">Tạo báo cáo</p>
-                                        <p className="text-xs text-gray-500">Xuất báo cáo thống kê</p>
-                                    </div>
-                                </div>
-                            </button>
                         </div>
                     </div>
 

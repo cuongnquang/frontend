@@ -9,8 +9,8 @@ interface PatientTableRowProps {
     getRiskText: (risk: string) => string
     calculateAge: (dob: string) => number
     onView: (patient: Patient) => void
-    onEdit: (patient: Patient) => void
-    onDelete: (patient: Patient) => void
+    // onEdit: (patient: Patient) => void
+    // onDelete: (patient: Patient) => void
 }
 
 const PatientTableRow: React.FC<PatientTableRowProps> = ({
@@ -19,8 +19,8 @@ const PatientTableRow: React.FC<PatientTableRowProps> = ({
     getRiskText,
     calculateAge,
     onView,
-    onEdit,
-    onDelete,
+    // onEdit,
+    // onDelete,
 }) => (
     <tr key={patient.id} className="hover:bg-gray-50">
         {/* Cột 1: Bệnh nhân */}
@@ -80,16 +80,16 @@ const PatientTableRow: React.FC<PatientTableRowProps> = ({
 
         {/* Cột 6: Thao tác */}
         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-            <div className="flex space-x-2">
+            <div className="flex  space-x-6">
                 <button onClick={() => onView(patient)} className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition">
-                    <Eye className="w-5 h-5" />
+                    <Eye className=" w-5 h-5" />
                 </button>
-                <button onClick={() => onEdit(patient)} className="text-yellow-600 hover:text-yellow-900 p-1 rounded hover:bg-yellow-50 transition">
+                {/* <button onClick={() => onEdit(patient)} className="text-yellow-600 hover:text-yellow-900 p-1 rounded hover:bg-yellow-50 transition">
                     <Edit className="w-5 h-5" />
                 </button>
                 <button onClick={() => onDelete(patient)} className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition">
                     <Trash2 className="w-5 h-5" />
-                </button>
+                </button> */}
             </div>
         </td>
     </tr>
@@ -103,8 +103,8 @@ interface PatientTableProps {
     getRiskColor: (risk: string) => string
     getRiskText: (risk: string) => string
     onViewPatient: (patient: Patient) => void
-    onEditPatient: (patient: Patient) => void
-    onDeletePatient: (patient: Patient) => void
+    // onEditPatient: (patient: Patient) => void
+    // onDeletePatient: (patient: Patient) => void
 }
 
 export default function PatientTable({
@@ -113,8 +113,8 @@ export default function PatientTable({
     getRiskColor,
     getRiskText,
     onViewPatient,
-    onEditPatient,
-    onDeletePatient,
+    // onEditPatient,
+    // onDeletePatient,
 }: PatientTableProps) {
     return (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -160,8 +160,8 @@ export default function PatientTable({
                                 getRiskColor={getRiskColor}
                                 getRiskText={getRiskText}
                                 onView={onViewPatient}
-                                onEdit={onEditPatient}
-                                onDelete={onDeletePatient}
+                                // onEdit={onEditPatient}
+                                // onDelete={onDeletePatient}
                             />
                         ))}
                         {filteredPatients.length === 0 && (

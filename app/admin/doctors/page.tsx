@@ -186,7 +186,6 @@ export default function AdminDoctors() {
             <DoctorPageHeader
                 onAddDoctor={handleAddDoctor}
                 onExport={handleExport}
-                onImport={handleImport}
             />
             <DoctorStatistics doctors={doctors} />
             <DoctorFilters
