@@ -40,10 +40,11 @@ export default function Header() {
             <div className="container mx-auto px-4">
                 <div className="flex justify-between items-center py-4">
                     {/* Logo */}
-                    <Link href="/" className="flex items-center">
-                        <div className="bg-blue-600 text-white px-3 py-2 rounded-lg font-bold text-xl">
+                    <Link href="/" className="text-4xl font-extrabold tracking-tight">
+                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-500">
                             Medi
-                        </div>
+                        </span>
+                        <span className="text-purple-700">Contect</span>
                     </Link>
 
                     {/* Desktop Navigation */}

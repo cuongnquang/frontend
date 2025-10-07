@@ -1,5 +1,5 @@
 import { User, Mail, Phone, MapPin, Calendar, CreditCard, Edit3, X, CheckCircle, Save, Eye, EyeOff, Camera } from 'lucide-react'
-import { useState, Dispatch, SetStateAction } from 'react'
+import { useState, Dispatch, SetStateAction, useEffect } from 'react'
 
 interface UserProfile {
     id: number
@@ -30,15 +30,41 @@ interface ProfileDetailsProps {
 export default function ProfileDetails({ userProfile, setUserProfile, isLoading }: ProfileDetailsProps) {
     const [isEditing, setIsEditing] = useState(false)
     const [editForm, setEditForm] = useState(userProfile)
+    const [isUpdating, setIsUpdating] = useState(false);
 
-    // Handle profile update (Same logic as in original page.tsx)
+    useEffect(() => {
+        setEditForm(userProfile);
+    }, [userProfile]);
+
+    useEffect(() => {
+        if (!userProfile.birthDate || !userProfile.address) {
+            setIsEditing(true);
+        }
+    }, [userProfile.birthDate, userProfile.address]);
+
     const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault()
-        // Simulate API call and state update
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        setUserProfile(editForm)
-        setIsEditing(false)
-        alert('Cập nhật thông tin thành công!')
+        setIsUpdating(true);
+        try {
+            const res = await fetch(`/api/user/profile`, { 
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(editForm),
+            });
+
+            if (!res.ok) {
+                alert('Cập nhật thất bại!');
+            } else {
+                const updatedProfile = await res.json();
+                setUserProfile(updatedProfile); 
+                setIsEditing(false);
+                alert('Cập nhật thông tin thành công!');
+            }
+        } catch (error) {
+            alert('Có lỗi xảy ra.');
+        } finally {
+            setIsUpdating(false);
+        }
     }
 
     return (
@@ -74,9 +100,13 @@ export default function ProfileDetails({ userProfile, setUserProfile, isLoading 
             </div>
 
             <div className="p-6">
+                {isEditing && (!userProfile.birthDate || !userProfile.address) && (
+                    <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
+                        Vui lòng hoàn tất thông tin cá nhân của bạn để có trải nghiệm tốt nhất.
+                    </div>
+                )}
                 <form onSubmit={handleUpdateProfile}>
                     <div className="grid md:grid-cols-2 gap-6">
-                        {/* Full Name */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Họ và tên <span className="text-red-500">*</span></label>
                             <div className="relative">
@@ -91,7 +121,6 @@ export default function ProfileDetails({ userProfile, setUserProfile, isLoading 
                             </div>
                         </div>
 
-                        {/* Email (Read-only for editing, but shows verification status) */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Email <span className="text-red-500">*</span></label>
                             <div className="relative">
@@ -99,7 +128,7 @@ export default function ProfileDetails({ userProfile, setUserProfile, isLoading 
                                 <input
                                     type="email"
                                     value={editForm.email}
-                                    disabled={true} // Email is often not editable here
+                                    disabled={true}
                                     className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 border-gray-200`}
                                 />
                                 {userProfile.emailVerified && (
@@ -108,7 +137,6 @@ export default function ProfileDetails({ userProfile, setUserProfile, isLoading 
                             </div>
                         </div>
 
-                        {/* Phone */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Số điện thoại <span className="text-red-500">*</span></label>
                             <div className="relative">
@@ -128,7 +156,6 @@ export default function ProfileDetails({ userProfile, setUserProfile, isLoading 
                             </div>
                         </div>
 
-                        {/* Birth Date, Gender, Insurance Number */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Ngày sinh</label>
                             <input
@@ -170,7 +197,6 @@ export default function ProfileDetails({ userProfile, setUserProfile, isLoading 
                         </div>
                     </div>
 
-                    {/* Address */}
                     <div className="mt-6">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Địa chỉ</label>
                         <div className="relative">
@@ -185,11 +211,9 @@ export default function ProfileDetails({ userProfile, setUserProfile, isLoading 
                         </div>
                     </div>
 
-                    {/* Emergency Contact */}
                     <div className="mt-6">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">Liên hệ khẩn cấp</h3>
                         <div className="grid md:grid-cols-3 gap-4">
-                            {/* ... (Emergency Contact fields similar to above) ... */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Họ tên</label>
                                 <input
@@ -232,7 +256,6 @@ export default function ProfileDetails({ userProfile, setUserProfile, isLoading 
                         </div>
                     </div>
 
-                    {/* Save Button */}
                     {isEditing && (
                         <div className="mt-8 flex items-center justify-end space-x-4">
                             <button
@@ -244,10 +267,10 @@ export default function ProfileDetails({ userProfile, setUserProfile, isLoading 
                             </button>
                             <button
                                 type="submit"
-                                disabled={isLoading}
+                                disabled={isUpdating || isLoading}
                                 className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
                             >
-                                {isLoading ? (
+                                {isUpdating ? (
                                     <>
                                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                                         Đang lưu...
