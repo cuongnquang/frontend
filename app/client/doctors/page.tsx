@@ -1,37 +1,172 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
-import { Search, CheckCircle } from 'lucide-react'
-import DoctorCard from '@/components/doctor/DoctorCard'
+import DoctorSearch from '@/components/client/doctors/DoctorSearch'
+import DoctorList from '@/components/client/doctors/DoctorList'
+import NoResults from '@/components/client/doctors/NoResults'
 import { Doctor } from '@/types/types'
-import { DoctorCardProps } from '@/types/ui_types'  // tách riêng type UI
+import { Award, ThumbsUp } from 'lucide-react'
+
+const featuredDoctors = [
+        { // This is a simplified Doctor object for demonstration purposes
+            id: 1,
+            name: 'PGS.TS. Nguyễn Văn An',
+            specialty: 'Tim mạch can thiệp',
+            hospital: 'Bệnh viện Chợ Rẫy',
+            location: 'Quận 5, TP.HCM',
+            rating: 4.8,
+            reviews: 127,
+            experience: 15,
+            price: '500.000đ',
+            nextAvailable: 'Thứ 2, 25/09',
+            isVerified: true,
+            achievements: ['2000+ ca can thiệp', 'Giải thưởng y khoa 2023'],
+            // Add missing properties to match the Doctor interface
+            doctor_id: 'DOC001',
+            user_id: 'USER001',
+            specialty_id: 1,
+            full_name: 'Nguyễn Văn An',
+            phone_number: '0901234567',
+            email: 'an.nguyen@example.com',
+            address: '201B Nguyễn Chí Thanh, Phường 12, Quận 5, TP.HCM',
+            description: 'Bác sĩ chuyên khoa Tim mạch can thiệp với nhiều năm kinh nghiệm.',
+            experience_years: 15,
+            rating_average: 4.8,
+            review_count: 127,
+            consultation_fee: 500000,
+            status: 'active',
+            created_at: '2023-01-01T00:00:00Z',
+            updated_at: '2023-01-01T00:00:00Z',
+        },
+        {
+            id: 2,
+            name: 'BS.CKI Trần Thị Bình',
+            specialty: 'Nhi khoa',
+            hospital: 'Bệnh viện Nhi Đồng 1',
+            location: 'Quận 10, TP.HCM',
+            rating: 4.9,
+            reviews: 203,
+            experience: 20,
+            price: '450.000đ',
+            nextAvailable: 'Thứ 3, 26/09',
+            isOnline: false,
+            achievements: ['Chuyên gia đầu ngành', 'Top bác sĩ nhi 2023'],
+            // Add missing properties to match the Doctor interface
+            doctor_id: 'DOC002',
+            user_id: 'USER002',
+            specialty_id: 2,
+            full_name: 'Trần Thị Bình',
+            phone_number: '0901234568',
+            email: 'binh.tran@example.com',
+            address: '149 Đường Đồng Khởi, Phường Bến Nghé, Quận 1, TP.HCM',
+            description: 'Bác sĩ chuyên khoa Nhi với kinh nghiệm lâu năm trong việc chăm sóc trẻ em.',
+            experience_years: 20,
+            rating_average: 4.9,
+            review_count: 203,
+            consultation_fee: 450000,
+            status: 'active',
+            created_at: '2023-01-01T00:00:00Z',
+            updated_at: '2023-01-01T00:00:00Z', // Add is_available property
+ is_available: true,
+        },
+        {
+            id: 3,
+            name: 'TS.BS Lê Minh Châu',
+            specialty: 'Da liễu thẩm mỹ',
+            hospital: 'Bệnh viện Da liễu TP.HCM',
+            location: 'Quận 1, TP.HCM',
+            rating: 4.7,
+            reviews: 89,
+            experience: 12,
+            price: '400.000đ',
+            nextAvailable: 'Thứ 4, 27/09',
+            isOnline: true,
+            achievements: ['Tỷ lệ hài lòng cao', 'Chuyên gia thẩm mỹ'],
+            // Add missing properties to match the Doctor interface
+            doctor_id: 'DOC003',
+            user_id: 'USER003',
+            specialty_id: 3,
+            full_name: 'Lê Minh Châu',
+            phone_number: '0901234569',
+            email: 'chau.le@example.com',
+            address: '2 Nguyễn Thông, Phường 6, Quận 3, TP.HCM',
+            description: 'Bác sĩ chuyên khoa Da liễu thẩm mỹ, mang lại vẻ đẹp tự nhiên cho khách hàng.',
+            experience_years: 12,
+            rating_average: 4.7,
+            review_count: 89,
+            consultation_fee: 400000,
+            status: 'active',
+            created_at: '2023-01-01T00:00:00Z',
+            updated_at: '2023-01-01T00:00:00Z',
+            Specialty: { id: 3, name: 'Da liễu thẩm mỹ' }, // Add Specialty object
+        },
+        {
+            id: 4,
+            name: 'PGS Phạm Văn Dũng',
+            specialty: 'Thần kinh',
+            hospital: 'Bệnh viện Thống Nhất',
+            location: 'Quận Tân Bình, TP.HCM',
+            rating: 4.6,
+            reviews: 156,
+            experience: 18,
+            price: '600.000đ',
+            nextAvailable: 'Thứ 5, 28/09',
+            isOnline: false,
+            achievements: ['Phó Giáo sư', 'Chuyên gia đầu ngành'],
+            // Add missing properties to match the Doctor interface
+            doctor_id: 'DOC004',
+            user_id: 'USER004',
+            specialty_id: 4,
+            full_name: 'Phạm Văn Dũng',
+            phone_number: '0901234570',
+            email: 'dung.pham@example.com',
+            address: '139 Pasteur, Phường 6, Quận 3, TP.HCM',
+            description: 'Bác sĩ chuyên khoa Thần kinh, điều trị các bệnh lý phức tạp về não và hệ thần kinh.',
+            experience_years: 18,
+            rating_average: 4.6,
+            review_count: 156,
+            consultation_fee: 600000,
+            status: 'active',
+            created_at: '2023-01-01T00:00:00Z',
+            updated_at: '2023-01-01T00:00:00Z',
+        }
+    ]
 
 export default function DoctorsPage() {
     const [doctors, setDoctors] = useState<Doctor[]>([])
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedSpecialty, setSelectedSpecialty] = useState('all')
-    const [selectedLocation, setSelectedLocation] = useState('all')
 
-    // gọi API lấy danh sách bác sĩ
     useEffect(() => {
-        const fetchDoctors = async () => {
-            try {
-                const res = await fetch('http://localhost:5000/v1/doctors')
-                const data = await res.json()
-                setDoctors(data)
-            } catch (error) {
-                console.error('Lỗi khi gọi API:', error)
-            } finally {
-                setLoading(false)
-            }
-        }
-        fetchDoctors()
+        setLoading(true)
+        setTimeout(() => {
+            // Map the simplified featuredDoctors to the full Doctor interface
+            const doctorsWithFullProps: Doctor[] = featuredDoctors.map(doc => ({
+                ...doc,
+                doctor_id: doc.doctor_id || `DOC${doc.id}`, // Fallback if not explicitly set
+                user_id: doc.user_id || `USER${doc.id}`,
+                specialty_id: doc.specialty_id || doc.id,
+                full_name: doc.name,
+                phone_number: doc.phone_number || 'N/A',
+                email: doc.email || 'N/A',
+                address: doc.address || doc.location,
+                description: doc.description || 'N/A',
+                experience_years: doc.experience,
+                rating_average: doc.rating,
+                review_count: doc.reviews,
+                consultation_fee: parseFloat(doc.price.replace('.', '').replace('đ', '')),
+                status: 'active', // Default status
+                created_at: '2023-01-01T00:00:00Z', // Default date
+                updated_at: '2023-01-01T00:00:00Z', // Default date
+                Specialty: { id: doc.specialty_id || doc.id, name: doc.specialty }, // Mock Specialty object
+            }));
+            setDoctors(doctorsWithFullProps)
+            setLoading(false)
+        }, 500)
     }, [])
-
-    // Filter
     const filteredDoctors = doctors.filter((doctor) => {
         const matchesSearch =
             doctor.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -40,53 +175,18 @@ export default function DoctorsPage() {
         const matchesSpecialty =
             selectedSpecialty === 'all' || doctor.Specialty?.name === selectedSpecialty
 
-        // const matchesLocation =
-        //     selectedLocation === 'all' || doctor.location?.includes(selectedLocation)
-
         return matchesSearch && matchesSpecialty
     })
 
-    // Mapping từ Prisma Doctor sang DoctorCardProps
-    const toDoctorCardDoctor = (d: Doctor): DoctorCardProps['doctor'] => ({
-        id: d.doctor_id, // UUID string
-        name: d.full_name || 'Chưa cập nhật',
-        title:
-            d.full_name?.startsWith('PGS') || d.full_name?.startsWith('TS')
-                ? 'PGS.TS.'
-                : 'BS.',
-        specialty: d.Specialty?.name || 'Chuyên khoa khác',
-        hospital: '',
-        location: '',
-        rating: 0,
-        reviews: 0,
-        totalPatients: 1000,
-        experience: typeof d.experience_years === 'number' ? d.experience_years : 10, // ép về number
-        price: {
-            consultation: '400.000đ',
-            online: '250.000đ',
-        },
-        availability: {
-            days: ['Thứ 2', 'Thứ 4', 'Thứ 6'],
-            time: '08:00 - 17:00',
-        },
-        image: '/api/placeholder/150/150',
-        isVerified: true,
-        acceptsInsurance: true,
-    })
-
-    if (loading) {
-        return (
-            <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <p className="text-gray-600">Đang tải dữ liệu bác sĩ...</p>
-            </main>
-        )
+    const clearFilters = () => {
+        setSearchQuery('')
+        setSelectedSpecialty('all')
     }
 
     return (
         <main className="min-h-screen bg-gray-50">
             <Header />
 
-            {/* Header */}
             <section className="bg-white border-b py-8">
                 <div className="container mx-auto px-4">
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">Tìm bác sĩ</h1>
@@ -96,69 +196,14 @@ export default function DoctorsPage() {
                 </div>
             </section>
 
-            {/* Search & Filter */}
-            <section className="py-6 bg-white border-b">
-                <div className="container mx-auto px-4">
-                    <div className="grid lg:grid-cols-4 gap-4">
-                        {/* Search box */}
-                        <div className="relative">
-                            <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Tìm tên bác sĩ, chuyên khoa..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                            />
-                        </div>
+            <DoctorSearch
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                selectedSpecialty={selectedSpecialty}
+                setSelectedSpecialty={setSelectedSpecialty}
+                doctors={doctors}
+            />
 
-                        {/* specialty filter */}
-                        <select
-                            value={selectedSpecialty}
-                            onChange={(e) => setSelectedSpecialty(e.target.value)}
-                            className="px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="all">Tất cả chuyên khoa</option>
-                            {[...new Set(doctors.map((d) => d.Specialty?.name))].map(
-                                (s) =>
-                                    s && (
-                                        <option key={s} value={s}>
-                                            {s}
-                                        </option>
-                                    )
-                            )}
-                        </select>
-
-                        {/* location filter */}
-                        {/* <select
-                            value={selectedLocation}
-                            onChange={(e) => setSelectedLocation(e.target.value)}
-                            className="px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="all">Tất cả địa điểm</option>
-                            {[...new Set(doctors.map((d) => d.location))].map(
-                                (l) =>
-                                    l && (
-                                        <option key={l} value={l}>
-                                            {l}
-                                        </option>
-                                    )
-                            )}
-                        </select> */}
-
-                        {/* Sort */}
-                        <select className="px-4 py-3 border border-gray-200 rounded-lg">
-                            <option>Sắp xếp theo</option>
-                            <option>Đánh giá cao nhất</option>
-                            <option>Giá thấp nhất</option>
-                            <option>Giá cao nhất</option>
-                            <option>Kinh nghiệm</option>
-                        </select>
-                    </div>
-                </div>
-            </section>
-
-            {/* Results */}
             <section className="py-8">
                 <div className="container mx-auto px-4">
                     <div className="flex justify-between items-center mb-6">
@@ -168,32 +213,12 @@ export default function DoctorsPage() {
                         </p>
                     </div>
 
-                    <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {filteredDoctors.map((doctor) => (
-                            <DoctorCard
-                                key={doctor.doctor_id}
-                                variant="compact"
-                                doctor={toDoctorCardDoctor(doctor)}
-                            />
-                        ))}
-                    </div>
-
-                    {filteredDoctors.length === 0 && (
-                        <div className="text-center py-12">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                Không tìm thấy bác sĩ
-                            </h3>
-                            <button
-                                onClick={() => {
-                                    setSearchQuery('')
-                                    setSelectedSpecialty('all')
-                                    setSelectedLocation('all')
-                                }}
-                                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                            >
-                                Xóa bộ lọc
-                            </button>
-                        </div>
+                    {loading ? (
+                        <p className="text-center py-12">Đang tải danh sách bác sĩ...</p>
+                    ) : filteredDoctors.length > 0 ? (
+                        <DoctorList doctors={filteredDoctors} />
+                    ) : (
+                        <NoResults clearFilters={clearFilters} />
                     )}
                 </div>
             </section>

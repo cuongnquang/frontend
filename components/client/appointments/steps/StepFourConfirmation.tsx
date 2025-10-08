@@ -1,116 +1,83 @@
-import React from 'react'
-import { Calendar, Clock, MapPin, Star, AlertCircle } from 'lucide-react'
-import { Doctor, PatientInfo, Hospital } from '@/components/client/appointments/AppointmentTypes'
+'use client';
 
+import React from 'react';
+import { Doctor, Patient } from '@/types/types';
+import { Hospital } from '@/app/client/appointments/data';
+import { Calendar, Clock, User, Phone, MapPin } from 'lucide-react';
+
+/**
+ * Props for the StepFourConfirmation component.
+ */
 interface StepFourProps {
-    selectedDoctor: Doctor | null
-    selectedHospital: Hospital | null
-    selectedDate: Date | null
-    selectedTime: string
-    patientInfo: PatientInfo
+  selectedDoctor: Doctor | null;
+  selectedHospital: Hospital | null;
+  selectedDate: Date | null;
+  selectedTime: string;
+  patientInfo: Partial<Patient>;
 }
 
-export default function StepFourConfirmation({
-    selectedDoctor,
-    selectedHospital,
-    selectedDate,
-    selectedTime,
-    patientInfo
-}: StepFourProps) {
-    const displayGender = patientInfo.gender === 'male' ? 'Nam' :
-        patientInfo.gender === 'female' ? 'Nữ' :
-            patientInfo.gender === 'other' ? 'Khác' : 'Chưa cung cấp'
+/**
+ * A reusable component to display a piece of information in the confirmation step.
+ */
+const InfoRow: React.FC<{ icon: React.ReactNode; label: string; value?: string | null }> = ({ icon, label, value }) => (
+  <div className="flex items-start py-3">
+    <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center text-blue-600">{icon}</div>
+    <div className="ml-4">
+      <p className="text-sm font-semibold text-gray-600">{label}</p>
+      <p className="text-md font-medium text-gray-900">{value || 'N/A'}</p>
+    </div>
+  </div>
+);
 
-    return (
-        <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                Xác nhận thông tin đặt lịch
-            </h2>
+/**
+ * Component for Step 4: Confirming all appointment details.
+ */
+export default function StepFourConfirmation({ 
+    selectedDoctor, 
+    selectedHospital, 
+    selectedDate, 
+    selectedTime, 
+    patientInfo 
+}: StepFourProps): React.ReactElement {
 
-            <div className="space-y-6">
-                {/* Selected entity info */}
-                <div className="p-4 bg-gray-50 rounded-lg">
-                    <h3 className="font-semibold text-lg mb-3 text-blue-600">Thông tin đặt khám</h3>
-                    {selectedDoctor && (
-                        <div className="flex items-center space-x-4">
-                            <div className="w-16 h-16 bg-gray-200 rounded-full flex-shrink-0"></div>
-                            <div>
-                                <h4 className="font-semibold text-gray-900">{selectedDoctor.name}</h4>
-                                <p className="text-blue-600 text-sm">{selectedDoctor.specialty}</p>
-                                <p className="text-gray-600 text-sm">{selectedDoctor.hospital}</p>
-                                <p className="font-semibold text-blue-600 text-sm">{selectedDoctor.price}</p>
-                            </div>
-                        </div>
-                    )}
-                    {selectedHospital && (
-                        <div className="flex items-center space-x-4">
-                            <div className="w-16 h-16 bg-gray-200 rounded-lg flex-shrink-0"></div>
-                            <div>
-                                <h4 className="font-semibold text-gray-900">{selectedHospital.name}</h4>
-                                <p className="text-gray-600 text-sm flex items-center"><MapPin className="w-4 h-4 mr-1 text-blue-500" />{selectedHospital.address}</p>
-                                <div className="flex items-center mt-1">
-                                    <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                                    <span className="ml-1 text-sm font-medium text-gray-700">{selectedHospital.rating}</span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
+  const entity = selectedDoctor || selectedHospital;
 
-                {/* Appointment info */}
-                <div className="p-4 bg-gray-50 rounded-lg">
-                    <h3 className="font-semibold text-lg mb-3 text-blue-600">Thông tin lịch hẹn</h3>
-                    <div className="grid md:grid-cols-2 gap-4">
-                        <div className="flex items-center">
-                            <Calendar className="w-5 h-5 text-blue-600 mr-2" />
-                            <span>Ngày: **{selectedDate?.toLocaleDateString('vi-VN')}**</span>
-                        </div>
-                        <div className="flex items-center">
-                            <Clock className="w-5 h-5 text-blue-600 mr-2" />
-                            <span>Giờ: **{selectedTime}**</span>
-                        </div>
-                    </div>
-                </div>
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200 mt-6">
+      <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-3">Xác nhận Thông tin Lịch hẹn</h2>
+      
+      <div className="divide-y divide-gray-200">
+        {/* Appointment Details */}
+        <InfoRow 
+          icon={<User />} 
+          label={selectedDoctor ? "Bác sĩ" : "Bệnh viện"} 
+          value={entity?.full_name || entity?.name}
+        />
+        <InfoRow 
+          icon={<Calendar />} 
+          label="Ngày khám" 
+          value={selectedDate ? selectedDate.toLocaleDateString('vi-VN') : 'Chưa chọn'}
+        />
+        <InfoRow 
+          icon={<Clock />} 
+          label="Giờ khám" 
+          value={selectedTime || 'Chưa chọn'}
+        />
 
-                {/* Patient info */}
-                <div className="p-4 bg-gray-50 rounded-lg">
-                    <h3 className="font-semibold text-lg mb-3 text-blue-600">Thông tin bệnh nhân</h3>
-                    <div className="grid md:grid-cols-2 gap-4 text-sm">
-                        <div><strong>Họ tên:</strong> {patientInfo.fullName}</div>
-                        <div><strong>Điện thoại:</strong> {patientInfo.phone}</div>
-                        <div><strong>Email:</strong> {patientInfo.email}</div>
-                        <div><strong>Ngày sinh:</strong> {patientInfo.birthDate || 'Chưa cung cấp'}</div>
-                        <div><strong>Giới tính:</strong> {displayGender}</div>
-                        <div><strong>Địa chỉ:</strong> {patientInfo.address || 'Chưa cung cấp'}</div>
-                        {patientInfo.symptoms && (
-                            <div className="md:col-span-2">
-                                <strong>Triệu chứng:</strong> {patientInfo.symptoms}
-                            </div>
-                        )}
-                        {patientInfo.notes && (
-                            <div className="md:col-span-2">
-                                <strong>Ghi chú:</strong> {patientInfo.notes}
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Terms */}
-                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <div className="flex items-start">
-                        <AlertCircle className="w-5 h-5 text-yellow-600 mr-2 mt-0.5 flex-shrink-0" />
-                        <div className="text-sm text-yellow-800">
-                            <p className="font-medium mb-1">Lưu ý quan trọng:</p>
-                            <ul className="list-disc list-inside space-y-1">
-                                <li>Vui lòng có mặt trước **15 phút** so với giờ hẹn</li>
-                                <li>Mang theo **CMND/CCCD** và các giấy tờ y tế liên quan</li>
-                                <li>Nếu cần hủy lịch, vui lòng thông báo trước 2 giờ</li>
-                                <li>Phí khám sẽ được thanh toán trực tiếp tại bệnh viện</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        {/* Patient Details */}
+        <div className="pt-4">
+            <h3 className="text-lg font-bold text-gray-700 mb-2">Thông tin Bệnh nhân</h3>
+            <InfoRow icon={<User />} label="Họ và tên" value={patientInfo.full_name} />
+            <InfoRow icon={<Phone />} label="Số điện thoại" value={patientInfo.phone_number} />
+            <InfoRow icon={<Calendar />} label="Ngày sinh" value={patientInfo.date_of_birth} />
+            <InfoRow icon={<User />} label="Giới tính" value={patientInfo.gender} />
+            <InfoRow icon={<MapPin />} label="Địa chỉ" value={patientInfo.address} />
         </div>
-    )
+      </div>
+
+      <div className="mt-6 bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-lg">
+        <p className="font-semibold">Vui lòng kiểm tra kỹ lại toàn bộ thông tin trước khi xác nhận đặt lịch.</p>
+      </div>
+    </div>
+  );
 }
