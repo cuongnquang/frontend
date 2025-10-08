@@ -42,7 +42,7 @@ export function DoctorLanguages({
                     value={newLanguage}
                     onChange={(e) => setNewLanguage(e.target.value)}
                     placeholder="Thêm ngôn ngữ"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
                 />
                 <button
                     type="button"

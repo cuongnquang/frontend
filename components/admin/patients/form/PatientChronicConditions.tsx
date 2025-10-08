@@ -55,7 +55,7 @@ export function PatientChronicConditions({ formData, setFormData, isReadOnly }: 
                         value={newCondition}
                         onChange={(e) => setNewCondition(e.target.value)}
                         placeholder="Thêm bệnh mãn tính"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
                     />
                     <button
                         type="button"

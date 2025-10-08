@@ -90,6 +90,9 @@ export interface DoctorSchedule {
 
 // Appointment
 export interface Appointment {
+  appointment_date: any;
+  appointment_time: any;
+  reason: any;
   appointment_id: string;
   patient_id: string;
   doctor_id: string;

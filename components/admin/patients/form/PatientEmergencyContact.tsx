@@ -14,7 +14,7 @@ export function PatientEmergencyContact({ formData, setFormData, isReadOnly }: P
                         disabled={isReadOnly}
                         value={formData.emergencyContactName}
                         onChange={(e) => setFormData({ ...formData, emergencyContactName: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                        className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     />
                 </div>
 
@@ -27,7 +27,7 @@ export function PatientEmergencyContact({ formData, setFormData, isReadOnly }: P
                         disabled={isReadOnly}
                         value={formData.emergencyContactPhone}
                         onChange={(e) => setFormData({ ...formData, emergencyContactPhone: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                        className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     />
                 </div>
 
@@ -40,7 +40,7 @@ export function PatientEmergencyContact({ formData, setFormData, isReadOnly }: P
                         disabled={isReadOnly}
                         value={formData.emergencyContactRelationship}
                         onChange={(e) => setFormData({ ...formData, emergencyContactRelationship: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                        className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     />
                 </div>
             </div>

@@ -1,27 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import {
     User, Calendar, Settings, LogOut, CheckCircle, FileText, Camera
 } from 'lucide-react'
 
-
 import ProfileDetails from '@/components/profile/ProfileDetails'
 import AppointmentsList from '@/components/profile/AppointmentsList'
 import MedicalRecordsList from '@/components/profile/MedicalRecordsList'
 import SettingsManagement from '@/components/profile/SettingsManagement'
-// Import Modals
 import ChangePasswordModal from '@/components/profile/ChangePasswordModal'
 import CancelAppointmentModal from '@/components/profile/CancelAppointmentModal'
 import DeleteAccountModal from '@/components/profile/DeleteAccountModal'
-// Import hooks
 import { useDeleteAccount } from '@/hooks/useDeleteAccount';
+import { useAuth } from '@/lib/AuthContext';
 
-
-// Interface Data (Được giữ lại ở đây để dễ quản lý state)
-interface Userprofile {
+interface UserProfile {
     id: number
     fullName: string
     email: string
@@ -63,49 +59,67 @@ interface MedicalRecord {
     files: string[]
 }
 
-
-export default function profilePage() {
+export default function ProfilePage() {
+    const { user, logout } = useAuth();
     const [activeTab, setActiveTab] = useState<'profile' | 'appointments' | 'records' | 'settings'>('profile')
     const [showDeleteModal, setShowDeleteModal] = useState(false)
     const [showCancelModal, setShowCancelModal] = useState<number | null>(null)
     const [showChangePassword, setShowChangePassword] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const { isDeleting, error, deleteAccount } = useDeleteAccount();
-    // User data (Kept here for global state management)
-    const [userprofile, setUserprofile] = useState<Userprofile>({
-        id: 1,
-        fullName: 'Nguyễn Văn Nam',
-        email: 'nguyen.van.nam@email.com',
-        phone: '0912345678',
-        birthDate: '1990-05-15',
-        gender: 'male',
-        address: '123 Nguyễn Văn Cừ, Quận 1, TP.HCM',
-        avatar: '/api/placeholder/150/150',
-        joinDate: '2023-01-15',
-        emailVerified: true,
+
+    const [userProfile, setUserProfile] = useState<UserProfile>({
+        id: 0,
+        fullName: '',
+        email: '',
+        phone: '',
+        birthDate: '',
+        gender: 'other',
+        address: '',
+        avatar: '',
+        joinDate: '',
+        emailVerified: false,
         phoneVerified: false,
-        insuranceNumber: 'BH123456789',
+        insuranceNumber: '',
         emergencyContact: {
-            name: 'Nguyễn Thị Mai',
-            phone: '0987654321',
-            relationship: 'Vợ'
+            name: '',
+            phone: '',
+            relationship: ''
         }
     })
 
-    // Appointments data (Kept here for global state management)
+    useEffect(() => {
+        if (user) {
+            setUserProfile(prevProfile => ({
+                ...prevProfile,
+                id: user.id || 0,
+                fullName: user.fullName || '',
+                email: user.email || '',
+                phone: user.phone || '',
+                birthDate: user.birthDate || prevProfile.birthDate,
+                gender: user.gender || prevProfile.gender,
+                address: user.address || prevProfile.address,
+                avatar: user.avatar || prevProfile.avatar,
+                joinDate: user.joinDate || prevProfile.joinDate,
+                emailVerified: user.emailVerified || false,
+                phoneVerified: user.phoneVerified || false,
+                insuranceNumber: user.insuranceNumber || '',
+                emergencyContact: user.emergencyContact || prevProfile.emergencyContact,
+            }));
+        }
+    }, [user]);
+
     const [appointments, setAppointments] = useState<Appointment[]>([
         { id: 1, doctorName: 'PGS.TS. Nguyễn Văn An', doctorSpecialty: 'Tim mạch', hospital: 'Bệnh viện Chợ Rẫy', date: '2024-10-15', time: '09:00', status: 'confirmed', price: '500.000đ', notes: 'Khám tổng quát tim mạch' },
         { id: 2, doctorName: 'BS. Trần Thị Bình', doctorSpecialty: 'Da liễu', hospital: 'Bệnh viện Da liễu TP.HCM', date: '2024-10-20', time: '14:30', status: 'pending', price: '350.000đ' },
         { id: 3, doctorName: 'TS.BS Lê Minh Châu', doctorSpecialty: 'Nhi khoa', hospital: 'Bệnh viện Nhi Đồng 1', date: '2024-09-28', time: '10:15', status: 'completed', price: '300.000đ' }
     ])
 
-    // Medical records data (Kept here for global state management)
     const [medicalRecords] = useState<MedicalRecord[]>([
         { id: 1, date: '2024-09-28', doctorName: 'TS.BS Lê Minh Châu', diagnosis: 'Viêm họng cấp', treatment: 'Kháng sinh + nghỉ ngơi', hospital: 'Bệnh viện Nhi Đồng 1', files: ['prescription.pdf', 'lab_results.pdf'] },
         { id: 2, date: '2024-08-15', doctorName: 'PGS.TS. Nguyễn Văn An', diagnosis: 'Kiểm tra sức khỏe định kỳ', treatment: 'Bình thường, theo dõi', hospital: 'Bệnh viện Chợ Rẫy', files: ['health_check.pdf'] }
     ])
 
-    // Password Form State (Moved to page.tsx to manage modal state, or could be moved to modal component)
     const [passwordForm, setPasswordForm] = useState({
         currentPassword: '',
         newPassword: '',
@@ -117,7 +131,6 @@ export default function profilePage() {
         confirm: false
     })
 
-    // Handle password change (Function kept here)
     const handleChangePassword = async () => {
         if (passwordForm.newPassword !== passwordForm.confirmPassword) {
             alert('Mật khẩu xác nhận không khớp!')
@@ -141,7 +154,6 @@ export default function profilePage() {
         }
     }
 
-    // Handle appointment cancellation (Function kept here)
     const handleCancelAppointment = async (appointmentId: number) => {
         setIsLoading(true)
         try {
@@ -160,11 +172,10 @@ export default function profilePage() {
         }
     }
 
-    // Handle account deletion (Function kept here)
     const handleDeleteAccount = async () => {
         setIsLoading(true)
         try {
-            const userId = userprofile.id;
+            const userId = userProfile.id;
             const success = await deleteAccount(userId);
 
             if (success) {
@@ -182,7 +193,6 @@ export default function profilePage() {
         }
     }
 
-    // Utility functions (Kept here for shared use)
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'confirmed': return 'bg-green-100 text-green-800'
@@ -209,32 +219,29 @@ export default function profilePage() {
 
             <div className="container mx-auto px-4 py-8">
                 <div className="flex flex-col lg:flex-row gap-8">
-                    {/* Sidebar (Kept here) */}
                     <div className="lg:w-1/4">
                         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                            {/* User Avatar & Basic Info */}
                             <div className="p-6 bg-gradient-to-br from-blue-500 to-blue-600 text-white">
                                 <div className="text-center">
                                     <div className="relative inline-block">
                                         <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-blue-600 text-2xl font-bold">
-                                            {userprofile.fullName.split(' ').map(n => n[0]).join('')}
+                                            {userProfile.fullName.split(' ').map(n => n[0]).join('')}
                                         </div>
                                         <button className="absolute -bottom-1 -right-1 w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center border-2 border-white hover:bg-blue-700 transition-colors">
                                             <Camera className="w-3 h-3 text-white" />
                                         </button>
                                     </div>
-                                    <h2 className="text-xl font-bold mt-3">{userprofile.fullName}</h2>
-                                    <p className="text-blue-100 text-sm">{userprofile.email}</p>
+                                    <h2 className="text-xl font-bold mt-3">{userProfile.fullName}</h2>
+                                    <p className="text-blue-100 text-sm">{userProfile.email}</p>
                                     <div className="flex items-center justify-center mt-2">
                                         <div className="flex items-center text-sm">
-                                            {userprofile.emailVerified && (<CheckCircle className="w-4 h-4 mr-1" />)}
+                                            {userProfile.emailVerified && (<CheckCircle className="w-4 h-4 mr-1" />)}
                                             <span>Đã xác thực</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Navigation Menu */}
                             <div className="p-4">
                                 <nav className="space-y-1">
                                     <button onClick={() => setActiveTab('profile')} className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors ${activeTab === 'profile' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}>
@@ -256,7 +263,7 @@ export default function profilePage() {
                                     </button>
                                 </nav>
                                 <div className="mt-6 pt-4 border-t">
-                                    <button className="w-full flex items-center px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                    <button onClick={logout} className="w-full flex items-center px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                                         <LogOut className="w-5 h-5 mr-3" /> Đăng xuất
                                     </button>
                                 </div>
@@ -264,12 +271,11 @@ export default function profilePage() {
                         </div>
                     </div>
 
-                    {/* Main Content (Uses new components) */}
                     <div className="lg:w-3/4">
                         {activeTab === 'profile' && (
                             <ProfileDetails
-                                userProfile={userprofile}
-                                setUserProfile={setUserprofile}
+                                userProfile={userProfile}
+                                setUserProfile={setUserProfile}
                                 isLoading={isLoading}
                             />
                         )}
@@ -302,7 +308,6 @@ export default function profilePage() {
 
             <Footer />
 
-            {/* Change Password Modal */}
             <ChangePasswordModal
                 showChangePassword={showChangePassword}
                 setShowChangePassword={setShowChangePassword}
@@ -314,7 +319,6 @@ export default function profilePage() {
                 setShowPasswords={setShowPasswords}
             />
 
-            {/* Cancel Appointment Modal */}
             <CancelAppointmentModal
                 showCancelModal={showCancelModal}
                 setShowCancelModal={setShowCancelModal}
@@ -322,7 +326,6 @@ export default function profilePage() {
                 handleCancelAppointment={handleCancelAppointment}
             />
 
-            {/* Delete Account Modal */}
             <DeleteAccountModal
                 showDeleteModal={showDeleteModal}
                 setShowDeleteModal={setShowDeleteModal}

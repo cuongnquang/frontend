@@ -33,7 +33,7 @@ export default function DoctorFilters({
                             placeholder="Tên, mã BS, số điện thoại..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
                         />
                     </div>
                 </div>
@@ -44,7 +44,7 @@ export default function DoctorFilters({
                     <select
                         value={specializationFilter}
                         onChange={(e) => setSpecializationFilter(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
                     >
                         <option value="all">Tất cả Chuyên khoa</option>
                         {availableSpecializations.map(spec => (
@@ -59,7 +59,7 @@ export default function DoctorFilters({
                     <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
                     >
                         <option value="all">Tất cả</option>
                         <option value="active">Đang làm việc</option>

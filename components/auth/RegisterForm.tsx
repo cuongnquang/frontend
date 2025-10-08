@@ -9,9 +9,11 @@ import {
 import Alert from '@/components/ui/Alert'
 import InputField from '@/components/ui/InputField'
 import PasswordField from '@/components/ui/PasswordField'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function RegisterForm() {
     const router = useRouter()
+    const { login } = useAuth()
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | null }>({ message: '', type: null })
@@ -34,6 +36,7 @@ export default function RegisterForm() {
         setErrors({})
         const newErrors: Record<string, string> = {}
 
+
         if (!form.email) newErrors.email = 'Nhập email'
         else if (!validateEmail(form.email)) newErrors.email = 'Email không hợp lệ'
         if (!form.password) newErrors.password = 'Nhập mật khẩu'
@@ -45,6 +48,7 @@ export default function RegisterForm() {
             setErrors(newErrors)
             return
         }
+
 
         setIsLoading(true)
         try {
@@ -58,12 +62,14 @@ export default function RegisterForm() {
             if (!res.ok) {
                 setAlert({ message: data.error || 'Đăng ký thất bại', type: 'error' })
             } else {
-                setAlert({ message: 'Đăng ký thành công! Vui lòng đăng nhập.', type: 'success' })
-                router.push('/auth/login')
+                await login(form.email, form.password)
+                setAlert({ message: 'Đăng ký thành công! Vui lòng hoàn tất hồ sơ.', type: 'success' })
+                router.push('/auth/complete-profile')
             }
         } catch (err) {
             console.error(err)
-            setAlert({ message: 'Lỗi kết nối server', type: 'error' })
+            const errorMessage = err instanceof Error ? err.message : 'Lỗi kết nối server';
+            setAlert({ message: errorMessage, type: 'error' })
         } finally {
             setIsLoading(false)
         }
@@ -72,7 +78,7 @@ export default function RegisterForm() {
     return (
         <div className="container mx-auto px-4 py-8">
             <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8">
-                <h1 className="text-3xl font-bold text-center mb-2">Đăng ký</h1>
+                <h1 className="text-3xl font-bold text-center mb-2 text-black">Đăng ký</h1>
                 <p className="text-center text-gray-600 mb-6">Tạo tài khoản để đặt lịch khám bệnh</p>
 
                 {alert.type && <Alert message={alert.message} type={alert.type} />}
@@ -136,4 +142,3 @@ export default function RegisterForm() {
         </div>
     )
 }
-

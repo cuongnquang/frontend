@@ -1,12 +1,11 @@
-import { Download, Plus, Upload } from 'lucide-react'
+import { Download, Plus } from 'lucide-react'
 import React from 'react'
 interface AppointmentPageHaderProps {
     onAdd: () => void
     onExport: (type: any) => void
-    onImport: () => void
 }
 
-export default function AppointmentHeader( { onAdd, onExport, onImport }: AppointmentPageHaderProps ) {
+export default function AppointmentHeader( { onAdd, onExport }: AppointmentPageHaderProps ) {
     return (
        <div className="flex justify-between items-center">
             <div>
@@ -20,13 +19,6 @@ export default function AppointmentHeader( { onAdd, onExport, onImport }: Appoin
                 >
                     <Download className="w-4 h-4 mr-2" />
                     Xuất Excel
-                </button>
-                <button
-                    onClick={onImport}
-                    className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 flex items-center"
-                >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Nhập Excel
                 </button>
                 <button
                     onClick={onAdd}

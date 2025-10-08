@@ -25,7 +25,6 @@ import {
     BookOpen
 } from 'lucide-react'
 import DoctorCard from '@/components/doctor/DoctorCard'
-import HospitalCard from '@/components/hospital/HospitalCard'
 
 interface Specialty {
     id: number
@@ -57,21 +56,6 @@ interface Doctor {
     achievements: string[]
 }
 
-interface Hospital {
-    id: number
-    name: string
-    type: 'Công lập' | 'Tư nhân'
-    level: string
-    district: string
-    rating: number
-    reviews: number
-    beds: number
-    doctors: number
-    specialties: number[]
-    emergency: boolean
-    priceRange: string
-    satisfactionRate: number
-}
 
 export default function SpecialtiesPage() {
     const searchParams = useSearchParams()
@@ -91,7 +75,7 @@ export default function SpecialtiesPage() {
     const [sortBy, setSortBy] = useState('rating')
     const [showFilters, setShowFilters] = useState(false)
     const [favoriteDoctors, setFavoriteDoctors] = useState<number[]>([])
-    const [favoriteHospitals, setFavoriteHospitals] = useState<number[]>([])
+    
 
     // Specialties data
     const specialties: Specialty[] = [
@@ -245,39 +229,7 @@ export default function SpecialtiesPage() {
         }
     ]
 
-    // Sample hospitals data
-    const hospitals: Hospital[] = [
-        {
-            id: 1,
-            name: 'Bệnh viện Chợ Rẫy',
-            type: 'Công lập',
-            level: 'Hạng I',
-            district: 'Quận 5',
-            rating: 4.6,
-            reviews: 1250,
-            beds: 1200,
-            doctors: 450,
-            specialties: [1, 4, 6],
-            emergency: true,
-            priceRange: '50.000đ - 500.000đ',
-            satisfactionRate: 92
-        },
-        {
-            id: 2,
-            name: 'Vinmec Central Park',
-            type: 'Tư nhân',
-            level: 'Đặc biệt',
-            district: 'Quận Bình Thạnh',
-            rating: 4.8,
-            reviews: 756,
-            beds: 500,
-            doctors: 280,
-            specialties: [1, 5, 6, 8],
-            emergency: true,
-            priceRange: '200.000đ - 1.500.000đ',
-            satisfactionRate: 96
-        }
-    ]
+
 
     const locations = ['Quận 1', 'Quận 3', 'Quận 5', 'Quận 7', 'Quận 10', 'Quận Bình Thạnh', 'Quận Tân Bình']
     const priceRanges = ['Dưới 200k', '200k - 400k', '400k - 600k', 'Trên 600k']
@@ -289,19 +241,9 @@ export default function SpecialtiesPage() {
             doctor.specialty.toLowerCase().includes(searchQuery.toLowerCase()))
     )
 
-    const filteredHospitals = hospitals.filter(hospital =>
-        (!selectedSpecialty || hospital.specialties.includes(selectedSpecialty))
-    )
-
     const toggleDoctorFavorite = (doctorId: number) => {
         setFavoriteDoctors(prev =>
             prev.includes(doctorId) ? prev.filter(id => id !== doctorId) : [...prev, doctorId]
-        )
-    }
-
-    const toggleHospitalFavorite = (hospitalId: number) => {
-        setFavoriteHospitals(prev =>
-            prev.includes(hospitalId) ? prev.filter(id => id !== hospitalId) : [...prev, hospitalId]
         )
     }
 
@@ -583,15 +525,7 @@ export default function SpecialtiesPage() {
                                             >
                                                 Bác sĩ ({filteredDoctors.length})
                                             </button>
-                                            <button
-                                                onClick={() => setActiveTab('hospitals')}
-                                                className={`px-6 py-4 font-medium border-b-2 transition-colors ${activeTab === 'hospitals'
-                                                    ? 'border-blue-600 text-blue-600'
-                                                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                                                    }`}
-                                            >
-                                                Bệnh viện ({filteredHospitals.length})
-                                            </button>
+                                            
                                         </div>
                                     </div>
 
@@ -673,19 +607,6 @@ export default function SpecialtiesPage() {
                                             </div>
                                         )}
 
-                                        {/* Hospitals Tab */}
-                                        {activeTab === 'hospitals' && (
-                                            <div className="space-y-4">
-                                                {filteredHospitals.map((hospital) => (
-                                                    <HospitalCard key={hospital.id} variant='list' hospital={hospital} />
-                                                ))}
-                                                {filteredHospitals.length === 0 && (
-                                                    <div className="text-center text-gray-500 text-sm py-8">
-                                                        Không có bệnh viện phù hợp
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                             </div>

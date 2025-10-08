@@ -116,6 +116,9 @@ export default function LoginPage() {
                             'Đăng nhập'
                         )}
                     </button>
+                    <Link href="/" className="w-full block text-center border border-blue-600 text-blue-700 py-3 rounded-lg hover:bg-gray-100">
+                        Quay về trang chủ
+                    </Link>
                 </form>
 
                 <p className="mt-6 text-center text-gray-600 text-sm">
