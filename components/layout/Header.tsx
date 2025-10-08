@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Menu, X, Phone, MapPin, User, LogOut, Settings, ChevronDown } from 'lucide-react'
-import { useAuth } from '@/lib/AuthContext'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false)

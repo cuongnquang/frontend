@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Review } from '@/lib/types'
+import { Review } from '@/types'
 import { Star, Verified, ChevronDown, ChevronUp, User } from 'lucide-react'
 
 interface TabContentReviewsProps {

@@ -10,42 +10,22 @@ import Alert from '@/components/ui/Alert'
 import InputField from '@/components/ui/InputField'
 import PasswordField from '@/components/ui/PasswordField'
 
-type Specialty = { id: number; name: string }
-
 export default function RegisterForm() {
     const router = useRouter()
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | null }>({ message: '', type: null })
-    const [specialties, setSpecialties] = useState<Specialty[]>([])
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [isLoading, setIsLoading] = useState(false)
 
     const [form, setForm] = useState({
-        fullName: '',
         email: '',
-        phone: '',
         password: '',
         confirmPassword: '',
-        role: 'patient',
-        specialty: '',
         agreeTerms: false
     })
 
-    // Load specialties từ API
-    useEffect(() => {
-        async function fetchSpecialties() {
-            try {
-                const res = await fetch('/api/specialty')
-                const data = await res.json()
-                setSpecialties(data)
-            } catch (err) {
-                console.error(err)
-                setAlert({ message: 'Không thể load chuyên khoa', type: 'error' })
-            }
-        }
-        fetchSpecialties()
-    }, [])
+    const {agreeTerms, ...dataWithoutAgreeTerms} = form
 
     const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
@@ -54,15 +34,12 @@ export default function RegisterForm() {
         setErrors({})
         const newErrors: Record<string, string> = {}
 
-        if (!form.fullName) newErrors.fullName = 'Nhập họ tên'
         if (!form.email) newErrors.email = 'Nhập email'
         else if (!validateEmail(form.email)) newErrors.email = 'Email không hợp lệ'
-        if (!form.phone) newErrors.phone = 'Nhập số điện thoại'
         if (!form.password) newErrors.password = 'Nhập mật khẩu'
         else if (form.password.length < 8) newErrors.password = 'Mật khẩu ít nhất 8 ký tự'
         if (form.password !== form.confirmPassword) newErrors.confirmPassword = 'Mật khẩu không khớp'
         if (!form.agreeTerms) newErrors.agreeTerms = 'Cần đồng ý điều khoản'
-        if (form.role === 'doctor' && !form.specialty) newErrors.specialty = 'Chọn chuyên khoa'
 
         if (Object.keys(newErrors).length) {
             setErrors(newErrors)
@@ -74,7 +51,7 @@ export default function RegisterForm() {
             const res = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(form)
+                body: JSON.stringify(dataWithoutAgreeTerms)
             })
             const data = await res.json()
 
@@ -101,16 +78,7 @@ export default function RegisterForm() {
                 {alert.type && <Alert message={alert.message} type={alert.type} />}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Full name */}
-                    <InputField
-                        icon={<User />}
-                        label="Họ và tên"
-                        value={form.fullName}
-                        onChange={(v: any) => setForm({ ...form, fullName: v })}
-                        error={errors.fullName}
-                        placeholder="Nhập họ tên"
-                    />
-
+                    
                     {/* Email */}
                     <InputField
                         icon={<Mail />}
@@ -121,48 +89,6 @@ export default function RegisterForm() {
                         error={errors.email}
                         placeholder="email@example.com"
                     />
-
-                    {/* Phone */}
-                    <InputField
-                        icon={<Phone />}
-                        label="Số điện thoại"
-                        value={form.phone}
-                        onChange={(v: any) => setForm({ ...form, phone: v })}
-                        error={errors.phone}
-                        placeholder="0123456789"
-                    />
-
-                    {/* Role */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Vai trò *</label>
-                        <select
-                            className="w-full pl-3 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 border-gray-300"
-                            value={form.role}
-                            onChange={(e) => setForm({ ...form, role: e.target.value })}
-                        >
-                            <option value="patient">Bệnh nhân</option>
-                            <option value="doctor">Bác sĩ</option>
-                            <option value="admin">Quản trị viên</option>
-                        </select>
-                    </div>
-
-                    {/* Specialty */}
-                    {form.role === 'doctor' && (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Chuyên khoa *</label>
-                            <select
-                                className={`w-full pl-3 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.specialty ? 'border-red-300' : 'border-gray-300'}`}
-                                value={form.specialty}
-                                onChange={(e) => setForm({ ...form, specialty: e.target.value })}
-                            >
-                                <option value="">-- Chọn chuyên khoa --</option>
-                                {specialties.map((sp) => (
-                                    <option key={sp.id} value={sp.id}>{sp.name}</option>
-                                ))}
-                            </select>
-                            {errors.specialty && <p className="text-sm text-red-600 mt-1">{errors.specialty}</p>}
-                        </div>
-                    )}
 
                     {/* Password */}
                     <PasswordField
@@ -193,7 +119,7 @@ export default function RegisterForm() {
                             className={`mr-2 rounded border-gray-300 text-blue-600 ${errors.agreeTerms ? 'border-red-300' : ''}`}
                         />
                         Tôi đồng ý với{" "}
-                        <Link href="/terms" className="text-blue-600 ml-1">Điều khoản</Link> và{" "}
+                        <Link href="/terms" className="text-blue-600 ml-1">Điều khoản</Link>và{" "}
                         <Link href="/privacy" className="text-blue-600 ml-1">Chính sách</Link>
                     </label>
                     {errors.agreeTerms && <p className="text-sm text-red-600 mt-1">{errors.agreeTerms}</p>}
@@ -206,16 +132,6 @@ export default function RegisterForm() {
                         {isLoading ? 'Đang tạo tài khoản...' : 'Tạo tài khoản'}
                     </button>
                 </form>
-
-                {/* Social login */}
-                <div className="mt-6 space-y-3">
-                    <button className="w-full px-4 py-3 border border-gray-300 rounded-lg flex justify-center">
-                        Tiếp tục với Google
-                    </button>
-                    <button className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg flex justify-center">
-                        <Facebook className="w-5 h-5 mr-2" /> Tiếp tục với Facebook
-                    </button>
-                </div>
             </div>
         </div>
     )
