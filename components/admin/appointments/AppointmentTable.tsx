@@ -1,6 +1,6 @@
 import React from 'react'
 import { Edit, Trash2, Eye, Phone, MapPin, Award } from 'lucide-react'
-import { Appointment } from './AppointmentType'
+import { Appointment } from '@/types/types'
 
 interface AppointmentTableRowProps {
     appointment: Appointment
@@ -14,7 +14,9 @@ const getStatusText = (availability: Appointment['status']) => {
     switch (availability) {
         case 'completed': return 'Hoàn thành'
         case 'cancelled': return 'Đã hủy'
-        default: return 'Chờ xác nhận'
+        case 'confirmed': return 'Đã xác nhận'
+        case 'pending': return 'Chờ xác nhận'
+        default: return 'Không rõ'
     }
 }
 
@@ -25,26 +27,26 @@ const AppointmentTableRow: React.FC<AppointmentTableRowProps> = ({
     onEdit,
     onDelete,
 }) => (
-    <tr key={appointment.id} className="hover:bg-gray-50">
+    <tr key={appointment.appointment_id} className="hover:bg-gray-50">
         {/* Cột 1: Bệnh nhân */}
         <td className="px-6 py-4 whitespace-nowrap">
             <div className="flex items-center">
                 <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                    <span className="text-indigo-600 font-semibold">{appointment.patientName.charAt(4)}</span>
+                    <span className="text-indigo-600 font-semibold">{appointment.Patient.full_name.charAt(0)}</span>
                 </div>
                 <div className="ml-4">
-                    <div className="text-sm font-medium text-gray-900">{appointment.patientName}</div>
-                    <div className="text-sm text-gray-500">Mã: {appointment.id}</div>
+                    <div className="text-sm font-medium text-gray-900">{appointment.Patient.full_name}</div>
+                    <div className="text-sm text-gray-500">Mã: {appointment.patient_id}</div>
                 </div>
             </div>
         </td>
 
         {/* Cột 2: Bác sĩ */}
         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-            <p className="font-medium text-gray-900">{appointment.doctorName}</p>
+            <p className="font-medium text-gray-900">{appointment.Doctor.full_name}</p>
             <p className="text-xs mt-1 flex items-center">
                 <Award className="w-3 h-3 inline mr-1 text-gray-400" />
-                {appointment.doctorName}
+                {appointment.Doctor.Specialty.name}
             </p>
         </td>
 
@@ -52,11 +54,11 @@ const AppointmentTableRow: React.FC<AppointmentTableRowProps> = ({
         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
             <div className="flex items-center space-x-2">
                 <Phone className="w-4 h-4 text-gray-400" />
-                <span>{appointment.date}</span>
+                <span>{new Date(appointment.DoctorSchedule.schedule_date).toLocaleDateString('vi-VN')}</span>
             </div>
             <div className="flex items-center space-x-2 mt-1">
                 <MapPin className="w-4 h-4 text-gray-400" />
-                <span className="truncate max-w-xs">{appointment.time}</span>
+                <span className="truncate max-w-xs">{appointment.DoctorSchedule.start_time} - {appointment.DoctorSchedule.end_time}</span>
             </div>
         </td>
 
@@ -67,11 +69,9 @@ const AppointmentTableRow: React.FC<AppointmentTableRowProps> = ({
             </span>
         </td>
 
-        {/* Cột 5: Phí */}
-        <td className="px-6 py-4 whitespace-nowrap">
-            <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColorAppointment(appointment.status)}`}>
-                {appointment.consultationFee} VND
-            </span>
+        {/* Cột 5: Triệu chứng */}
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            {appointment.symptoms}
         </td>
 
         {/* Cột 6: Thao tác */}
@@ -99,7 +99,7 @@ interface AppointmentTableProps {
     onEdit: (appointment: Appointment) => void
     onDelete: (appointment: Appointment) => void
 }
-export default function DoctorTable({
+export default function AppointmentTable({
     filteredAppointments,
     getStatusColorAppointment,
     onView,
@@ -134,7 +134,7 @@ export default function DoctorTable({
                                 Trạng thái
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Phí
+                                Triệu chứng
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Thao tác
@@ -144,7 +144,7 @@ export default function DoctorTable({
                     <tbody className="bg-white divide-y divide-gray-200">
                         {filteredAppointments.map((appointment) => (
                             <AppointmentTableRow
-                                key={appointment.id}
+                                key={appointment.appointment_id}
                                 appointment={appointment}
                                 getStatusColorAppointment={getStatusColorAppointment}
                                 onView={onView}

@@ -2,14 +2,12 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { Menu, X, Phone, MapPin, User, LogOut, Settings, ChevronDown } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 
 export default function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
-    const router = useRouter()
     const { user, logout } = useAuth()
 
     return (

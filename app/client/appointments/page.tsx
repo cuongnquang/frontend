@@ -5,7 +5,11 @@ import { useSearchParams } from 'next/navigation'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 
-// 1. Nhập các components đã tạo
+// Import centralized types and refactored mock data
+import { Doctor, Patient, Gender } from '@/types/types'
+import { mockDoctors, mockHospitals, mockTimeSlots, Hospital } from './data'
+
+// Import components
 import AppointmentHeader from '@/components/client/appointments/AppointmentHeader'
 import AppointmentProgress from '@/components/client/appointments/AppointmentProgress'
 import SelectedInfoCard from '@/components/client/appointments/SelectedInfoCard'
@@ -13,98 +17,84 @@ import StepNavigation from '@/components/client/appointments/StepNavigation'
 import StepTwoDateTimeSelection from '@/components/client/appointments/steps/StepTwoDateTimeSelection'
 import StepThreePatientInfoForm from '@/components/client/appointments/steps/StepThreePatientInfoForm'
 import StepFourConfirmation from '@/components/client/appointments/steps/StepFourConfirmation'
-import { Doctor, Hospital, TimeSlot, PatientInfo } from '@/components/client/appointments/AppointmentTypes'
-import { Gender } from '@/types/emuns'
 
-
-// 3. Main Component
 export default function AppointmentPage() {
     // --- State Management ---
-    const [currentStep, setCurrentStep] = useState(2) // Bắt đầu từ bước 2 theo yêu cầu
-    const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null)
-    const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(null)
-    const [selectionType, setSelectionType] = useState<'doctor' | 'hospital'>('doctor') // Giữ lại cho logic pre-select
-    const [selectedDate, setSelectedDate] = useState<Date | null>(null)
-    const [selectedTime, setSelectedTime] = useState<string>('')
-    const [patientInfo, setPatientInfo] = useState<PatientInfo>({
-        fullName: '',
-        phone: '',
-        email: '',
-        birthDate: '',
+    const [currentStep, setCurrentStep] = useState(2);
+    const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+    const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(null);
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+    const [selectedTime, setSelectedTime] = useState<string>('');
+    
+    // Use Partial<Patient> for the form, as it's built incrementally
+    const [patientInfo, setPatientInfo] = useState<Partial<Patient>>({
+        full_name: '',
+        phone_number: '',
+        // email is not in the Patient type, but is useful for forms.
+        // We can add it as an optional field to the main type if needed.
+        // For now, we handle it locally.
         gender: Gender.MALE,
+        date_of_birth: '',
         address: '',
-        symptoms: '',
-        notes: ''
-    })
+    });
 
-    // --- Mock Data (Giữ trong file chính hoặc di chuyển sang file data) ---
-    const doctors: Doctor[] = [
-        { id: 1, name: 'BS. Nguyễn Văn An', specialty: 'Tim mạch', hospital: 'Bệnh viện Chợ Rẫy', rating: 4.8, price: '500.000đ', image: '/api/placeholder/80/80' },
-        { id: 2, name: 'PGS.TS. Trần Thị Bình', specialty: 'Nhi khoa', hospital: 'Bệnh viện Nhi Đồng 1', rating: 4.9, price: '600.000đ', image: '/api/placeholder/80/80' },
-        { id: 3, name: 'BS. Lê Minh Châu', specialty: 'Da liễu', hospital: 'Bệnh viện Da liễu TP.HCM', rating: 4.7, price: '450.000đ', image: '/api/placeholder/80/80' }
-    ]
-
-    const hospitals: Hospital[] = [
-        { id: 101, name: 'Bệnh viện Chợ Rẫy', address: '201B Nguyễn Chí Thanh, Q.5, TP.HCM', rating: 4.7, image: '/api/placeholder/80/80' },
-        { id: 102, name: 'Bệnh viện Nhi Đồng 1', address: '341 Sư Vạn Hạnh, Q.10, TP.HCM', rating: 4.8, image: '/api/placeholder/80/80' },
-        { id: 103, name: 'Bệnh viện Da liễu TP.HCM', address: '2 Nguyễn Thông, Q.3, TP.HCM', rating: 4.6, image: '/api/placeholder/80/80' }
-    ]
-
-    const timeSlots: TimeSlot[] = [
-        { time: '08:00', available: true }, { time: '08:30', available: true }, { time: '09:00', available: false },
-        { time: '09:30', available: true }, { time: '10:00', available: true }, { time: '10:30', available: false },
-        { time: '14:00', available: true }, { time: '14:30', available: true }, { time: '15:00', available: true },
-        { time: '15:30', available: false }, { time: '16:00', available: true }, { time: '16:30', available: true }
-    ]
+    // --- Data ---
+    // Data is now imported from ./data.ts
+    const doctors = mockDoctors;
+    const hospitals = mockHospitals;
+    const timeSlots = mockTimeSlots;
 
     // --- Utility Functions ---
-    const handlePatientInfoChange = (field: string, value: string) => {
-        setPatientInfo(prev => ({ ...prev, [field]: value }))
-    }
+    const handlePatientInfoChange = (field: keyof Patient, value: string | Gender) => {
+        setPatientInfo(prev => ({ ...prev, [field]: value }));
+    };
 
     // --- Validation Logic ---
     const isStepValid = (step: number): boolean => {
         switch (step) {
             case 2:
-                // Thêm điều kiện: Phải có Doctor/Hospital được chọn từ Bước 1 (pre-select)
                 const isEntitySelected = selectedDoctor !== null || selectedHospital !== null;
                 return isEntitySelected && selectedDate !== null && selectedTime !== '';
             case 3:
-                return patientInfo.fullName.trim() !== '' && patientInfo.phone.trim() !== '' && patientInfo.email.trim() !== ''
+                // Check for core patient info fields
+                return !!patientInfo.full_name && !!patientInfo.phone_number && !!patientInfo.date_of_birth;
             case 4:
-                return isStepValid(2) && isStepValid(3)
+                return isStepValid(2) && isStepValid(3);
             default:
-                return false
+                return false;
         }
-    }
+    };
 
-    // Logic đặt trước từ URL
-    const searchParams = useSearchParams()
+    // --- Effects ---
+    const searchParams = useSearchParams();
     useEffect(() => {
-        const doctorId = searchParams.get('doctorId')
-        const hospitalId = searchParams.get('hospitalId')
+        const doctorId = searchParams.get('doctorId');
+        const hospitalId = searchParams.get('hospitalId');
 
         if (doctorId) {
-            const found = doctors.find(d => String(d.id) === doctorId)
+            const found = doctors.find(d => d.doctor_id === doctorId);
             if (found) {
-                setSelectedDoctor(found)
-                setSelectedHospital(null)
-                setSelectionType('doctor')
+                setSelectedDoctor(found);
+                setSelectedHospital(null);
             }
         } else if (hospitalId) {
-            const found = hospitals.find(h => String(h.id) === hospitalId)
+            const found = hospitals.find(h => String(h.id) === hospitalId);
             if (found) {
-                setSelectedHospital(found)
-                setSelectedDoctor(null)
-                setSelectionType('hospital')
+                setSelectedHospital(found);
+                setSelectedDoctor(null);
             }
         }
-        // Nếu không có pre-select, cần phải có Bước 1 trong ứng dụng thực tế
-        // Hiện tại, code đang mặc định bắt đầu từ Bước 2 và giả định đã có Doctor/Hospital được chọn.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [searchParams])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchParams]);
 
-    // --- Submission Handler ---
+    useEffect(() => {
+        if (!selectedDoctor && !selectedHospital) {
+            setSelectedDoctor(doctors[0]);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // --- Handlers ---
     const handleSubmit = () => {
         console.log('Appointment submitted:', {
             doctor: selectedDoctor,
@@ -112,42 +102,33 @@ export default function AppointmentPage() {
             date: selectedDate,
             time: selectedTime,
             patientInfo
-        })
-        alert('Đặt lịch thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.')
-    }
+        });
+        alert('Đặt lịch thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.');
+    };
 
     const handleNext = () => setCurrentStep(currentStep + 1);
     const handleBack = () => setCurrentStep(Math.max(2, currentStep - 1));
-
-
-    // *** Trong ứng dụng thực tế, nên chuyển bước 1 (chọn bác sĩ/bệnh viện) vào code
-    // Hiện tại, để code chạy từ bước 2 theo yêu cầu, tôi giả định một lựa chọn mặc định nếu không có URL param.
-    useEffect(() => {
-        if (!selectedDoctor && !selectedHospital) {
-            // Giả định chọn bác sĩ đầu tiên nếu không có URL param
-            setSelectedDoctor(doctors[0]);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+    const handleBookAppointment = () => {
+        // Logic to navigate to the beginning of the flow or open a modal
+        alert('Chức năng Đặt lịch hẹn mới sẽ được thực hiện');
+    };
 
     // --- Render ---
     return (
         <main className="min-h-screen bg-gray-50">
             <Header />
 
-            <AppointmentHeader />
+            <AppointmentHeader onBookAppointment={handleBookAppointment} />
 
             <AppointmentProgress currentStep={currentStep} />
 
             <section className="py-8">
                 <div className="container mx-auto px-4 max-w-4xl">
-                    {/* Thông tin đã chọn (Hiển thị cố định) */}
                     <SelectedInfoCard
                         selectedDoctor={selectedDoctor}
                         selectedHospital={selectedHospital}
                     />
 
-                    {/* Render Steps */}
                     {currentStep === 2 && (
                         <StepTwoDateTimeSelection
                             selectedDate={selectedDate}
@@ -175,7 +156,6 @@ export default function AppointmentPage() {
                         />
                     )}
 
-                    {/* Navigation buttons */}
                     <StepNavigation
                         currentStep={currentStep}
                         onBack={handleBack}
@@ -183,11 +163,10 @@ export default function AppointmentPage() {
                         onSubmit={handleSubmit}
                         isNextDisabled={!isStepValid(currentStep)}
                     />
-
                 </div>
             </section>
 
             <Footer />
         </main>
-    )
+    );
 }

@@ -3,13 +3,11 @@
 import { useState, useMemo } from 'react'
 import { Calendar, CheckCircle, XCircle } from 'lucide-react'
 import AppointmentStatistics from '@/components/admin/appointments/AppointmentStatistics'
-import { Appointment } from '@/components/admin/appointments/AppointmentType'
-import { AppointmentStatus, Gender } from '@/types/emuns'
 import AppointmentFilters from '@/components/admin/appointments/AppointmentFilters'
 import AppointmentTable from '@/components/admin/appointments/AppointmentTable'
 import AppointmentHeader from '@/components/admin/appointments/AppointmentPageHeader'
 import { AppointmentForm } from '@/components/admin/appointments/form/AppointmentForm'
-import { Doctor, Patient } from '@/types/types'
+import { Doctor, Patient, Appointment, Specialty, DoctorSchedule, User, AppointmentStatus, Role, Gender} from '@/types/types'
 
 
 const getStatusColorAppointment = (availability: Appointment['status']) => {
@@ -21,107 +19,87 @@ const getStatusColorAppointment = (availability: Appointment['status']) => {
 }
 
 // Mock data for doctors and patients, needed for the form
+const mockUsers: User[] = [
+    { user_id: '1', email: 'doctor.an@email.com', role: Role.DOCTOR, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    { user_id: '2', email: 'doctor.binh@email.com', role: Role.DOCTOR, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    { user_id: '3', email: 'patient.cuong@email.com', role: Role.PATIENT, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    { user_id: '4', email: 'patient.duyen@email.com', role: Role.PATIENT, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+];
+
+const mockSpecialties: Specialty[] = [
+    { specialty_id: '1', name: 'Tim mạch', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), Doctors: [] },
+    { specialty_id: '2', name: 'Da liễu', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), Doctors: [] },
+];
+
 const mockDoctors: Doctor[] = [
-    { doctor_id: 'BS001', full_name: 'BS. Nguyễn Văn An', Specialty: { name: 'Tim mạch' } },
-    { doctor_id: 'BS002', full_name: 'BS. Trần Thị Bình', Specialty: { name: 'Da liễu' } },
-    { doctor_id: 'BS003', full_name: 'BS. Lê Văn Cường', Specialty: { name: 'Nhi khoa' } },
-    { doctor_id: 'BS004', full_name: 'BS. Phạm Thị Duyên', Specialty: { name: 'Tim mạch' } },
+    { doctor_id: 'BS001', user_id: '1', specialty_id: '1', full_name: 'BS. Nguyễn Văn An', experience_years: 10, is_available: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), User: mockUsers[0], Specialty: mockSpecialties[0], Schedules: [], Appointments: [] },
+    { doctor_id: 'BS002', user_id: '2', specialty_id: '2', full_name: 'BS. Trần Thị Bình', experience_years: 5, is_available: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), User: mockUsers[1], Specialty: mockSpecialties[1], Schedules: [], Appointments: [] },
 ]
 
 const mockPatients: Patient[] = [
-    {
-        patient_id: 'BN001',
-        full_name: 'Nguyễn Văn An',
-        phone_number: '0901234567',
-        gender: Gender.MALE,
-        date_of_birth: '1985-03-15',
-        User: { email: 'nva@email.com' }
-    },
-    {
-        patient_id: 'BN002',
-        full_name: 'Trần Thị Bình',
-        phone_number: '0901234568',
-        gender: Gender.FEMALE,
-        date_of_birth: '1990-07-22',
-        User: { email: 'ttb@email.com' }
-    },
-    {
-        patient_id: 'BN003',
-        full_name: 'Lê Văn Cường',
-        phone_number: '0901234569',
-        gender: Gender.MALE,
-        date_of_birth: '1995-12-05',
-        User: { email: 'lvc@email.com' }
-    },
-    {
-        patient_id: 'BN004',
-        full_name: 'Phạm Thị Duyên',
-        phone_number: '0901234570',
-        gender: Gender.FEMALE,
-        date_of_birth: '1970-01-01',
-        User: { email: 'ptd@email.com' }
-    }
+    { patient_id: 'BN001', user_id: '3', full_name: 'Lê Văn Cường', phone_number: '0901234569', date_of_birth: '1995-12-05', gender: Gender.MALE, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), User: mockUsers[2], Appointments: [] },
+    { patient_id: 'BN002', user_id: '4', full_name: 'Phạm Thị Duyên', phone_number: '0901234570', date_of_birth: '1970-01-01', gender: Gender.FEMALE, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), User: mockUsers[3], Appointments: [] },
 ]
 
-
-
-
-
-
+const mockSchedules: DoctorSchedule[] = [
+    { schedule_id: '1', doctor_id: 'BS001', schedule_date: '2024-03-10', start_time: '09:00', end_time: '11:00', is_available: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), Doctor: mockDoctors[0], Appointments: [] },
+    { schedule_id: '2', doctor_id: 'BS002', schedule_date: '2024-03-11', start_time: '14:00', end_time: '16:00', is_available: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), Doctor: mockDoctors[1], Appointments: [] },
+];
 
 // --- 2. DỮ LIỆU MOCK (Thay thế bằng fetch API thực tế) ---
 const mockAppointments: Appointment[] = [
     {
-        id: 'LH001',
-        patientName: 'Nguyễn Văn An',
-        patientId: 'BN001',
-        doctorName: 'BS. Nguyễn Văn An',
-        doctorId: 'BS001',
-        specialization: 'Tim mạch',
-        date: '2024-03-01',
-        time: '10:00',
-        status: AppointmentStatus.Completed,
-        reason: 'Khám tổng quát',
-        consultationFee: 500000,
+        appointment_id: 'LH001',
+        patient_id: 'BN001',
+        doctor_id: 'BS001',
+        schedule_id: '1',
+        symptoms: 'Đau ngực, khó thở',
+        status: AppointmentStatus.COMPLETED,
+        created_at: '2024-03-01T10:00:00Z',
+        updated_at: '2024-03-01T10:00:00Z',
+        Patient: mockPatients[0],
+        Doctor: mockDoctors[0],
+        DoctorSchedule: mockSchedules[0],
     },
     {
-        id: 'LH002',
-        patientName: 'Trần Thị Bình',
-        patientId: 'BN002',
-        doctorName: 'BS. Trần Thị Bình',
-        doctorId: 'BS002',
-        specialization: 'Da liễu',
-        date: '2024-02-28',
-        time: '14:30',
-        status: AppointmentStatus.Completed,
-        reason: 'Tái khám da liễu',
-        consultationFee: 750000,
+        appointment_id: 'LH002',
+        patient_id: 'BN002',
+        doctor_id: 'BS002',
+        schedule_id: '2',
+        symptoms: 'Phát ban, ngứa',
+        status: AppointmentStatus.CONFIRMED,
+        created_at: '2024-03-05T14:30:00Z',
+        updated_at: '2024-03-05T14:30:00Z',
+        Patient: mockPatients[1],
+        Doctor: mockDoctors[1],
+        DoctorSchedule: mockSchedules[1],
     },
     {
-        id: 'LH003',
-        patientName: 'Lê Văn Cường',
-        patientId: 'BN003',
-        doctorName: 'BS. Lê Văn Cường',
-        doctorId: 'BS003',
-        specialization: 'Nhi khoa',
-        date: '2024-03-05',
-        time: '09:00',
-        status: AppointmentStatus.Cancelled,
-        reason: 'Cảm cúm thông thường',
-        consultationFee: 400000,
+        appointment_id: 'LH003',
+        patient_id: 'BN001',
+        doctor_id: 'BS002',
+        schedule_id: '2',
+        symptoms: 'Ho, sốt',
+        status: AppointmentStatus.CANCELLED,
+        cancellation_reason: 'Bệnh nhân bận đột xuất',
+        created_at: '2024-03-08T09:00:00Z',
+        updated_at: '2024-03-08T09:00:00Z',
+        Patient: mockPatients[0],
+        Doctor: mockDoctors[1],
+        DoctorSchedule: mockSchedules[1],
     },
     {
-        id: 'LH004',
-        patientName: 'Phạm Thị Duyên',
-        patientId: 'BN004',
-        doctorName: 'BS. Phạm Thị Duyên',
-        doctorId: 'BS004',
-        specialization: 'Tim mạch',
-        date: '2024-03-10',
-        time: '16:00',
-        status: AppointmentStatus.Pending,
-        reason: 'Kiểm tra huyết áp',
-        consultationFee: 500000,
+        appointment_id: 'LH004',
+        patient_id: 'BN002',
+        doctor_id: 'BS001',
+        schedule_id: '1',
+        symptoms: 'Kiểm tra định kỳ',
+        status: AppointmentStatus.PENDING,
+        created_at: '2024-03-09T16:00:00Z',
+        updated_at: '2024-03-09T16:00:00Z',
+        Patient: mockPatients[1],
+        Doctor: mockDoctors[0],
+        DoctorSchedule: mockSchedules[0],
     },
 ]
 
@@ -154,9 +132,9 @@ export default function AdminAppointments() {
     // Filter logic
     const filteredAppointments = useMemo(() => {
         return appointments.filter(appt => {
-            const matchesSearch = appt.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                appt.doctorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                appt.id.toLowerCase().includes(searchTerm.toLowerCase())
+            const matchesSearch = appt.Patient.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                appt.Doctor.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                appt.appointment_id.toLowerCase().includes(searchTerm.toLowerCase())
             const matchesStatus = statusFilter === 'all' || appt.status === statusFilter
             return matchesSearch && matchesStatus
         })
@@ -180,9 +158,9 @@ export default function AdminAppointments() {
         setIsFormOpen(true)
     }
     const handleDeleteAppointment = (appointment: Appointment) => {
-        if (window.confirm(`Bạn có chắc chắn muốn xóa lịch hẹn ${appointment.id} không?`)) {
-            setAppointments(prev => prev.filter(a => a.id !== appointment.id))
-            alert(`Đã xóa lịch hẹn ${appointment.id}`)
+        if (window.confirm(`Bạn có chắc chắn muốn xóa lịch hẹn ${appointment.appointment_id} không?`)) {
+            setAppointments(prev => prev.filter(a => a.appointment_id !== appointment.appointment_id))
+            alert(`Đã xóa lịch hẹn ${appointment.appointment_id}`)
         }
     }
     const handleFormClose = () => {
@@ -199,10 +177,10 @@ export default function AdminAppointments() {
                 doctorName: mockDoctors.find(d => d.doctor_id === data.doctorId)?.full_name || 'N/A',
             } as Appointment;
             setAppointments(prev => [newAppointment, ...prev]);
-            alert(`Đã tạo lịch hẹn mới: ${newAppointment.id}`);
+            alert(`Đã tạo lịch hẹn mới: ${newAppointment.appointment_id}`);
         } else if (formMode === 'edit' && currentAppointment) {
-            setAppointments(prev => prev.map(a => a.id === currentAppointment.id ? { ...a, ...data } : a));
-            alert(`Đã cập nhật lịch hẹn: ${currentAppointment.id}`);
+            setAppointments(prev => prev.map(a => a.appointment_id === currentAppointment.appointment_id ? { ...a, ...data } : a));
+            alert(`Đã cập nhật lịch hẹn: ${currentAppointment.appointment_id}`);
         }
         handleFormClose();
     }

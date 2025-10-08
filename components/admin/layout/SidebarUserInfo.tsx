@@ -1,7 +1,7 @@
 'use client'
 
 import { useAuth } from '@/lib/AuthContext'
-import { Role } from '@/types/emuns'
+import { Role } from '@/types/types'
 
 export function SidebarUserInfo() {
     const { user } = useAuth()

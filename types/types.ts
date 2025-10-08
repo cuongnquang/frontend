@@ -1,79 +1,87 @@
-import { AppointmentStatus, Gender, Role } from "./emuns";
 
-// User
+export enum AppointmentStatus {
+  PENDING = "pending",
+  CONFIRMED = "confirmed",
+  COMPLETED = "completed",
+  CANCELLED = "cancelled",
+  NO_SHOW = "no_show",
+}
+
+export enum Role {
+  PATIENT = "patient",
+  DOCTOR = "doctor",
+  ADMIN = "admin",
+}
+
+export enum Gender {
+  MALE = "male",
+  FEMALE = "female",
+  OTHER = "other",
+}
+
 export interface User {
   user_id: string;
   email: string;
-  password_hash: string;
   role: Role;
   is_active: boolean;
-  created_at: string;  // Date from backend => string in JSON
+  created_at: string;
   updated_at: string;
-
-  passwordResetToken?: string | null;
-  passwordResetTokenExpires?: string | null;
-
-  Patient?: Patient | null;
-  Doctor?: Doctor | null;
+  passwordResetToken?: string;
+  passwordResetTokenExpires?: string;
+  Patient?: Patient;
+  Doctor?: Doctor;
 }
 
-// Patient
 export interface Patient {
   patient_id: string;
   user_id: string;
   full_name: string;
-  identity_number?: string | null;
+  identity_number?: string;
   phone_number: string;
   date_of_birth: string;
   gender: Gender;
-  address?: string | null;
-  ethnicity?: string | null;
-  health_insurance_number?: string | null;
-  referral_code?: string | null;
-  occupation?: string | null;
+  address?: string;
+  ethnicity?: string;
+  health_insurance_number?: string;
+  referral_code?: string;
+  occupation?: string;
   created_at: string;
   updated_at: string;
-
-  User?: User;
-  Appointments?: Appointment[];
+  User: User;
+  Appointments: Appointment[];
 }
 
-// Specialty
 export interface Specialty {
   specialty_id: string;
   name: string;
-  description?: string | null;
-  image_url?: string | null;
+  description?: string;
+  image_url?: string;
   created_at: string;
   updated_at: string;
-
-  Doctors?: Doctor[];
+  Doctors: Doctor[];
 }
 
-// Doctor
 export interface Doctor {
   doctor_id: string;
   user_id: string;
   specialty_id: string;
   full_name: string;
-  title?: string | null;
-  introduction?: string | null;
-  avatar_url?: string | null;   // 👈 ảnh là string (URL), không phải Blob
-  specializations?: string | null;
-  work_experience?: string | null;
-  achievements?: string | null;
-  experience_years?: number | null;
+  title?: string;
+  introduction?: string;
+  avatar_url?: string;
+  specializations?: string;
+  work_experience?: string;
+  achievements?: string;
+  experience_years?: number;
   is_available: boolean;
   created_at: string;
   updated_at: string;
-
-  User?: User;
-  Specialty?: Specialty;
-  Schedules?: DoctorSchedule[];
-  Appointments?: Appointment[];
+  User: User;
+  Specialty: Specialty;
+  Schedules: DoctorSchedule[];
+  Appointments: Appointment[];
 }
 
-// DoctorSchedule
 export interface DoctorSchedule {
   schedule_id: string;
   doctor_id: string;
@@ -83,28 +91,33 @@ export interface DoctorSchedule {
   is_available: boolean;
   created_at: string;
   updated_at: string;
-
-  Doctor?: Doctor;
-  Appointments?: Appointment[];
+  Doctor: Doctor;
+  Appointments: Appointment[];
 }
 
-// Appointment
 export interface Appointment {
-  appointment_date: any;
-  appointment_time: any;
-  reason: any;
   appointment_id: string;
   patient_id: string;
   doctor_id: string;
   schedule_id: string;
-  symptoms?: string | null;
-  notes?: string | null;
+  symptoms?: string;
+  notes?: string;
   status: AppointmentStatus;
-  cancellation_reason?: string | null;
+  cancellation_reason?: string;
   created_at: string;
   updated_at: string;
-
-  Patient?: Patient;
-  Doctor?: Doctor;
-  DoctorSchedule?: DoctorSchedule;
+  Patient: Patient;
+  Doctor: Doctor;
+  DoctorSchedule: DoctorSchedule;
 }
+
+export interface TimeSlot {
+  id: string;
+  day: string;
+  startTime: string;
+  endTime: string;
+  maxPatients: number;
+  currentPatients: number;
+  isAvailable: boolean;
+}
+

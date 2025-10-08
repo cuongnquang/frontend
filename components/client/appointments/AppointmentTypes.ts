@@ -4,17 +4,8 @@ export interface Doctor {
     id: number
     name: string
     specialty: string
-    hospital: string
     rating: number
     price: string
-    image: string
-}
-
-export interface Hospital {
-    id: number
-    name: string
-    address: string
-    rating: number
     image: string
 }
 

@@ -9,7 +9,8 @@ import {
     FileText,
     Settings,
     LogOut,
-    CalendarDays
+    CalendarDays,
+    Stethoscope
 } from 'lucide-react'
 import { SidebarHeader } from './SidebarHeader'
 import { SidebarUserInfo } from './SidebarUserInfo'
@@ -28,6 +29,7 @@ export function AdminSidebar({ sidebarOpen, setSidebarOpen }: AdminSidebarProps)
         { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
         { name: 'Quản lý Bác sĩ', href: '/admin/doctors', icon: UserCheck },
         { name: 'Quản lý Bệnh nhân', href: '/admin/patients', icon: Users },
+        { name: 'Quản lý Chuyên khoa', href: '/admin/specialties', icon: Stethoscope },
         { name: 'Quản lý Lịch hẹn', href: '/admin/appointments', icon: CalendarDays },
         { name: 'Báo cáo', href: '/admin/reports', icon: FileText },
         { name: 'Cài đặt', href: '/admin/settings', icon: Settings }
