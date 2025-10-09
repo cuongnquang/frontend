@@ -42,7 +42,7 @@ export default function Header() {
                         <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-500">
                             Medi
                         </span>
-                        <span className="text-purple-700">Contect</span>
+                        <span className="text-purple-700">Connect</span>
                     </Link>
 
                     {/* Desktop Navigation */}

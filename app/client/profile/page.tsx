@@ -15,7 +15,7 @@ import ChangePasswordModal from '@/components/profile/ChangePasswordModal'
 import CancelAppointmentModal from '@/components/profile/CancelAppointmentModal'
 import DeleteAccountModal from '@/components/profile/DeleteAccountModal'
 import { useDeleteAccount } from '@/hooks/useDeleteAccount';
-import { useAuth } from '@/lib/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UserProfile {
     id: number

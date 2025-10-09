@@ -21,9 +21,12 @@ export default function Footer() {
                     {/* Company info */}
                     <div>
                         <div className="flex items-center mb-6">
-                            <div className="bg-blue-600 text-white px-3 py-2 rounded-lg font-bold text-xl">
-                                Medi
-                            </div>
+                            <Link href="/" className="text-4xl font-extrabold tracking-tight">
+                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-500">
+                            Medi
+                        </span>
+                        <span className="text-purple-700">Connect</span>
+                    </Link>
                         </div>
                         <p className="text-gray-300 mb-6">
                             Nền tảng đặt lịch khám bệnh trực tuyến hàng đầu Việt Nam,
@@ -50,17 +53,12 @@ export default function Footer() {
                         <h3 className="text-lg font-semibold mb-6">Dịch vụ</h3>
                         <ul className="space-y-3">
                             <li>
-                                <Link href="/doctors" className="text-gray-300 hover:text-white transition-colors">
+                                <Link href="/client/doctors" className="text-gray-300 hover:text-white transition-colors">
                                     Tìm bác sĩ
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/hospitals" className="text-gray-300 hover:text-white transition-colors">
-                                    Tìm bệnh viện
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/specialties" className="text-gray-300 hover:text-white transition-colors">
+                                <Link href="/client/specialties" className="text-gray-300 hover:text-white transition-colors">
                                     Tìm chuyên khoa
                                 </Link>
                             </li>

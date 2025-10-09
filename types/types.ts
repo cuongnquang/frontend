@@ -1,4 +1,3 @@
-
 export enum AppointmentStatus {
   PENDING = "pending",
   CONFIRMED = "confirmed",
@@ -112,12 +111,18 @@ export interface Appointment {
 }
 
 export interface TimeSlot {
-  id: string;
-  day: string;
-  startTime: string;
-  endTime: string;
-  maxPatients: number;
-  currentPatients: number;
-  isAvailable: boolean;
+    id: string;
+    day: 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
+    startTime: string;
+    endTime: string;
+    isAvailable: boolean;
+    maxPatients: number;
+    currentPatients: number;
+}
+
+export enum BookingStep{
+  DATE_TIME = 1,
+  PROFILE = 2,
+  CONFIRMATION = 3
 }
 
