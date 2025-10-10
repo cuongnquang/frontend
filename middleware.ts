@@ -10,7 +10,7 @@ export function middleware(request: NextRequest) {
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
 
   if (isProtectedRoute && !accessToken) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/auth/login", request.url));
   }
 
   // Nếu đã đăng nhập, không cho vào trang login/register

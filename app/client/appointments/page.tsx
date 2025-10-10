@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Calendar, Clock, CheckCircle, ChevronRight } from 'lucide-react'
 import {BookingStep, Doctor, DoctorSchedule, Patient, Gender} from '@/types/types'
 import Footer from '@/components/layout/Footer'
@@ -11,7 +12,7 @@ import DoctorSidebar from '@/components/client/appointments/DoctorSidebar'
 import BookingProgressBar from '@/components/client/appointments/AppointmentsProgressBar'
 import PatientForm from '@/components/client/appointments/PatientForm'
 import AppointmentConfirmation from '@/components/client/appointments/AppointmentConfirmation'
-
+import { mockDoctors, mockSchedules, mockPatients } from '@/public/data'
 // --- Hàm tiện ích ---
 const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
@@ -22,36 +23,14 @@ const formatDate = (dateStr: string) => {
 }
 
 // --- Mock Data (Giữ nguyên) ---
-const doctor: Doctor = {
-    doctor_id: 'doc_001',
-    user_id: 'user_001',
-    specialty_id: 'spec_001',
-    full_name: 'BS.CK2. Nguyễn Văn An',
-    title: 'Bác sĩ Chuyên khoa 2',
-    introduction: 'Bác sĩ có hơn 15 năm kinh nghiệm trong lĩnh vực Tim mạch, từng công tác tại nhiều bệnh viện lớn.',
-    avatar_url: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400',
-    specializations: 'Tim mạch, Huyết áp, Rối loạn nhịp tim',
-    work_experience: 'Bệnh viện Chợ Rẫy (2008-2015), Bệnh viện Đại học Y Dược (2015-hiện tại)',
-    achievements: 'Giải thưởng Thầy thuốc trẻ xuất sắc 2018, Nhiều công trình nghiên cứu về Tim mạch',
-    experience_years: 15,
-    is_available: true,
-    Specialty: {
-        specialty_id: 'spec_001',
-        name: 'Tim mạch',
-        description: 'Chuyên khoa Tim mạch'
-    }
-}
+const doctor: Doctor = mockDoctors[0];
+const schedule: DoctorSchedule[] = mockSchedules;
 
-const availableSchedules: DoctorSchedule[] = [
-    { schedule_id: 'sch_001', doctor_id: 'doc_001', schedule_date: '2025-10-10', start_time: '08:00', end_time: '08:30', is_available: true, created_at: '', updated_at: '' },
-    { schedule_id: 'sch_002', doctor_id: 'doc_001', schedule_date: '2025-10-10', start_time: '09:00', end_time: '09:30', is_available: true, created_at: '', updated_at: '' },
-    { schedule_id: 'sch_003', doctor_id: 'doc_001', schedule_date: '2025-10-11', start_time: '14:00', end_time: '14:30', is_available: true, created_at: '', updated_at: '' },
-    { schedule_id: 'sch_004', doctor_id: 'doc_001', schedule_date: '2025-10-12', start_time: '08:00', end_time: '08:30', is_available: true, created_at: '', updated_at: '' },
-    { schedule_id: 'sch_005', doctor_id: 'doc_001', schedule_date: '2025-10-12', start_time: '10:00', end_time: '10:30', is_available: true, created_at: '', updated_at: '' },
-]
+function AppointmentFlow() {
+    
+    const searchParams = useSearchParams();
+    const scheduleId = searchParams.get('scheduleId');
 
-// --- Main Page Component ---
-export default function AppointmentPage() {
     const [currentStep, setCurrentStep] = useState<BookingStep>(BookingStep.DATE_TIME)
     const [selectedDate, setSelectedDate] = useState<string | null>(null)
     const [selectedSchedule, setSelectedSchedule] = useState<DoctorSchedule | null>(null)
@@ -59,30 +38,28 @@ export default function AppointmentPage() {
     const [symptoms, setSymptoms] = useState('')
     const [notes, setNotes] = useState('')
 
+    useEffect(() => {
+        if (scheduleId) {
+            const preSelectedSchedule = schedule.find(s => s.schedule_id === scheduleId);
+            if (preSelectedSchedule) {
+                setSelectedSchedule(preSelectedSchedule);
+                setSelectedDate(preSelectedSchedule.schedule_date);
+                setCurrentStep(BookingStep.PROFILE);
+            }
+        }
+    }, [scheduleId]);
+
     // Load mock patient data
     useEffect(() => {
-        const mockPatientData: Patient = {
-            patient_id: 'pat_001',
-            user_id: 'user_002',
-            full_name: 'Trần Thị Bình',
-            identity_number: '079123456789',
-            phone_number: '0901234567',
-            date_of_birth: '1990-05-15',
-            gender: Gender.FEMALE,
-            address: '123 Nguyễn Huệ, Quận 1, TP.HCM',
-            ethnicity: 'Kinh',
-            health_insurance_number: 'HS1234567890',
-            occupation: 'Nhân viên văn phòng',
-            created_at: '2024-01-01',
-            updated_at: '2024-01-01'
-        }
-        setPatientData(mockPatientData)
+        const patient: Patient = mockPatients[0]
+
+        setPatientData(patient)
     }, [])
     
     // Group schedules by date
     const groupedSchedules = useMemo(() => {
         const grouped: { [key: string]: DoctorSchedule[] } = {}
-        availableSchedules.forEach(schedule => {
+        schedule.forEach(schedule => {
             if (!grouped[schedule.schedule_date]) {
                 grouped[schedule.schedule_date] = []
             }
@@ -253,5 +230,14 @@ export default function AppointmentPage() {
         </div>
         <Footer/>
         </div>
+    )
+}
+
+// --- Main Page Component ---
+export default function AppointmentPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <AppointmentFlow />
+        </Suspense>
     )
 }

@@ -54,7 +54,6 @@ export interface Specialty {
   specialty_id: string;
   name: string;
   description?: string;
-  image_url?: string;
   created_at: string;
   updated_at: string;
   Doctors: Doctor[];
@@ -126,3 +125,20 @@ export enum BookingStep{
   CONFIRMATION = 3
 }
 
+export interface ChatMessage {
+  id: string;
+  sender: 'user' | 'bot';
+  text: string;
+  timestamp: Date;
+  options?: string[]; // Ví dụ: ['Đặt lịch', 'Tìm kiếm Bác sĩ']
+  relatedDoctorId?: string; 
+}
+
+export interface Review {
+id: string;
+patient_name: string;
+rating: number;
+comment: string;
+date: string;
+verified: boolean;
+}

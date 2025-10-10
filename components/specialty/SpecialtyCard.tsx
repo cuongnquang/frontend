@@ -1,6 +1,6 @@
 'use client'
 
-import { ForwardRefExoticComponent, RefAttributes, useState } from 'react'
+import { ForwardRefExoticComponent, RefAttributes } from 'react'
 import {
     ChevronRight,
     LucideProps
@@ -10,7 +10,6 @@ interface Specialty {
     name: string;
     icon: ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>;
     doctors: number;
-    hospitals: number;
     description: string;
     commonConditions: string[];
     averagePrice: string;
@@ -30,8 +29,6 @@ export default function SpecialtyCard(specialty: Specialty) {
                     </h3>
                     <div className="flex items-center space-x-3 text-sm text-gray-600">
                         <span>{specialty.doctors} bác sĩ</span>
-                        <span>•</span>
-                        <span>{specialty.hospitals} bệnh viện</span>
                     </div>
                 </div>
             </div>

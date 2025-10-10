@@ -120,16 +120,6 @@ export default function LoginPage() {
                         Quay về trang chủ
                     </Link>
                 </form>
-
-                <p className="mt-6 text-center text-gray-600 text-sm">
-                    Chưa có tài khoản?{' '}
-                    <Link 
-                        href="/auth/register" 
-                        className="text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                        Đăng ký ngay
-                    </Link>
-                </p>
             </div>
 
             {alert.type && (

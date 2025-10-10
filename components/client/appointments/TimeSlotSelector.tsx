@@ -15,7 +15,7 @@ export default function TimeSlotSelector({ schedules, selectedSchedule, onSelect
     return (
         <div className="p-4 border border-gray-200 rounded-lg bg-gray-50 mt-4">
             <h4 className="text-lg font-bold text-gray-800 mb-4 flex items-center"><Clock className="w-5 h-5 mr-2 text-blue-600" /> Chọn Khung Giờ</h4>
-            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-3 ">
                 {schedules.map(schedule => {
                     const isSelected = selectedSchedule?.schedule_id === schedule.schedule_id
                     return (

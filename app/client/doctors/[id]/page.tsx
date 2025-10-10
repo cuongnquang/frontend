@@ -1,82 +1,80 @@
 'use client'
 
-import React, { useState } from 'react'
-import Header from '@/components/layout/Header'
-import Footer from '@/components/layout/Footer'
-import type { Doctor } from '@/types/types'
-import {
-    ThumbsUp, Award, BookOpen, Users, MapPin
-} from 'lucide-react'
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import type { Doctor, DoctorSchedule, Review } from '@/types/types';
 
-// --- Imports Component Con ---
-import { DoctorHeroSection } from '@/components/doctor/DoctorHero'
-import { AchievementsGrid } from '@/components/doctor/AchievementsGrid'
-import { DoctorTabs } from '@/components/doctor/DoctorTabs'
-import { AppointmentSidebarWidget } from '@/components/doctor/AppoimentSidebar'
+import DoctorProfileCard from '@/components/client/doctors/details/DoctorProfileCard';
+import DoctorInfoTabs from '@/components/client/doctors/details/DoctorInfoTabs';
+import BookingPanel from '@/components/client/doctors/details/BookingPanel';
 
-export interface Achievement {
-    icon: React.ElementType;
-    text: string;
-    count: number;
-    unit: string;
-}
-
-
-export interface Review {
-    id: number;
-    patientName: string;
-    rating: number;
-    date: string;
-    comment: string;
-    verified: boolean;
-}
-
-const reviews: Review[] = [
-    { id: 1, patientName: 'Trần Thị B', rating: 5, date: '20/09/2025', comment: 'Bác sĩ rất tận tình, giải thích kỹ càng về tình trạng bệnh. Cảm ơn bác sĩ!', verified: true },
-    { id: 2, patientName: 'Lê Văn C', rating: 5, date: '18/09/2025', comment: 'Thái độ chuyên nghiệp, kinh nghiệm cao. Rất hài lòng với dịch vụ.', verified: true },
-    { id: 3, patientName: 'Nguyễn Thị D', rating: 4, date: '15/09/2025', comment: 'Khám bệnh kỹ lưỡng, tư vấn chi tiết. Chỉ có điều thời gian chờ hơi lâu.', verified: true }
-]
-// =========================================================
+import { mockDoctors, mockSchedules, mockReviews } from '@/public/data';
 
 export default function DoctorDetailPage() {
-    const [activeTab, setActiveTab] = useState('about')
-    // State cho Sidebar
-    const [selectedService, setSelectedService] = useState<'consultation' | 'online'>('consultation')
+  const router = useRouter();
+  const [selectedDateString, setSelectedDateString] = useState<string>('');
+  const [selectedSchedule, setSelectedSchedule] = useState<DoctorSchedule | null>(null);
+  
+  const doctor: Doctor = mockDoctors[0];
+  const schedules: DoctorSchedule[] = mockSchedules;
+  const reviews: Review[] = mockReviews;
 
-    return (
-        <>
-            <Header />
-            <main className="bg-gray-50 min-h-screen">
-                {/* 1. HERO SECTION */}
-                <DoctorHeroSection doctor={Doctor} />
+  const handleSelectDate = (date: string) => {
+    setSelectedDateString(date);
+    setSelectedSchedule(null);
+  };
 
-                <div className="max-w-6xl mx-auto px-4 py-8 grid lg:grid-cols-3 gap-8">
-                    {/* Cột chính */}
-                    <div className="lg:col-span-2 space-y-8">
-                        {/* 2. THÀNH TÍCH NỔI BẬT */}
-                        <AchievementsGrid achievements={Doctor.achievements} />
+  const handleSelectSchedule = (schedule: DoctorSchedule) => {
+    setSelectedSchedule(schedule);
+  };
 
-                        {/* 3. TABS CONTENT */}
-                        <DoctorTabs
-                            activeTab={activeTab}
-                            setActiveTab={setActiveTab}
-                            doctor={Doctor}
-                            reviews={reviews}
-                        />
-                    </div>
+  // Hàm này sẽ được sử dụng cho cả 2 nút
+  const handleBookingSubmit = () => {
+    if (selectedSchedule) {
+      // Chuyển hướng đến trang đặt lịch với các tham số cần thiết
+      router.push(`/client/appointments?doctorId=${doctor.doctor_id}&scheduleId=${selectedSchedule.schedule_id}`);
+    } else {
+      // Thông báo cho người dùng nếu họ chưa chọn lịch
+      alert("Vui lòng chọn một khung giờ khám bệnh.");
+    }
+  };
+  
+  // Không cần hàm handleOnSubmit trống nữa, ta sẽ xóa nó đi.
+  
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white shadow-sm sticky top-0 z-40">
+        {/* ... Header ... */}
+      </header>
+      
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          <div className="lg:col-span-2 space-y-6">
+            <DoctorProfileCard 
+              doctor={doctor} 
+              reviews={reviews}
+              onBookAppointmentClick={handleBookingSubmit}
+            />
+            <DoctorInfoTabs 
+              doctor={doctor} 
+              reviews={reviews} 
+            />
+          </div>
+          
+          <div className="lg:col-span-1">
+            <BookingPanel 
+              schedules={schedules}
+              selectedDate={selectedDateString}
+              selectedSchedule={selectedSchedule}
+              onSelectDate={handleSelectDate}
+              onSelectSchedule={handleSelectSchedule}
+              onSubmit={handleBookingSubmit} 
+            />
+          </div>
 
-                    {/* Cột phụ - Sidebar */}
-                    <div className="space-y-6">
-                        {/* 4. WIDGET ĐẶT LỊCH */}
-                        <AppointmentSidebarWidget
-                            doctor={Doctor}
-                            selectedService={selectedService}
-                            setSelectedService={setSelectedService}
-                        />
-                    </div>
-                </div>
-            </main>
-            <Footer />
-        </>
-    )
+        </div>
+      </main>
+    </div>
+  );
 }
