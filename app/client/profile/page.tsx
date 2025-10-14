@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import {
@@ -16,6 +17,7 @@ import CancelAppointmentModal from '@/components/profile/CancelAppointmentModal'
 import DeleteAccountModal from '@/components/profile/DeleteAccountModal'
 import { useDeleteAccount } from '@/hooks/useDeleteAccount';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/lib/api';
 
 interface UserProfile {
     id: number
@@ -60,15 +62,17 @@ interface MedicalRecord {
 }
 
 export default function ProfilePage() {
+    const searchParams = useSearchParams();
     const { user, logout } = useAuth();
     const [activeTab, setActiveTab] = useState<'profile' | 'appointments' | 'records' | 'settings'>('profile')
     const [showDeleteModal, setShowDeleteModal] = useState(false)
     const [showCancelModal, setShowCancelModal] = useState<number | null>(null)
     const [showChangePassword, setShowChangePassword] = useState(false)
-    const [isLoading, setIsLoading] = useState(false)
-    const { isDeleting, error, deleteAccount } = useDeleteAccount();
-
-    const [userProfile, setUserProfile] = useState<UserProfile>({
+    const [isLoading, setIsLoading] = useState(true)
+    // const [error, setError] = useState<string | null>(null);
+    const { isDeleting, deleteAccount } = useDeleteAccount();
+    
+    const [userProfile, setUserProfile] = useState<User>({
         id: 0,
         fullName: '',
         email: '',
@@ -89,11 +93,28 @@ export default function ProfilePage() {
     })
 
     useEffect(() => {
+        // Ưu tiên tham số 'tab' từ URL
+        const tab = searchParams.get('tab');
+        if (tab === 'settings' || tab === 'appointments' || tab === 'records' || tab === 'profile') {
+            setActiveTab(tab);
+            // Xóa tab đã lưu trong localStorage nếu có để tránh xung đột
+            localStorage.removeItem('activeProfileTab');
+            return;
+        }
+
+        // Nếu không có tham số URL, kiểm tra localStorage
+        const savedTab = localStorage.getItem('activeProfileTab');
+        if (savedTab === 'settings' || savedTab === 'appointments' || savedTab === 'records' || savedTab === 'profile') {
+            setActiveTab(savedTab);
+            localStorage.removeItem('activeProfileTab'); // Xóa sau khi sử dụng
+        }
+    }, [searchParams]);
+    useEffect(() => {
         if (user) {
             setUserProfile(prevProfile => ({
                 ...prevProfile,
-                id: user.id || 0,
-                fullName: user.fullName || '',
+                id: user.user_id || 0,
+                fullName: user.full_name || '',
                 email: user.email || '',
                 phone: user.phone || '',
                 birthDate: user.birthDate || prevProfile.birthDate,
@@ -109,16 +130,39 @@ export default function ProfilePage() {
         }
     }, [user]);
 
-    const [appointments, setAppointments] = useState<Appointment[]>([
-        { id: 1, doctorName: 'PGS.TS. Nguyễn Văn An', doctorSpecialty: 'Tim mạch', hospital: 'Bệnh viện Chợ Rẫy', date: '2024-10-15', time: '09:00', status: 'confirmed', price: '500.000đ', notes: 'Khám tổng quát tim mạch' },
-        { id: 2, doctorName: 'BS. Trần Thị Bình', doctorSpecialty: 'Da liễu', hospital: 'Bệnh viện Da liễu TP.HCM', date: '2024-10-20', time: '14:30', status: 'pending', price: '350.000đ' },
-        { id: 3, doctorName: 'TS.BS Lê Minh Châu', doctorSpecialty: 'Nhi khoa', hospital: 'Bệnh viện Nhi Đồng 1', date: '2024-09-28', time: '10:15', status: 'completed', price: '300.000đ' }
-    ])
+    const [appointments, setAppointments] = useState<Appointment[]>([]);
+    const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
 
-    const [medicalRecords] = useState<MedicalRecord[]>([
-        { id: 1, date: '2024-09-28', doctorName: 'TS.BS Lê Minh Châu', diagnosis: 'Viêm họng cấp', treatment: 'Kháng sinh + nghỉ ngơi', hospital: 'Bệnh viện Nhi Đồng 1', files: ['prescription.pdf', 'lab_results.pdf'] },
-        { id: 2, date: '2024-08-15', doctorName: 'PGS.TS. Nguyễn Văn An', diagnosis: 'Kiểm tra sức khỏe định kỳ', treatment: 'Bình thường, theo dõi', hospital: 'Bệnh viện Chợ Rẫy', files: ['health_check.pdf'] }
-    ])
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!user) return;
+            setIsLoading(true);
+            setError(null);
+            try {
+                const [appointmentsRes, recordsRes] = await Promise.all([
+                    apiClient.get<Appointment[]>('/api/appointments'),
+                    apiClient.get<MedicalRecord[]>('/api/medical-records')
+                ]);
+
+                if (appointmentsRes.status && appointmentsRes.data) {
+                    setAppointments(appointmentsRes.data);
+                } else {
+                    setError(appointmentsRes.message || 'Không thể tải lịch hẹn.');
+                }
+
+                if (recordsRes.status && recordsRes.data) {
+                    setMedicalRecords(recordsRes.data);
+                } else {
+                    setError(prev => `${prev ? prev + ' ' : ''}${recordsRes.message || 'Không thể tải hồ sơ y tế.'}`);
+                }
+            } catch (err) {
+                setError('Đã xảy ra lỗi khi tải dữ liệu trang hồ sơ.');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchData();
+    }, [user]);
 
     const [passwordForm, setPasswordForm] = useState({
         currentPassword: '',
@@ -130,6 +174,30 @@ export default function ProfilePage() {
         new: false,
         confirm: false
     })
+
+    const handleUpdateProfile = async (profileData: UserProfile) => {
+        setIsLoading(true);
+        try {
+            const res = await apiClient(`/api/user/profile`, {
+                method: 'PUT',
+                body: JSON.stringify(profileData),
+            });
+
+            if (!res.status) {
+                alert(res.message || 'Cập nhật thất bại!');
+                return false;
+            } else {
+                await fetchProfile(); // Tải lại thông tin user trong context
+                alert('Cập nhật thông tin thành công!');
+                return true;
+            }
+        } catch (error) {
+            alert('Có lỗi xảy ra khi cập nhật.');
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    }
 
     const handleChangePassword = async () => {
         if (passwordForm.newPassword !== passwordForm.confirmPassword) {
@@ -143,7 +211,12 @@ export default function ProfilePage() {
 
         setIsLoading(true)
         try {
-            await new Promise(resolve => setTimeout(resolve, 1000))
+            const res = await apiClient('/api/user/change-password', {
+                method: 'POST',
+                body: JSON.stringify(passwordForm)
+            });
+            if (!res.status) throw new Error(res.message || 'Đổi mật khẩu thất bại');
+
             setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
             setShowChangePassword(false)
             alert('Đổi mật khẩu thành công!')
@@ -157,14 +230,18 @@ export default function ProfilePage() {
     const handleCancelAppointment = async (appointmentId: number) => {
         setIsLoading(true)
         try {
-            await new Promise(resolve => setTimeout(resolve, 1000))
-            setAppointments(prev =>
-                prev.map(apt =>
-                    apt.id === appointmentId ? { ...apt, status: 'cancelled' } : apt
+            const res = await apiClient(`/api/appointments/${appointmentId}/cancel`, {
+                method: 'PATCH'
+            });
+            if (res.status) {
+                setAppointments(prev =>
+                    prev.map(apt =>
+                        apt.id === appointmentId ? { ...apt, status: 'cancelled' } : apt
+                    )
                 )
-            )
-            setShowCancelModal(null)
-            alert('Đã hủy lịch hẹn thành công!')
+                setShowCancelModal(null)
+                alert('Đã hủy lịch hẹn thành công!')
+            } else { throw new Error(res.message || 'Hủy lịch hẹn thất bại'); }
         } catch (error) {
             alert('Có lỗi xảy ra. Vui lòng thử lại.')
         } finally {
@@ -214,7 +291,7 @@ export default function ProfilePage() {
     }
 
     return (
-        <>
+        <div className='bg-gray-50'>
             <Header />
 
             <div className="container mx-auto px-4 py-8">
@@ -277,6 +354,7 @@ export default function ProfilePage() {
                                 userProfile={userProfile}
                                 setUserProfile={setUserProfile}
                                 isLoading={isLoading}
+                                onUpdateProfile={handleUpdateProfile}
                             />
                         )}
 
@@ -332,6 +410,6 @@ export default function ProfilePage() {
                 isDeleting={isDeleting}
                 handleDeleteAccount={handleDeleteAccount}
             />
-        </>
+        </div>
     )
 }

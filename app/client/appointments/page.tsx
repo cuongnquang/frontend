@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect, useMemo, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Calendar, Clock, CheckCircle, ChevronRight } from 'lucide-react'
-import {BookingStep, Doctor, DoctorSchedule, Patient, Gender} from '@/types/types'
+import {BookingStep, Doctor, DoctorSchedule, Patient} from '@/types/types'
 import Footer from '@/components/layout/Footer'
 import Header from '@/components/layout/Header'
 import DateSelector from '@/components/client/appointments/DateSelector'
@@ -27,7 +27,7 @@ const doctor: Doctor = mockDoctors[0];
 const schedule: DoctorSchedule[] = mockSchedules;
 
 function AppointmentFlow() {
-    
+    const router = useRouter()
     const searchParams = useSearchParams();
     const scheduleId = searchParams.get('scheduleId');
 
@@ -48,6 +48,7 @@ function AppointmentFlow() {
             }
         }
     }, [scheduleId]);
+    
 
     // Load mock patient data
     useEffect(() => {
@@ -98,11 +99,12 @@ function AppointmentFlow() {
     const handleSubmit = () => {
         console.log('Appointment data submitted!')
         alert('Đặt lịch thành công! Chúng tôi sẽ liên hệ với bạn sớm.')
-        setCurrentStep(BookingStep.DATE_TIME)
+        
         setSelectedSchedule(null)
         setSelectedDate(null)
         setSymptoms('')
         setNotes('')
+        router.push('/')
     }
 
     // --- Điều kiện chuyển bước ---

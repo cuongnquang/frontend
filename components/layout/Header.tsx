@@ -1,14 +1,21 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Menu, X, Phone, MapPin, User, LogOut, Settings, ChevronDown } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function Header() {
+    const router = useRouter()
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
     const { user, logout } = useAuth()
+
+    const handleSettingsClick = () => {
+        router.push('/client/profile?tab=settings');
+        setIsUserMenuOpen(false);
+    };
 
     return (
         <header className="bg-white shadow-sm border-b">
@@ -103,7 +110,7 @@ export default function Header() {
 
                                             {/* Menu items */}
                                             <Link
-                                                href="/client/profile/"
+                                                href="/client/profile?tab=profile"
                                                 className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                                                 onClick={() => setIsUserMenuOpen(false)}
                                             >
@@ -111,14 +118,13 @@ export default function Header() {
                                                 Hồ sơ cá nhân
                                             </Link>
 
-                                            <Link
-                                                href="/client/settings"
+                                            <button
+                                                onClick={handleSettingsClick}
                                                 className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                                                onClick={() => setIsUserMenuOpen(false)}
                                             >
                                                 <Settings className="w-4 h-4 mr-2" />
                                                 Cài đặt
-                                            </Link>
+                                            </button>
 
                                             <button
                                                 onClick={logout}
@@ -185,7 +191,7 @@ export default function Header() {
                                                 {user.avatar ? (
                                                     <img
                                                         src={user.avatar}
-                                                        alt={user.name}
+                                                        alt={user.full_name }
                                                         className="w-full h-full object-cover"
                                                     />
                                                 ) : (
@@ -200,15 +206,15 @@ export default function Header() {
                                             </div>
                                         </div>
 
-                                        <Link href="/client/profile" className="flex items-center px-2 py-2 text-gray-700 hover:text-blue-600">
+                                        <Link href="/client/profile?tab=profile" className="flex items-center px-2 py-2 text-gray-700 hover:text-blue-600">
                                             <User className="w-4 h-4 mr-2" />
                                             Hồ sơ cá nhân
                                         </Link>
 
-                                        <Link href="/client/settings" className="flex items-center px-2 py-2 text-gray-700 hover:text-blue-600">
+                                        <button onClick={handleSettingsClick} className="flex items-center w-full px-2 py-2 text-gray-700 hover:text-blue-600">
                                             <Settings className="w-4 h-4 mr-2" />
                                             Cài đặt
-                                        </Link>
+                                        </button>
 
                                         <button
                                             onClick={logout}

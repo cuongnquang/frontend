@@ -6,9 +6,10 @@ interface DoctorListProps {
   doctors: Doctor[];
   resultsCount: number;
   onSelectDoctor: (doctor: Doctor) => void;
+  onAppointmentDoctor: (doctor: Doctor) => void;
 }
 
-export default function DoctorList({ doctors, resultsCount, onSelectDoctor }: DoctorListProps) {
+export default function DoctorList({ doctors, resultsCount, onSelectDoctor, onAppointmentDoctor }: DoctorListProps) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-6">
@@ -23,7 +24,8 @@ export default function DoctorList({ doctors, resultsCount, onSelectDoctor }: Do
           <DoctorCard 
             key={doctor.doctor_id} 
             doctor={doctor} 
-            onBook={() => onSelectDoctor(doctor)}
+            onSelect={() => onSelectDoctor(doctor)}
+            onBook={() => onAppointmentDoctor(doctor)}
           />
         ))}
         

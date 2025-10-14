@@ -75,6 +75,7 @@ for (let i = 1; i <= 12; i++) {
     specialty_id: specialty.specialty_id,
     full_name: `${getRandomElement(firstNames)} ${getRandomElement(lastNames)}`,
     title: Math.random() > 0.5 ? 'PGS.TS.BS' : 'ThS.BS',
+    work_experience: `Bệnh viện ${specialty.name}`,
     introduction: `Chuyên gia hàng đầu về ${specialty.name} với hơn ${Math.floor(Math.random() * 10) + 5} năm kinh nghiệm.`,
     avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=Doctor${i}`,
     experience_years: Math.floor(Math.random() * 20) + 5,

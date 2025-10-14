@@ -11,11 +11,16 @@ export default function Hero() {
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault()
-        let path = ''
-        if (searchType === 'doctor') path = `/client/doctors`
-        else if (searchType === 'hospital') path = `/client/hospitals`
-        else path = `/client/specialties`
-        router.push(path)
+        const query = new URLSearchParams()
+        if (searchValue) {
+            query.set('q', searchValue)
+        }
+
+        let basePath = ''
+        if (searchType === 'doctor') basePath = `/client/doctors`
+        else basePath = `/client/specialties`
+
+        router.push(`${basePath}?${query.toString()}`)
     }
 
     return (
@@ -48,15 +53,6 @@ export default function Hero() {
                                     Tìm bác sĩ
                                 </button>
                                 <button
-                                    onClick={() => setSearchType('hospital')}
-                                    className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${searchType === 'hospital'
-                                        ? 'bg-white text-blue-600 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                        }`}
-                                >
-                                    Tìm bệnh viện
-                                </button>
-                                <button
                                     onClick={() => setSearchType('specialty')}
                                     className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${searchType === 'specialty'
                                         ? 'bg-white text-blue-600 shadow-sm'
@@ -78,8 +74,7 @@ export default function Hero() {
                                             onChange={e => setSearchValue(e.target.value)}
                                             placeholder={
                                                 searchType === 'doctor' ? 'Tìm tên bác sĩ...' :
-                                                    searchType === 'hospital' ? 'Tìm tên bệnh viện...' :
-                                                        'Tìm chuyên khoa...'
+                                                       'Tìm chuyên khoa...'
                                             }
                                             className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         />

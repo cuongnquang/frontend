@@ -4,18 +4,17 @@ import { MapPin, Award, Clock, Calendar } from 'lucide-react';
 
 interface DoctorCardProps {
   doctor: Doctor;
+  onSelect:()=>void;
   onBook: () => void;
 }
 
-export default function DoctorCard({ doctor, onBook }: DoctorCardProps) {
-  return (
+export default function DoctorCard({ doctor, onBook, onSelect }: DoctorCardProps) {
+  return ( 
     <div
       className="bg-white rounded-xl shadow-md hover:shadow-lg transition p-5 border border-gray-100"
     >
       <div className="flex gap-5">
-        
-        {/* Cột 1: Avatar và Trạng thái */}
-        <div className='flex flex-col items-center flex-shrink-0'>
+        <div  onClick={onSelect} className='flex flex-col items-center flex-shrink-0 cursor-pointer'>
           <img
             src={doctor.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'}
             alt={doctor.full_name}
@@ -29,7 +28,7 @@ export default function DoctorCard({ doctor, onBook }: DoctorCardProps) {
         </div>
 
         <div className="flex-1">
-          <div className="flex items-center justify-between">
+          <div  onClick={onSelect} className="flex items-center justify-between cursor-pointer">
             <h3 className="text-xl font-bold text-gray-900 leading-snug">
               {doctor.title ? `${doctor.title} ` : ''}{doctor.full_name}
             </h3>

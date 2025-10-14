@@ -1,52 +1,43 @@
-'use client'
+'use client';
+import { useState } from "react";
+import { patients as allPatients } from "../data";
+import { PatientsPageHeader } from "@/components/doctor/patients/PatientsPageHeader";
+import { PatientStatsCards } from "@/components/doctor/patients/PatientStatsCards";
+import { PatientSearchBar } from "@/components/doctor/patients/PatientSearchBar";
+import { PatientsTable } from "@/components/doctor/patients/PatientsTable";
+import { PatientDetailModal } from "@/components/doctor/patients/PatientDetailModal";
 
-import { useState } from 'react'
-import {
-    Plus,
+export default function PatientsPage() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedPatient, setSelectedPatient] = useState(null);
 
-} from 'lucide-react'
+  const filteredPatients = allPatients.filter(patient =>
+    patient.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    patient.phone_number.includes(searchQuery)
+  );
 
-// Import component AuthGuard để bảo vệ toàn bộ trang
-
-import { Patient } from '@/types/types' // Sẽ định nghĩa ở dưới
-
-
-export default function DoctorPatients() {
-    const [searchTerm, setSearchTerm] = useState('')
-    const [statusFilter, setStatusFilter] = useState('all')
-    const [riskFilter, setRiskFilter] = useState('all')
-    const [isModalOpen, setIsModalOpen] = useState(false)
-    const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
-
-
-    const handleViewDetails = (patient: Patient) => {
-        setSelectedPatient(patient)
-        setIsModalOpen(true)
-    }
-
-    const handleCloseModal = () => {
-        setIsModalOpen(false)
-        setSelectedPatient(null)
-    }
-
-    return (
-            <div className="space-y-6 p-8">
-                {/* Header */}
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Danh sách Bệnh nhân</h1>
-                        <p className="text-gray-600">Quản lý thông tin bệnh nhân</p>
-                    </div>
-            
-                        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center">
-                            <Plus className="w-4 h-4 mr-2" />
-                            Thêm bệnh nhân
-                        </button>
-
-                </div>
-
-                
-            </div>
-
-    )
+  return (
+    <div className="space-y-6 p-6">
+      <PatientsPageHeader />
+      
+      <PatientStatsCards />
+      
+      <PatientSearchBar 
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+      />
+      
+      <PatientsTable 
+        patients={filteredPatients}
+        onViewDetails={setSelectedPatient}
+      />
+      
+      {selectedPatient && (
+        <PatientDetailModal
+          patient={selectedPatient}
+          onClose={() => setSelectedPatient(null)}
+        />
+      )}
+    </div>
+  );
 }

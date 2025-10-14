@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Mail, AlertCircle } from 'lucide-react'
+import { Mail } from 'lucide-react'
 import Alert from '@/components/ui/Alert'
 import InputField from '../ui/InputField'
 import PasswordField from '../ui/PasswordField'

@@ -4,11 +4,14 @@ import Header from '@/components/layout/Header'
 import Hero from '@/components/client/home/Hero'
 import Features from '@/components/client/home/Features'
 import Footer from '@/components/layout/Footer'
-export default function Info() {
+export default function HomePage() {
   return (
-    <><Header />
-      <Hero />
-      <Features />
+    <>
+      <Header />
+      <main>
+        <Hero />
+        <Features />
+      </main>
       <Footer />
     </>
   )

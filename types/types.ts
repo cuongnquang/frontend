@@ -69,7 +69,7 @@ export interface Doctor {
   avatar_url?: string;
   specializations?: string;
   work_experience?: string;
-  achievements?: string;
+  achievements?: string[];
   experience_years?: number;
   is_available: boolean;
   created_at: string;

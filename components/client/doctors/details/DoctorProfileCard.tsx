@@ -7,10 +7,9 @@ import type { Doctor, Review } from '@/types/types'; // Giả sử bạn có fil
 interface DoctorProfileCardProps {
   doctor: Doctor;
   reviews: Review[];
-  onBookAppointmentClick: () => void;
 }
 
-export default function DoctorProfileCard({ doctor, reviews, onBookAppointmentClick }: DoctorProfileCardProps) {
+export default function DoctorProfileCard({ doctor, reviews}: DoctorProfileCardProps) {
   const averageRating = reviews.length > 0
     ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
     : 0;
@@ -56,19 +55,6 @@ export default function DoctorProfileCard({ doctor, reviews, onBookAppointmentCl
               <Users className="w-5 h-5 mr-2" />
               5000+ bệnh nhân
             </div>
-          </div>
-          <div className="flex gap-3">
-            <button 
-              onClick={onBookAppointmentClick}
-              className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-2 font-medium"
-            >
-              <Calendar className="w-5 h-5" />
-              Đặt lịch khám
-            </button>
-            <button className="px-6 py-3 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition flex items-center gap-2 font-medium">
-              <Video className="w-5 h-5" />
-              Khám online
-            </button>
           </div>
         </div>
       </div>

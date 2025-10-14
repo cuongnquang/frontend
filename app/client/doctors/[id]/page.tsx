@@ -9,6 +9,8 @@ import DoctorInfoTabs from '@/components/client/doctors/details/DoctorInfoTabs';
 import BookingPanel from '@/components/client/doctors/details/BookingPanel';
 
 import { mockDoctors, mockSchedules, mockReviews } from '@/public/data';
+import Header from '@/components/layout/Header';
+import Footer from '@/components/layout/Footer';
 
 export default function DoctorDetailPage() {
   const router = useRouter();
@@ -43,9 +45,7 @@ export default function DoctorDetailPage() {
   
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm sticky top-0 z-40">
-        {/* ... Header ... */}
-      </header>
+      <Header/>
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -54,7 +54,6 @@ export default function DoctorDetailPage() {
             <DoctorProfileCard 
               doctor={doctor} 
               reviews={reviews}
-              onBookAppointmentClick={handleBookingSubmit}
             />
             <DoctorInfoTabs 
               doctor={doctor} 
@@ -74,7 +73,8 @@ export default function DoctorDetailPage() {
           </div>
 
         </div>
-      </main>
+       
+      </main> <Footer/>
     </div>
   );
 }
