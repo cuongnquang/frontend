@@ -5,11 +5,22 @@
             "previewLimit": 50,
             "server": "localhost",
             "port": 5432,
+            "askForPassword": true,
             "driver": "PostgreSQL",
             "database": "Medi",
             "username": "postgres",
             "name": "PostgreSQL 17",
             "group": "Server"
+        },
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "PostgreSQL",
+            "database": "test_user",
+            "username": "postgres"
         }
     ]
 }

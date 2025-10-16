@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { apiClient } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import { getRedirectPathByRole } from "@/utils/redirectByRole";
 
 interface User {
     user_id: string;
@@ -17,7 +18,12 @@ interface User {
 interface AuthContextType {
     user: User | null;
     login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
-    register: (email: string, password: string) => Promise<void>;
+    register: (email: string, password: string, confirmPassword: string) => Promise<{ success: boolean; message: string }>;
+    verifyEmail: (token: string) => Promise<{ success: boolean; message: string }>;
+    resendVerificationEmail: (email: string) => Promise<{ success: boolean; message: string }>;
+    forgotPassword: (email: string) => Promise<{ success: boolean; message: string }>;
+    verifyResetOTP: (otp: string) => Promise<{ success: boolean; message: string }>;
+    resetPassword: (otp: string, newPassword: string, confirmPassword: string) => Promise<{ success: boolean; message: string }>;
     logout: () => Promise<void>;
     loading: boolean;
     refreshUser: () => Promise<void>;
@@ -58,8 +64,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 return { success: false, message: res.message || "Đăng nhập thất bại" };
             }
 
-            await fetchUser();
-            router.push("/");
+            const userData = await fetchUser();
+            
+            if (userData && userData.role) {
+                const redirectPath = getRedirectPathByRole(userData.role);
+                router.push(redirectPath);
+            } else {
+                router.push("/");
+            }
             return { success: true, message: res.message || "Đăng nhập thành công" };
         } catch (e) {
             setError("Đã có lỗi không mong muốn xảy ra.");
@@ -69,23 +81,142 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
-    const register = async (email: string, password: string) => {
+    const register = async (email: string, password: string, confirmPassword: string): Promise<{ success: boolean; message: string }> => {
         setError(null);
         setLoading(true);
         try {
             const res = await apiClient("/api/auth/register", {
                 method: "POST",
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ email, password, confirmPassword }),
             });
 
             if (!res.status) {
                 setError(res.message || "Đăng ký thất bại");
-                return;
+                return { success: false, message: res.message || "Đăng ký thất bại" };
             }
 
-            router.push("/auth/login");
+            return { success: true, message: res.message || "Đăng ký thành công" };
         } catch (e) {
             setError("Đã có lỗi không mong muốn xảy ra.");
+            return { success: false, message: "Đã có lỗi không mong muốn xảy ra." };
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const verifyEmail = async (token: string): Promise<{ success: boolean; message: string }> => {
+        setError(null);
+        setLoading(true);
+        try {
+            const res = await apiClient(`/api/auth/verify-email/${token}`, {
+                method: "GET",
+            });
+
+            if (!res.status) {
+                setError(res.message || "Xác thực email thất bại");
+                return { success: false, message: res.message || "Xác thực email thất bại" };
+            }
+
+            return { 
+                success: true, 
+                message: res.message || "Xác thực email thành công! Bạn có thể đăng nhập ngay bây giờ." 
+            };
+        } catch (e) {
+            setError("Đã có lỗi không mong muốn xảy ra.");
+            return { success: false, message: "Đã có lỗi không mong muốn xảy ra." };
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const resendVerificationEmail = async (email: string): Promise<{ success: boolean; message: string }> => {
+        setError(null);
+        setLoading(true);
+        try {
+            const res = await apiClient("/api/auth/resend-verification", {
+                method: "POST",
+                body: JSON.stringify({ email }),
+            });
+
+            if (!res.status) {
+                setError(res.message || "Gửi lại email xác thực thất bại");
+                return { success: false, message: res.message || "Gửi lại email xác thực thất bại" };
+            }
+
+            return { 
+                success: true, 
+                message: res.message || "Email xác thực đã được gửi lại. Vui lòng kiểm tra hộp thư." 
+            };
+        } catch (e) {
+            setError("Đã có lỗi không mong muốn xảy ra.");
+            return { success: false, message: "Đã có lỗi không mong muốn xảy ra." };
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const forgotPassword = async (email: string): Promise<{ success: boolean; message: string }> => {
+        setError(null);
+        setLoading(true);
+        try {
+            const res = await apiClient("/api/auth/forgot-password", {
+                method: "POST",
+                body: JSON.stringify({ email }),
+            });
+
+            if (!res.status) {
+                setError(res.message || "Yêu cầu lấy lại mật khẩu thất bại");
+                return { success: false, message: res.message || "Yêu cầu lấy lại mật khẩu thất bại" };
+            }
+
+            return { success: true, message: res.message || "Đã gửi email lấy lại mật khẩu. Vui lòng kiểm tra hộp thư." };
+        } catch (e) {
+            setError("Đã có lỗi không mong muốn xảy ra.");
+            return { success: false, message: "Đã có lỗi không mong muốn xảy ra." };
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const verifyResetOTP = async (otp: string): Promise<{ success: boolean; message: string }> => {
+        setError(null);
+        setLoading(true);
+        try {
+            const res = await apiClient(`/api/auth/verify-reset-otp/${otp}`, {
+                method: "GET",
+            });
+            if (!res.status) {
+                setError(res.message || "Xác thực OTP thất bại");
+                return { success: false, message: res.message || "Xác thực OTP thất bại" };
+            }  
+            return { success: true, message: res.message || "Xác thực OTP thành công" };
+
+        } catch (e) {
+            setError("Đã có lỗi không mong muốn xảy ra.");
+            return { success: false, message: "Đã có lỗi không mong muốn xảy ra." };
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const resetPassword = async (otp: string, password: string, confirmPassword: string): Promise<{ success: boolean; message: string }> => {
+        setError(null);
+        setLoading(true);
+        try {
+            const res = await apiClient("/api/auth/reset-password", {
+                method: "POST",
+                body: JSON.stringify({ otp, password, confirmPassword }),
+            });
+
+            if (!res.status) {
+                setError(res.message || "Đặt lại mật khẩu thất bại");
+                return { success: false, message: res.message || "Đặt lại mật khẩu thất bại" };
+            }
+
+            return { success: true, message: res.message || "Đặt lại mật khẩu thành công" };
+        } catch (e) {
+            setError("Đã có lỗi không mong muốn xảy ra.");
+            return { success: false, message: "Đã có lỗi không mong muốn xảy ra." };
         } finally {
             setLoading(false);
         }
@@ -139,7 +270,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return (
         <AuthContext.Provider
-            value={{ user, login, register, logout, loading, refreshUser, error }}
+            value={{ user, login, register, logout, loading, verifyEmail, resendVerificationEmail, forgotPassword, verifyResetOTP, resetPassword, refreshUser, error }} 
         >
             {children}
         </AuthContext.Provider>

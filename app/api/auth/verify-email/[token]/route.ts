@@ -1,19 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { token: string } }
-) {
+export async function GET(req: NextRequest, context: { params: Promise<{ token: string }> }) {
+  
+  const { token } = await context.params;
+
   try {
-    const backendRes = await fetch(
-      `${process.env.BACKEND_API_URL}/v1/auth/verify-email/${params.token}`
-    );
+    const backendRes = await fetch(`${process.env.BACKEND_API_URL}/v1/auth/verify-email/${token}`);
+
+    if (!backendRes.ok) {
+      const errorData = await backendRes.json().catch(() => ({
+        message: "Backend trả về lỗi không phải JSON.",
+      }));
+      return NextResponse.json(errorData, { status: backendRes.status });
+    }
 
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
   } catch (error) {
+    console.error("API Route Error:", error);
     return NextResponse.json(
-      { message: "Lỗi kết nối", error: String(error) },
+      {
+        message: "Lỗi kết nối đến server backend.",
+        error: (error as Error).message,
+      },
       { status: 500 }
     );
   }

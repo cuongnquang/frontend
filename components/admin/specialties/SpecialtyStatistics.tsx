@@ -1,5 +1,5 @@
 import React from 'react'
-import { Microscope, Users, Star, ShieldCheck } from 'lucide-react'
+import { Microscope, ImageIcon, CalendarCheck } from 'lucide-react'
 import { Specialization } from './SpecializationTypes'
 
 interface SpecialtyStatisticsProps {
@@ -8,9 +8,8 @@ interface SpecialtyStatisticsProps {
 
 export default function SpecialtyStatistics({ specializations }: SpecialtyStatisticsProps) {
     const totalSpecialties = specializations.length
-    const totalDoctors = specializations.reduce((sum, s) => sum + s.totalDoctors, 0)
-    const avgRating = (specializations.reduce((sum, s) => sum + s.avgRating, 0) / totalSpecialties).toFixed(1)
-    const topRatedSpecialty = specializations.reduce((prev, current) => (prev.avgRating > current.avgRating ? prev : current), specializations[0])
+    const latestCreated = specializations.length > 0 ? new Date(specializations[0].createdAt || '').toLocaleDateString('vi-VN') : 'N/A'
+    const latestUpdated = specializations.length > 0 ? new Date(specializations[0].updatedAt || '').toLocaleDateString('vi-VN') : 'N/A'
 
     const stats = [
         {
@@ -21,25 +20,25 @@ export default function SpecialtyStatistics({ specializations }: SpecialtyStatis
             unit: 'Khoa'
         },
         {
-            icon: Users,
+            icon: ImageIcon,
             color: 'cyan',
-            label: 'Tổng số Bác sĩ',
-            value: totalDoctors.toLocaleString(),
-            unit: 'BS'
+            label: 'Có hình ảnh',
+            value: specializations.filter(s => s.image).length,
+            unit: 'Khoa'
         },
         {
-            icon: Star,
+            icon: CalendarCheck,
             color: 'yellow',
-            label: 'Đánh giá TB (Hệ thống)',
-            value: avgRating,
-            unit: 'Sao'
+            label: 'Ngày tạo gần nhất',
+            value: latestCreated,
+            unit: ''
         },
         {
-            icon: ShieldCheck,
+            icon: CalendarCheck,
             color: 'rose',
-            label: 'Chuyên khoa tốt nhất',
-            value: topRatedSpecialty?.name || 'N/A',
-            unit: topRatedSpecialty ? `(${topRatedSpecialty.avgRating} Sao)` : ''
+            label: 'Ngày cập nhật gần nhất',
+            value: latestUpdated,
+            unit: ''
         }
     ]
 
@@ -48,9 +47,6 @@ export default function SpecialtyStatistics({ specializations }: SpecialtyStatis
             {stats.map((stat) => (
                 <div key={stat.label} className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-l-gray-200 hover:border-l-indigo-400 transition-all duration-300">
                     <div className="flex items-center">
-                        {/* Lưu ý: Để TailwindCSS hoạt động, các class color như 'bg-indigo-100' cần được định nghĩa đầy đủ, thay vì dùng string interpolation.
-                            Tuy nhiên, tôi vẫn dùng interpolation để giữ tính linh hoạt về mặt code logic, mặc dù có thể cần thêm config Tailwind.
-                        */}
                         <div className={`p-3 rounded-lg bg-${stat.color}-100 text-${stat.color}-600 mr-4`}>
                             <stat.icon className="w-6 h-6" />
                         </div>

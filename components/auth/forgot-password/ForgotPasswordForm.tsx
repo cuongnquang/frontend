@@ -7,11 +7,14 @@ import EmailStep from './EmailStep'
 import VerificationStep from './VerificationStep'
 import ResetStep from './ResetStep'
 import SuccessStep from './SuccessStep'
+import Alert from '@/components/ui/Alert'
+import { useAuth } from '@/contexts/AuthContext'
 
 type Step = 'email' | 'verification' | 'reset' | 'success'
 
 export default function ForgotPasswordForm() {
     const router = useRouter()
+    const { forgotPassword, verifyResetOTP, resetPassword } = useAuth()
     const [currentStep, setCurrentStep] = useState<Step>('email')
     const [isLoading, setIsLoading] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
@@ -22,6 +25,11 @@ export default function ForgotPasswordForm() {
     const [showNewPassword, setShowNewPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [countdown, setCountdown] = useState(0)
+    const [alert, setAlert] = useState<{ message: string, type: 'success' | 'error' | 'info' | null, duration?: number }>({
+        message: '',
+        type: null,
+        duration: 4000
+    })
 
     const validateEmail = (email: string) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -40,6 +48,7 @@ export default function ForgotPasswordForm() {
         }
     }
 
+    // Step 1: Gửi email quên mật khẩu
     const handleEmailSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
@@ -50,17 +59,24 @@ export default function ForgotPasswordForm() {
             return
         }
         try {
-            await new Promise(resolve => setTimeout(resolve, 1500))
-            console.log('Password reset email sent to:', email)
-            setCurrentStep('verification')
-            startCountdown()
+            const result = await forgotPassword(email)
+            if (result.success) {
+                setAlert({ message: result.message, type: 'success' })
+                setCurrentStep('verification')
+                startCountdown()
+            } else {
+                setAlert({ message: result.message, type: 'error' })
+                setErrors({ general: result.message })
+            }
         } catch (error) {
+            setAlert({ message: 'Có lỗi xảy ra. Vui lòng thử lại.', type: 'error' })
             setErrors({ general: 'Có lỗi xảy ra. Vui lòng thử lại.' })
         } finally {
             setIsLoading(false)
         }
     }
 
+    // Step 2: Xác thực mã OTP
     const handleVerificationSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
@@ -72,16 +88,23 @@ export default function ForgotPasswordForm() {
             return
         }
         try {
-            await new Promise(resolve => setTimeout(resolve, 1000))
-            console.log('Verification code verified:', code)
-            setCurrentStep('reset')
+            const result = await verifyResetOTP(code)
+            if (result.success) {
+                setAlert({ message: result.message, type: 'success' })
+                setCurrentStep('reset')
+            } else {
+                setAlert({ message: result.message, type: 'error' })
+                setErrors({ general: result.message })
+            }
         } catch (error) {
+            setAlert({ message: 'Mã xác thực không đúng. Vui lòng thử lại.', type: 'error' })
             setErrors({ general: 'Mã xác thực không đúng. Vui lòng thử lại.' })
         } finally {
             setIsLoading(false)
         }
     }
 
+    // Step 3: Đặt lại mật khẩu mới
     const handlePasswordReset = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
@@ -98,10 +121,17 @@ export default function ForgotPasswordForm() {
             return
         }
         try {
-            await new Promise(resolve => setTimeout(resolve, 1500))
-            console.log('Password reset successful')
-            setCurrentStep('success')
+            const code = verificationCode.join('')
+            const result = await resetPassword(code, newPassword, confirmPassword)
+            if (result.success) {
+                setAlert({ message: result.message, type: 'success' })
+                setCurrentStep('success')
+            } else {
+                setAlert({ message: result.message, type: 'error' })
+                setErrors({ general: result.message })
+            }
         } catch (error) {
+            setAlert({ message: 'Có lỗi xảy ra. Vui lòng thử lại.', type: 'error' })
             setErrors({ general: 'Có lỗi xảy ra. Vui lòng thử lại.' })
         } finally {
             setIsLoading(false)
@@ -124,15 +154,22 @@ export default function ForgotPasswordForm() {
         }
     }
 
+    // Gửi lại mã xác thực
     const resendCode = async () => {
         if (countdown > 0) return
         setIsLoading(true)
         try {
-            await new Promise(resolve => setTimeout(resolve, 1000))
-            console.log('Verification code resent')
-            startCountdown()
-            setVerificationCode(['', '', '', '', '', ''])
+            const result = await forgotPassword(email)
+            if (result.success) {
+                setAlert({ message: 'Mã xác thực đã được gửi lại!', type: 'success' })
+                startCountdown()
+                setVerificationCode(['', '', '', '', '', ''])
+            } else {
+                setAlert({ message: result.message, type: 'error' })
+                setErrors({ general: result.message })
+            }
         } catch (error) {
+            setAlert({ message: 'Không thể gửi lại mã. Vui lòng thử lại.', type: 'error' })
             setErrors({ general: 'Không thể gửi lại mã. Vui lòng thử lại.' })
         } finally {
             setIsLoading(false)
@@ -195,6 +232,10 @@ export default function ForgotPasswordForm() {
                 )}
                 {renderStep()}
             </div>
+
+            {alert.type && (
+                <Alert message={alert.message} type={alert.type} duration={alert.duration} />
+            )}
 
             {currentStep !== 'success' && (
                 <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8">

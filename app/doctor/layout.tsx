@@ -1,6 +1,6 @@
 'use client'
 
-import { useAuth } from '@/lib/AuthContext'
+import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -111,7 +111,6 @@ export default function DoctorLayout({
                             {navigation.map((item) => {
                                 const IconComponent = item.icon
                                 return (
-
                                     <li>
                                         <Link
                                             href={item.href}

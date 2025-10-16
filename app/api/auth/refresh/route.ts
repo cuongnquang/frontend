@@ -29,6 +29,13 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    if (!backendRes.ok) {
+      const errorData = await backendRes.json().catch(() => ({
+        message: "Backend trả về lỗi không phải JSON.",
+      }));
+      return NextResponse.json(errorData, { status: backendRes.status });
+    }
+
     const data = await backendRes.json();
 
     const response = NextResponse.json(data, { status: backendRes.status });

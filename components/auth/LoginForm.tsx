@@ -2,63 +2,80 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { Mail, AlertCircle } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Mail } from 'lucide-react'
 import Alert from '@/components/ui/Alert'
 import InputField from '../ui/InputField'
 import PasswordField from '../ui/PasswordField'
 import { useAuth } from '@/contexts/AuthContext'
+import { getRedirectPathByRole } from "@/utils/redirectByRole";
 
 export default function LoginPage() {
     const router = useRouter()
-
-    const { login, loading, error: authError, user } = useAuth()
+    const searchParams = useSearchParams()
+    const { login, loading, user } = useAuth()
     
     const [showPassword, setShowPassword] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
-    const [alert, setAlert] = useState<{ message: string, type: 'success' | 'error' | null }>({ message: '', type: null })
-    const [isLoading, setIsLoading] = useState(false)
+    const [alert, setAlert] = useState<{ message: string, type: 'success' | 'error' | null, duration?: number }>({ 
+        message: '', 
+        type: null,
+        duration: 3000
+    })
+
+    // Check for message from query params (from register page)
+    useEffect(() => {
+        const message = searchParams.get('message')
+        const type = searchParams.get('type') as 'success' | 'error' | null
+        
+        if (message && type) {
+            setAlert({ message: decodeURIComponent(message), type, duration: type === 'success' ? 12000 : 3000 })
+            
+            const params = new URLSearchParams(searchParams.toString())
+            params.delete('message')
+            params.delete('type')
+            router.replace(`/auth/login?${params.toString()}`, { scroll: false })
+        }
+    }, [searchParams, router])
 
     useEffect(() => {
         if (user) {
-            router.push('/')
+            router.push(getRedirectPathByRole(user.role));
         }
     }, [user, router])
 
     const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
     const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsLoading(true);
-        setErrors({});
-        setAlert({ message: '', type: null });
+        e.preventDefault()
+        setErrors({})
+        setAlert({ message: '', type: null })
 
         // Client-side validation
-        const newErrors: Record<string, string> = {};
-        if (!email) newErrors.email = 'Vui lòng nhập email';
-        else if (!validateEmail(email)) newErrors.email = 'Email không hợp lệ';
-        if (!password) newErrors.password = 'Vui lòng nhập mật khẩu';
+        const newErrors: Record<string, string> = {}
+        if (!email) newErrors.email = 'Vui lòng nhập email'
+        else if (!validateEmail(email)) newErrors.email = 'Email không hợp lệ'
+        if (!password) newErrors.password = 'Vui lòng nhập mật khẩu'
 
         if (Object.keys(newErrors).length > 0) {
-            setErrors(newErrors);
-            setIsLoading(false);
-            return;
+            setErrors(newErrors)
+            return
         }
 
         try {
-            const result = await login(email, password);
-            setAlert({
-                message: result.message,
-                type: result.success ? "success" : "error"
-            });
+            const result = await login(email, password)
+            if (!result.success) {
+                setAlert({
+                    message: result.message,
+                    type: "error"
+                })
+            }
         } catch (error: any) {
-            setAlert({ message: "Đăng nhập thất bại", type: "error" });
-        } finally {
-            setIsLoading(false);
+            setAlert({ message: "Đăng nhập thất bại", type: "error" })
         }
-    };
+    }
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -116,7 +133,11 @@ export default function LoginPage() {
                             'Đăng nhập'
                         )}
                     </button>
-                    <Link href="/" className="w-full block text-center border border-blue-600 text-blue-700 py-3 rounded-lg hover:bg-gray-100">
+                    <Link 
+                        href="/" 
+                        className="w-full block text-center border border-blue-600 text-blue-700 py-3 rounded-lg hover:bg-gray-100 transition-colors"
+                        tabIndex={loading ? -1 : 0}
+                    >
                         Quay về trang chủ
                     </Link>
                 </form>
@@ -133,7 +154,7 @@ export default function LoginPage() {
             </div>
 
             {alert.type && (
-                <Alert message={alert.message} type={alert.type} duration={3000} />
+                <Alert message={alert.message} type={alert.type} duration={5000} />
             )}
         </div>
     )

@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/AuthContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { Shield, ArrowLeft, Home } from 'lucide-react'
 
 export default function UnauthorizedPage() {

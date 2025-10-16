@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Menu, Search, Bell } from 'lucide-react'
 import { NotificationDropdown } from './NotificationDropdown'
-import { useAuth } from '@/lib/AuthContext'
+import { useAuth } from '@/contexts/AuthContext'
 
 // Định nghĩa kiểu cho thông báo
 export interface Notification {

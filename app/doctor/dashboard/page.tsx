@@ -1,6 +1,6 @@
 'use client'
 
-import { useAuth } from '@/lib/AuthContext'
+import { useAuth } from '@/contexts/AuthContext'
 import {
     Calendar,
     Users,

@@ -73,11 +73,12 @@ export default function Alert({ message, type = 'info', duration = 4000 }: Alert
 
   const style = config[type]
 
+  const messages = message.split('\n').filter(msg => msg.trim())
+
   return (
     <div
-      className={`fixed top-26 right-6 z-50 min-w-[320px] max-w-md transform transition-all duration-300 ${
-        isExiting ? 'translate-x-[120%] opacity-0' : 'translate-x-0 opacity-100'
-      }`}
+      className={`fixed top-26 right-6 z-50 min-w-[320px] max-w-md transform transition-all duration-300 ${isExiting ? 'translate-x-[120%] opacity-0' : 'translate-x-0 opacity-100'
+        }`}
       style={{
         animation: isExiting ? undefined : 'slideIn 0.3s ease-out'
       }}
@@ -89,10 +90,17 @@ export default function Alert({ message, type = 'info', duration = 4000 }: Alert
           <div className="flex-shrink-0 mt-0.5">
             {style.icon}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className={`${style.text} text-sm font-medium leading-relaxed`}>
-              {message}
-            </p>
+          <div className="flex-1 min-w-0 space-y-1.5">
+            {messages.map((msg, index) => (
+              <div key={index} className="flex items-start gap-2">
+                {messages.length > 1 && (
+                  <span className={`${style.text} mt-0.5 flex-shrink-0`}>•</span>
+                )}
+                <p className={`${style.text} text-sm font-medium leading-relaxed flex-1`}>
+                  {msg}
+                </p>
+              </div>
+            ))}
           </div>
           <button
             onClick={handleClose}
@@ -102,11 +110,11 @@ export default function Alert({ message, type = 'info', duration = 4000 }: Alert
             <X className="w-4 h-4" />
           </button>
         </div>
-        
+
         <div className="w-full h-1 bg-black/5">
           <div
             className={`${style.progressBar} h-full transition-all ease-linear`}
-            style={{ 
+            style={{
               width: `${progress}%`,
               transitionDuration: '30ms'
             }}

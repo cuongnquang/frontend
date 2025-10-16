@@ -1,13 +1,15 @@
-import React from 'react'
-import { Edit, Trash2, Eye, User, Star, Users, ArrowRight, BookOpen } from 'lucide-react'
-import { Specialization } from './SpecializationTypes'
+// components/admin/specialties/SpecialtyTable.tsx
 
-// --- Component phụ: SpecialtyTableRow ---
+import React from 'react'
+import { Edit, Trash2, Eye } from 'lucide-react'
+import { Specialty } from '@/contexts/SpecialtyContext'
+
+
 interface SpecialtyTableRowProps {
-    specialty: Specialization
-    onView: (specialty: Specialization) => void
-    onEdit: (specialty: Specialization) => void
-    onDelete: (specialty: Specialization) => void
+    specialty: Specialty
+    onView: (specialty: Specialty) => void
+    onEdit: (specialty: Specialty) => void
+    onDelete: (specialty: Specialty) => void
 }
 
 const SpecialtyTableRow: React.FC<SpecialtyTableRowProps> = ({
@@ -16,58 +18,61 @@ const SpecialtyTableRow: React.FC<SpecialtyTableRowProps> = ({
     onEdit,
     onDelete,
 }) => (
-    <tr key={specialty.id} className="hover:bg-gray-50">
-        {/* Cột 1: Tên Chuyên khoa */}
-        <td className="px-6 py-4 whitespace-nowrap">
-            <div className="flex items-center">
-                <div className="ml-4">
-                    <div className="text-sm font-medium text-gray-900 flex items-center">
-                        <span className={`w-3 h-3 rounded-full mr-2`} style={{ backgroundColor: specialty.colorCode }}></span>
-                        {specialty.name}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1 flex items-center">
-                        <BookOpen className="w-3 h-3 inline mr-1 text-gray-400" />
-                        Mã: {specialty.id}
-                    </div>
+    <tr className="hover:bg-gray-50 transition-colors">
+        {/* Hình ảnh */}
+        <td className="px-4 py-4 whitespace-nowrap w-24">
+            {specialty.image ? (
+                <img src={specialty.image} alt={specialty.name} className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
+            ) : (
+                <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs">
+                    Không có ảnh
                 </div>
-            </div>
+            )}
         </td>
-
-        {/* Cột 2: Trưởng khoa */}
-        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-            <div className="flex items-center">
-                <User className="w-4 h-4 text-indigo-400 mr-2" />
-                <span>{specialty.leadDoctor}</span>
-            </div>
+        {/* Tên Chuyên khoa */}
+        <td className="px-6 py-4 w-48">
+            <span className="font-semibold text-gray-900 text-base">{specialty.name}</span>
         </td>
-
-        {/* Cột 3: Mô tả */}
-        <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
-            {specialty.description}
+        {/* Mô tả */}
+        <td className="px-6 py-4 flex-1">
+            <span className="text-sm text-gray-600 line-clamp-2">
+                {specialty.description || <span className="text-gray-400 italic">Không có mô tả</span>}
+            </span>
         </td>
-
-        {/* Cột 4: Thống kê */}
-        <td className="px-6 py-4 whitespace-nowrap text-sm">
-            <div className="flex items-center space-x-2 text-gray-600">
-                <Users className="w-4 h-4 text-blue-500" />
-                <span>{specialty.totalDoctors} BS</span>
-            </div>
-            <div className="mt-1 flex items-center space-x-2 text-gray-600">
-                <Star className="w-4 h-4 text-yellow-500" fill="#f59e0b" />
-                <span>{specialty.avgRating.toFixed(1)} / 5.0</span>
-            </div>
+        {/* Thời gian tạo */}
+        <td className="px-6 py-4 w-32 whitespace-nowrap">
+            <span className="text-sm text-gray-600">
+                {specialty.createdAt ? new Date(specialty.createdAt).toLocaleDateString('vi-VN') : '-'}
+            </span>
         </td>
-
-        {/* Cột 5: Thao tác */}
-        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-            <div className="flex space-x-2">
-                <button onClick={() => onView(specialty)} className="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50 transition" title="Xem chi tiết">
+        {/* Thời gian cập nhật */}
+        <td className="px-6 py-4 w-32 whitespace-nowrap">
+            <span className="text-sm text-gray-600">
+                {specialty.updatedAt ? new Date(specialty.updatedAt).toLocaleDateString('vi-VN') : '-'}
+            </span>
+        </td>
+        {/* Thao tác */}
+        <td className="px-4 py-4 whitespace-nowrap w-28">
+            <div className="flex space-x-1">
+                <button 
+                    onClick={() => onView(specialty)} 
+                    className="inline-flex items-center justify-center w-8 h-8 text-indigo-600 hover:text-indigo-900 rounded hover:bg-indigo-50 transition" 
+                    title="Xem chi tiết"
+                >
                     <Eye className="w-5 h-5" />
                 </button>
-                <button onClick={() => onEdit(specialty)} className="text-yellow-600 hover:text-yellow-900 p-1 rounded hover:bg-yellow-50 transition" title="Sửa">
+                <button 
+                    onClick={() => onEdit(specialty)} 
+                    className="inline-flex items-center justify-center w-8 h-8 text-yellow-600 hover:text-yellow-900 rounded hover:bg-yellow-50 transition" 
+                    title="Sửa"
+                >
                     <Edit className="w-5 h-5" />
                 </button>
-                <button onClick={() => onDelete(specialty)} className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition" title="Xóa">
+                <button 
+                    onClick={() => onDelete(specialty)} 
+                    className="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:text-red-900 rounded hover:bg-red-50 transition" 
+                    title="Xóa"
+                >
                     <Trash2 className="w-5 h-5" />
                 </button>
             </div>
@@ -75,70 +80,51 @@ const SpecialtyTableRow: React.FC<SpecialtyTableRowProps> = ({
     </tr>
 )
 
-// --- Component chính: SpecialtyTable ---
 interface SpecialtyTableProps {
-    specializations: Specialization[]
-    onViewSpecialty: (specialty: Specialization) => void
-    onEditSpecialty: (specialty: Specialization) => void
-    onDeleteSpecialty: (specialty: Specialization) => void
+    specialties: Specialty[]
+    onViewSpecialty: (specialty: Specialty) => void
+    onEditSpecialty: (specialty: Specialty) => void
+    onDeleteSpecialty: (specialty: Specialty) => void
 }
 
 export default function SpecialtyTable({
-    specializations,
+    specialties,
     onViewSpecialty,
     onEditSpecialty,
     onDeleteSpecialty,
 }: SpecialtyTableProps) {
     return (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                <h2 className="text-lg font-semibold text-gray-900">
-                    Danh sách Chuyên khoa
-                    <span className="ml-2 text-sm text-gray-500">
-                        ({specializations.length} chuyên khoa)
-                    </span>
-                </h2>
-                <button className="text-sm font-medium text-indigo-600 hover:text-indigo-800 flex items-center">
-                    Xem tất cả bác sĩ
-                    <ArrowRight className="w-4 h-4 ml-1" />
-                </button>
+            <div className="px-6 py-4 border-b border-gray-200">
+                <h2 className="font-bold text-lg text-gray-900">Danh sách chuyên khoa</h2>
             </div>
-
             <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Chuyên khoa
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Trưởng khoa
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Mô tả
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Thống kê
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Thao tác
-                            </th>
+                            <th className="px-4 py-3 w-24 text-center text-xs font-semibold text-gray-700 uppercase tracking-wide">Ảnh</th>
+                            <th className="px-6 py-3 w-48 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">Tên chuyên khoa</th>
+                            <th className="px-6 py-3 flex-1 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">Mô tả</th>
+                            <th className="px-6 py-3 w-32 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">Ngày tạo</th>
+                            <th className="px-6 py-3 w-32 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">Cập nhật</th>
+                            <th className="px-4 py-3 w-28 text-center text-xs font-semibold text-gray-700 uppercase tracking-wide">Thao tác</th>
                         </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {specializations.map((specialty) => (
-                            <SpecialtyTableRow
-                                key={specialty.id}
-                                specialty={specialty}
-                                onView={onViewSpecialty}
-                                onEdit={onEditSpecialty}
-                                onDelete={onDeleteSpecialty}
-                            />
-                        ))}
-                        {specializations.length === 0 && (
+                    <tbody className="divide-y divide-gray-200">
+                        {specialties.length > 0 ? (
+                            specialties.map(specialty => (
+                                <SpecialtyTableRow
+                                    key={specialty.id}
+                                    specialty={specialty}
+                                    onView={onViewSpecialty}
+                                    onEdit={onEditSpecialty}
+                                    onDelete={onDeleteSpecialty}
+                                />
+                            ))
+                        ) : (
                             <tr>
-                                <td colSpan={5} className="text-center py-10 text-gray-500">
-                                    Không có chuyên khoa nào được tìm thấy.
+                                <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
+                                    Không có dữ liệu
                                 </td>
                             </tr>
                         )}

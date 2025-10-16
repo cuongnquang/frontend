@@ -37,6 +37,7 @@ export default function ResetStep({ newPassword, setNewPassword, confirmPassword
                             type={showNewPassword ? 'text' : 'password'}
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
+                            autoComplete="off"
                             className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:outline-none text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.password ? 'border-red-300' : 'border-gray-300'}`}
                             placeholder="Nhập mật khẩu mới"
                         />
@@ -82,6 +83,7 @@ export default function ResetStep({ newPassword, setNewPassword, confirmPassword
                             type={showConfirmPassword ? 'text' : 'password'}
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
+                            autoComplete="off"
                             className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:outline-none text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.confirmPassword ? 'border-red-300' : 'border-gray-300'}`}
                             placeholder="Nhập lại mật khẩu mới"
                         />

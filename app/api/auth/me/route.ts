@@ -15,6 +15,13 @@ export async function GET(req: NextRequest) {
       cache: "no-store",
     });
 
+    if (!backendRes.ok) {
+      const errorData = await backendRes.json().catch(() => ({
+        message: "Backend trả về lỗi không phải JSON.",
+      }));
+      return NextResponse.json(errorData, { status: backendRes.status });
+    }
+
     // Parse response
     const data = await backendRes.json();
     

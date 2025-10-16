@@ -3,12 +3,17 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-
-    const backendRes = await fetch(`${process.env.BACKEND_API_URL}/v1/auth/reset-password`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    
+    const backendRes = await fetch(
+      `${process.env.BACKEND_API_URL}/v1/auth/resend-verification`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      }
+    );
 
     if (!backendRes.ok) {
       const errorData = await backendRes.json().catch(() => ({
