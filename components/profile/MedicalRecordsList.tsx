@@ -23,8 +23,11 @@ export default function MedicalRecordsList({ medicalRecords }: MedicalRecordsLis
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">Chưa có hồ sơ y tế nào</h3>
                     <p className="text-gray-600 mb-6">Các hồ sơ sẽ được lưu trữ tự động sau khi hoàn thành lịch hẹn.</p>
                     <button className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                        <Upload className="w-4 h-4 mr-2" />
-                        Tải lên hồ sơ mới
+                        <div className="flex items-center justify-center">
+                            <Upload className="w-4 h-4 mr-2" />
+                            Tải lên hồ sơ mới
+                        </div>
+                        
                     </button>
                 </div>
             </div>

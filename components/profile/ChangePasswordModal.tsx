@@ -39,7 +39,7 @@ export default function ChangePasswordModal({
         passwordForm.newPassword === passwordForm.confirmPassword
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity" onClick={() => setShowChangePassword(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center transition-opacity" onClick={() => setShowChangePassword(false)}>
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 transform transition-all" onClick={e => e.stopPropagation()}>
                 {/* Header */}
                 <div className="p-6 border-b border-gray-200 flex items-center justify-between">

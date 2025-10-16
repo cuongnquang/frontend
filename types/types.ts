@@ -1,4 +1,3 @@
-
 export enum AppointmentStatus {
   PENDING = "pending",
   CONFIRMED = "confirmed",
@@ -55,7 +54,6 @@ export interface Specialty {
   specialty_id: string;
   name: string;
   description?: string;
-  image_url?: string;
   created_at: string;
   updated_at: string;
   Doctors: Doctor[];
@@ -71,7 +69,7 @@ export interface Doctor {
   avatar_url?: string;
   specializations?: string;
   work_experience?: string;
-  achievements?: string;
+  achievements?: string[];
   experience_years?: number;
   is_available: boolean;
   created_at: string;
@@ -112,12 +110,35 @@ export interface Appointment {
 }
 
 export interface TimeSlot {
-  id: string;
-  day: string;
-  startTime: string;
-  endTime: string;
-  maxPatients: number;
-  currentPatients: number;
-  isAvailable: boolean;
+    id: string;
+    day: 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
+    startTime: string;
+    endTime: string;
+    isAvailable: boolean;
+    maxPatients: number;
+    currentPatients: number;
 }
 
+export enum BookingStep{
+  DATE_TIME = 1,
+  PROFILE = 2,
+  CONFIRMATION = 3
+}
+
+export interface ChatMessage {
+  id: string;
+  sender: 'user' | 'bot';
+  text: string;
+  timestamp: Date;
+  options?: string[]; // Ví dụ: ['Đặt lịch', 'Tìm kiếm Bác sĩ']
+  relatedDoctorId?: string; 
+}
+
+export interface Review {
+id: string;
+patient_name: string;
+rating: number;
+comment: string;
+date: string;
+verified: boolean;
+}

@@ -14,7 +14,6 @@ import {
     Video,
     MessageCircle,
     CheckCircle,
-    ThumbsUp,
     Eye,
     BookOpen,
     ChevronRight

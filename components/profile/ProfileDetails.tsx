@@ -25,10 +25,11 @@ interface ProfileDetailsProps {
     userProfile: UserProfile
     setUserProfile: Dispatch<SetStateAction<UserProfile>>
     isLoading: boolean
+    onUpdateProfile: (profileData: UserProfile) => Promise<boolean>
 }
 
-export default function ProfileDetails({ userProfile, setUserProfile, isLoading }: ProfileDetailsProps) {
-    const [isEditing, setIsEditing] = useState(false)
+export default function ProfileDetails({ userProfile, setUserProfile, isLoading, onUpdateProfile }: ProfileDetailsProps) {
+    const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState(userProfile)
     const [isUpdating, setIsUpdating] = useState(false);
 
@@ -44,31 +45,19 @@ export default function ProfileDetails({ userProfile, setUserProfile, isLoading 
 
     const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault()
-        setIsUpdating(true);
-        try {
-            const res = await fetch(`/api/user/profile`, { 
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editForm),
-            });
+        if (isUpdating) return;
 
-            if (!res.ok) {
-                alert('Cập nhật thất bại!');
-            } else {
-                const updatedProfile = await res.json();
-                setUserProfile(updatedProfile); 
-                setIsEditing(false);
-                alert('Cập nhật thông tin thành công!');
-            }
-        } catch (error) {
-            alert('Có lỗi xảy ra.');
-        } finally {
-            setIsUpdating(false);
+        setIsUpdating(true);
+        const success = await onUpdateProfile(editForm);
+        setIsUpdating(false);
+
+        if (success) {
+            setIsEditing(false);
         }
     }
 
     return (
-        <div className="bg-white rounded-xl shadow-sm">
+        <div className="bg-white text-black rounded-xl shadow-sm">
             <div className="p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold text-gray-900">
@@ -106,7 +95,7 @@ export default function ProfileDetails({ userProfile, setUserProfile, isLoading 
                     </div>
                 )}
                 <form onSubmit={handleUpdateProfile}>
-                    <div className="grid md:grid-cols-2 gap-6">
+                    <div className="grid md:grid-cols-2 text-black gap-6">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Họ và tên <span className="text-red-500">*</span></label>
                             <div className="relative">
