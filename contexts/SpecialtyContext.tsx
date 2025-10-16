@@ -1,5 +1,3 @@
-// contexts/SpecialtyContext.tsx
-
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
@@ -17,7 +15,7 @@ export interface Specialty {
 export type CreateSpecialtyData = {
   name: string;
   description?: string;
-  image_url?: string; // ✅ base64 string (JSON)
+  image_url?: string;
 };
 
 
@@ -86,7 +84,7 @@ export function SpecialtyProvider({ children }: { children: ReactNode }) {
 
             const res = await apiClient("/api/specialties", {
                 method: "POST",
-                body: JSON.stringify(data), // Gửi FormData thay vì JSON
+                body: JSON.stringify(data),
             });
 
             if (!res.status) {
