@@ -1,3 +1,5 @@
+import { log } from "node:console";
+
 interface ApiRequestOptions extends RequestInit {
     skipRefresh?: boolean;
     skipRedirect?: boolean;
@@ -21,22 +23,27 @@ function getCookie(name: string): string | undefined {
     return undefined;
 }
 
-
 export async function apiClient<T = any>(
     endpoint: string,
     options: ApiRequestOptions = {}
 ): Promise<ApiResponse<T>> {
     const { skipRefresh = false, skipRedirect = false, ...fetchOptions } = options;
 
-    const accessToken = getCookie("accessToken");
     const csrfToken = getCookie("csrfToken");
+    const accessToken = getCookie("accessToken");
+    
 
     const headers: Record<string, string> = {
         "Content-Type": "application/json",
     };
 
-    if (fetchOptions.headers) Object.assign(headers, fetchOptions.headers as Record<string, string>);
-    if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+    if (accessToken) {
+        headers["Authorization"] = `Bearer ${accessToken}`;
+    }
+
+    if (fetchOptions.headers)
+        Object.assign(headers, fetchOptions.headers as Record<string, string>);
+
     if (csrfToken && fetchOptions.method && fetchOptions.method !== "GET") {
         headers["x-csrf-token"] = csrfToken;
     }
@@ -52,15 +59,14 @@ export async function apiClient<T = any>(
     } catch (networkError) {
         return {
             status: false,
-            message: "Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại đường truyền mạng.",
-            error: networkError
+            message: "Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng.",
+            error: networkError,
         };
     }
 
     if (res.status === 401 && !skipRefresh) {
         const hasRefreshToken = getCookie("nestjs_refresh_token");
 
-        // Lấy thông báo lỗi từ BE nếu có
         let errorPayload: any = {};
         try {
             errorPayload = await res.clone().json();
@@ -73,7 +79,7 @@ export async function apiClient<T = any>(
                 status: false,
                 code: res.status,
                 message: errorPayload.message || "Yêu cầu xác thực không hợp lệ.",
-                error: errorPayload
+                error: errorPayload,
             };
         }
 
@@ -84,7 +90,7 @@ export async function apiClient<T = any>(
 
         if (refreshRes.ok) {
             window.dispatchEvent(new Event("token-refreshed"));
-            return apiClient<T>(endpoint, { ...options, skipRefresh: true }); // Thử lại yêu cầu
+            return apiClient<T>(endpoint, { ...options, skipRefresh: true }); // thử lại
         }
 
         if (!skipRedirect && typeof window !== "undefined") {
@@ -94,8 +100,9 @@ export async function apiClient<T = any>(
         return {
             status: false,
             code: res.status,
-            message: errorPayload.message || "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
-            error: errorPayload
+            message:
+                errorPayload.message || "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+            error: errorPayload,
         };
     }
 
@@ -105,15 +112,15 @@ export async function apiClient<T = any>(
             return {
                 status: false,
                 code: res.status,
-                message: errorPayload.message || `Yêu cầu thất bại với mã lỗi ${res.status}`,
+                message: errorPayload.message || `Yêu cầu thất bại (${res.status})`,
                 error: errorPayload,
             };
-        } catch (jsonError) {
+        } catch {
             return {
                 status: false,
                 code: res.status,
-                message: `Đã có lỗi xảy ra phía máy chủ (Mã: ${res.status})`,
-                error: "Invalid JSON error response"
+                message: `Máy chủ trả về lỗi không xác định (Mã: ${res.status})`,
+                error: "Invalid JSON error response",
             };
         }
     }
@@ -134,7 +141,11 @@ export async function apiClient<T = any>(
             status: false,
             code: res.status,
             message: "Phản hồi từ máy chủ không hợp lệ.",
-            error: jsonError
+            error: jsonError,
         };
     }
+}
+
+if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+    (window as any).apiClient = apiClient;
 }
