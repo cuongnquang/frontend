@@ -62,8 +62,8 @@ export default function DoctorFilters({
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
                     >
                         <option value="all">Tất cả</option>
-                        <option value="active">Đang làm việc</option>
-                        <option value="inactive">Đã nghỉ</option>
+                        <option value="active">Hoạt động</option>
+                        <option value="inactive">Ngừng hoạt động</option>
                     </select>
                 </div>
             </div>

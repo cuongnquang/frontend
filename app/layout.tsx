@@ -1,8 +1,11 @@
+// app/layout.tsx
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { SpecialtyProvider } from "@/contexts/SpecialtyContext";
+import { DoctorProvider } from "@/contexts/DoctorContext";
+import { PatientProvider } from '@/contexts/PatientContext';
 
 const inter = Inter({ subsets: ['latin', 'vietnamese'] })
 
@@ -21,7 +24,11 @@ export default function RootLayout({
       <body className={inter.className}>
         <AuthProvider>
           <SpecialtyProvider>
-            {children}
+            <DoctorProvider>
+              <PatientProvider>
+                {children}
+              </PatientProvider>
+            </DoctorProvider>
           </SpecialtyProvider>
         </AuthProvider>
       </body>

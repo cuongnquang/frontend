@@ -1,18 +1,15 @@
-// src/components/admin/patients/AdminPatients.tsx
-
 'use client'
 
-import { useState, useMemo, Activity } from 'react'
-import { Patient } from '@/components/admin/patients/PatientTypes'
+import { useState, useMemo } from 'react'
+import { usePatient, Patient } from '@/contexts/PatientContext'
 import PatientPageHeader from '@/components/admin/patients/PatientPageHeader'
 import PatientStatistics from '@/components/admin/patients/PatientStatistics'
 import PatientFilters from '@/components/admin/patients/PatientFilters'
 import PatientTable from '@/components/admin/patients/PatientTable'
 import { PatientForm } from '@/components/admin/patients/form/PatientForm'
-import { ExportReportModal } from '@/components/admin/reports/form/ExportReport'
-// import { calculateAge, getRiskColor, getRiskText } from '../../utils/patientUtils'
+import Alert from '@/components/ui/Alert'
 
-// Các hàm tiện ích (tạm thời giữ trong component gốc)
+// Các hàm tiện ích
 const calculateAge = (dateOfBirth: string) => {
     const today = new Date()
     const birth = new Date(dateOfBirth)
@@ -24,210 +21,148 @@ const calculateAge = (dateOfBirth: string) => {
     return age
 }
 
-const getRiskColor = (risk: string) => {
-    switch (risk) {
-        case 'low': return 'bg-green-100 text-green-800'
-        case 'medium': return 'bg-yellow-100 text-yellow-800'
-        case 'high': return 'bg-red-100 text-red-800'
-        default: return 'bg-gray-100 text-gray-800'
-    }
-}
-
-const getRiskText = (risk: string) => {
-    switch (risk) {
-        case 'low': return 'Thấp'
-        case 'medium': return 'TB'
-        case 'high': return 'Cao'
-        default: return risk
-    }
-}
-
-// Mock patients data (thường sẽ được fetch từ API)
-const mockPatients: Patient[] = [
-    {
-        id: 'BN001',
-        name: 'Nguyễn Văn An',
-        email: 'nva@email.com',
-        phone: '0901234567',
-        dateOfBirth: '1985-03-15',
-        gender: 'male',
-        address: 'Hà Nội',
-        insuranceNumber: 'INS001',
-        bloodType: 'O+',
-        lastVisit: '2024-02-10',
-        nextAppointment: '2024-02-20',
-        totalVisits: 15,
-        status: 'active',
-        riskLevel: 'high'
-    },
-    {
-        id: 'BN002',
-        name: 'Trần Thị Bình',
-        email: 'ttb@email.com',
-        phone: '0901234568',
-        dateOfBirth: '1990-07-22',
-        gender: 'female',
-        address: 'TP.HCM',
-        insuranceNumber: 'INS002',
-        bloodType: 'A+',
-        lastVisit: '2024-02-08',
-        totalVisits: 8,
-        status: 'active',
-        riskLevel: 'medium'
-    },
-    {
-        id: 'BN003',
-        name: 'Lê Văn Cường',
-        email: 'lvc@email.com',
-        phone: '0901234569',
-        dateOfBirth: '1995-12-05',
-        gender: 'male',
-        address: 'Đà Nẵng',
-        insuranceNumber: 'INS003',
-        bloodType: 'B+',
-        lastVisit: '2024-02-12',
-        totalVisits: 3,
-        status: 'active',
-        riskLevel: 'low'
-    },
-    {
-        id: 'BN004',
-        name: 'Phạm Thị Duyên',
-        email: 'ptd@email.com',
-        phone: '0901234570',
-        dateOfBirth: '1970-01-01',
-        gender: 'female',
-        address: 'Cần Thơ',
-        insuranceNumber: 'INS004',
-        bloodType: 'AB-',
-        lastVisit: '2024-01-01',
-        totalVisits: 25,
-        status: 'inactive',
-        riskLevel: 'high'
-    }
-]
-
 export default function AdminPatients() {
+    const { 
+        patients, 
+        loading, 
+        error, 
+        fetchPatients, 
+        createPatient,
+        fetchPatientById
+    } = usePatient()
+    
     const [searchTerm, setSearchTerm] = useState('')
-    const [statusFilter, setStatusFilter] = useState('all')
-    const [riskFilter, setRiskFilter] = useState('all')
-    const [isFormOpen, setIsFormOpen] = useState(false);
-    const [currentPatient, setCurrentPatient] = useState<Patient | undefined>(undefined);
-    const [formMode, setFormMode] = useState<'create' | 'edit' | 'view'>('create');
-    const [patients, setPatients] = useState(mockPatients);
-    const [showExportModal, setShowExportModal] = useState(false)
-    const [selectedReport, setSelectedReport] = useState<{
-        type: 'patients'
-        data: any[]
-        title: string
-    } | null>(null)
+    const [isFormOpen, setIsFormOpen] = useState(false)
+    const [currentPatient, setCurrentPatient] = useState<Patient | null>(null)
+    const [formMode, setFormMode] = useState<'create' | 'view'>('create')
+    const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | null }>({
+        message: '',
+        type: null,
+    })
+
+    // Hiển thị alert và tự động ẩn sau 5 giây
+    const showAlert = (message: string, type: 'success' | 'error') => {
+        setAlert({ message, type })
+        setTimeout(() => {
+            setAlert({ message: '', type: null })
+        }, 5000)
+    }
 
     const filteredPatients = useMemo(() => {
         return patients.filter(patient => {
-            const matchesSearch = patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                patient.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                patient.phone.includes(searchTerm)
-            const matchesStatus = statusFilter === 'all' || patient.status === statusFilter
-            const matchesRisk = riskFilter === 'all' || patient.riskLevel === riskFilter
+            const matchesSearch = patient.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                patient.patient_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                patient.phone_number.includes(searchTerm) ||
+                patient.identity_number?.includes(searchTerm)
 
-            return matchesSearch && matchesStatus && matchesRisk
+            return matchesSearch
         })
-    }, [patients, searchTerm, statusFilter, riskFilter])
+    }, [patients, searchTerm])
 
     // --- Action Handlers ---
     const handleAddPatient = () => {
-        setCurrentPatient(undefined);
-        setFormMode('create');
-        setIsFormOpen(true);
+        setCurrentPatient(null)
+        setFormMode('create')
+        setIsFormOpen(true)
     }
-    const handleImport = () => alert('Mở dialog nhập dữ liệu')
-    const handleViewPatient = (patient: Patient) => {
-        setCurrentPatient(patient);
-        setFormMode('view');
-        setIsFormOpen(true);
-    }
-    const handleEditPatient = (patient: Patient) => {
-        setCurrentPatient(patient);
-        setFormMode('view');
-        setIsFormOpen(true);
-    }
-    const handleDeletePatient = (patient: Patient) => {
-        if (confirm(`Bạn có chắc chắn muốn xóa bệnh nhân ${patient.name}?`)) {
-            alert(`Xóa bệnh nhân ${patient.name}`)
-            // Thực hiện logic xóa API
+
+    const handleViewPatient = async (patient: Patient) => {
+        try {
+            await fetchPatientById(patient.patient_id)
+            setCurrentPatient(patient)
+            setFormMode('view')
+            setIsFormOpen(true)
+        } catch (err) {
+            console.error('Error viewing patient:', err)
+            showAlert('Không thể xem thông tin bệnh nhân', 'error')
         }
     }
+
     const handleFormClose = () => {
-        setIsFormOpen(false);
-        setCurrentPatient(undefined); // Reset bác sĩ hiện tại khi đóng
-    };
-    const handleFormSubmit = (data: any) => {
-        console.log('Dữ liệu form đã gửi:', data);
-
-        if (formMode === 'create') {
-            // Logic thêm mới
-            const newPatient = { ...data, id: Date.now() } as Patient;
-            setPatients(prev => [...prev, newPatient]);
-            alert(`Đã thêm bác sĩ: ${data.name}`);
-        } else if (formMode === 'edit' && currentPatient) {
-            // Logic chỉnh sửa
-            setPatients(prev => prev.map(p => p.id === currentPatient.id ? { ...currentPatient, ...data } : p));
-            alert(`Đã cập nhật bác sĩ: ${data.name}`);
-        }
-
-        handleFormClose(); // Đóng form sau khi submit thành công
-    };
-    const reportTypes = {
-        id: 'patients',
-        title: 'Báo cáo Bệnh nhân',
-        description: 'Thống kê và danh sách bệnh nhân',
-        icon: Activity,
-        color: 'bg-purple-100 text-purple-600',
-        data: mockPatients,
-        type: 'patients' as const
+        setIsFormOpen(false)
+        setCurrentPatient(null)
     }
 
+    const handleFormSubmit = async (data: any) => {
+        if (formMode === 'create') {
+            const patientData = {
+                user_id: data.user_id || `user_${Date.now()}`,
+                full_name: data.full_name,
+                identity_number: data.identity_number || '',
+                phone_number: data.phone_number,
+                date_of_birth: data.date_of_birth,
+                gender: data.gender,
+                address: data.address || '',
+                ethnicity: data.ethnicity || '',
+                health_insurance_number: data.health_insurance_number || '',
+                referral_code: data.referral_code || '',
+                occupation: data.occupation || ''
+            }
 
-    const handleExport = (report: typeof reportTypes) => {
-        setSelectedReport({
-            type: reportTypes.type,
-            data: reportTypes.data,
-            title: reportTypes.title
-        })
-        setShowExportModal(true)
+            const result = await createPatient(patientData)
+            showAlert(result.message, result.success ? 'success' : 'error')
+            
+            if (result.success) {
+                await fetchPatients()
+            }
+        }
+        handleFormClose()
+    }
+
+    const handleExport = () => {
+        console.log('Exporting patients data...')
+        showAlert('Đang xuất dữ liệu bệnh nhân', 'success')
+    }
+
+    if (loading && patients.length === 0) {
+        return (
+            <div className="flex justify-center items-center min-h-screen">
+                <div className="text-lg">Đang tải dữ liệu bệnh nhân...</div>
+            </div>
+        )
     }
 
     return (
         <div className="space-y-6 p-6 md:p-8 bg-gray-50 min-h-screen">
-            {/* 1. Header */}
+            {/* Header */}
             <PatientPageHeader
                 onAddPatient={handleAddPatient}
                 onExport={handleExport}
             />
 
-            {/* 2. Statistics */}
+            {/* Alert thông báo */}
+            {alert.type && (
+                <Alert
+                    message={alert.message}
+                    type={alert.type}
+                />
+            )}
+
+            {/* Hiển thị lỗi từ context */}
+            {error && (
+                <Alert
+                    message={error}
+                    type="error"
+                />
+            )}
+
+            {/* Statistics */}
             <PatientStatistics patients={patients} />
 
-            {/* 3. Filters */}
+            {/* Filters */}
             <PatientFilters
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
-                statusFilter={statusFilter}
-                setStatusFilter={setStatusFilter}
-                riskFilter={riskFilter}
-                setRiskFilter={setRiskFilter}
             />
 
-            {/* 4. Patients Table */}
+            {/* Patients Table */}
             <PatientTable
                 filteredPatients={filteredPatients}
                 calculateAge={calculateAge}
-                getRiskColor={getRiskColor}
-                getRiskText={getRiskText}
                 onViewPatient={handleViewPatient}
-                // onEditPatient={handleEditPatient}
-                // onDeletePatient={handleDeletePatient}
             />
+
+            {/* Patient Form Modal */}
             {isFormOpen && (
                 <PatientForm
                     patient={currentPatient}
@@ -236,16 +171,6 @@ export default function AdminPatients() {
                     mode={formMode}
                 />
             )}
-            {showExportModal && selectedReport && (
-                <ExportReportModal
-                    isOpen={showExportModal}
-                    onClose={() => setShowExportModal(false)}
-                    reportType={selectedReport.type}
-                    data={selectedReport.data}
-                    title={selectedReport.title}
-                />
-            )}
         </div>
-
     )
 }

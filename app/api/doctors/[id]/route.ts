@@ -21,9 +21,3 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     return forwardRequest(req, `/v1/doctors/${id}`);
 
 }
-
-export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
-
-    const { id } = await context.params;
-    return forwardRequest(req, `/v1/doctors/${id}`);
-}
