@@ -13,8 +13,8 @@ import {
 import SpecialtyCard from '@/components/specialty/SpecialtyCard'
 import DoctorCard from '@/components/doctor/DoctorCard'
 import { Doctor, Specialty } from '@/types/types'
-import { mockDoctors, mockSpecialties } from '@/public/data'
 import { apiClient } from '@/lib/api'
+import FeaturedDoctorCard from '@/components/doctor/DoctorCard'
 
 export default function Features() {
     const router = useRouter()
@@ -29,7 +29,7 @@ export default function Features() {
                 // Gọi API đồng thời để lấy dữ liệu bác sĩ và chuyên khoa
                 const [doctorsRes, specialtiesRes] = await Promise.all([
                     apiClient<Doctor[]>('/api/doctors?featured=true&limit=4'),
-                    apiClient<Specialty[]>('/api/specialties?popular=true&limit=6')
+                    apiClient<Specialty[]>('/api/specialties?popular=true&limit=6&service_token=1')
                 ])
 
                 if (doctorsRes.status && doctorsRes.data) {
@@ -106,11 +106,11 @@ export default function Features() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                        {featuredDoctors.map((doctor) => (
-                            <DoctorCard
-                                key={doctor.doctor_id}
-                                doctor={mockDoctors[0]}
-                                variant="featured"
+                        {featuredDoctors.map((doctor, idx) => (
+                            <FeaturedDoctorCard 
+                                key={idx} 
+                                doctor={doctor} 
+                                showBookButton={true}
                             />
                         ))}
                     </div>
@@ -134,8 +134,8 @@ export default function Features() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {mockSpecialties.map((specialty) => (
-                            <div key={specialty.specialty_id} onClick={() => handleViewSpecialty(specialty.specialty_id)}>
+                        {popularSpecialties.map((specialty, idx) => (
+                            <div key={idx} onClick={() => handleViewSpecialty(specialty.specialty_id)}>
                                 <SpecialtyCard
                                     specialtyId={specialty.specialty_id}
                                     name={specialty.name}

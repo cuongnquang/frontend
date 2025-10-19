@@ -3,8 +3,8 @@ import { Specialty, Doctor } from '@/types/types'
 import SpecialtyListItem from './SpecialtyListItem'
 
 interface SpecialtySidebarProps {
-    mockSpecialties: Specialty[]
-    mockDoctors: Doctor[]
+    Specialties: Specialty[]
+    Doctors: Doctor[]
     selectedSpecialty: string | null
     setSelectedSpecialty: (id: string | null) => void
     setActiveTab: (tab: 'overview' | 'doctors') => void
@@ -13,8 +13,8 @@ interface SpecialtySidebarProps {
 }
 
 export default function SpecialtySidebar({
-    mockSpecialties,
-    mockDoctors,
+    Specialties,
+    Doctors,
     selectedSpecialty,
     setSelectedSpecialty,
     setActiveTab,
@@ -23,7 +23,7 @@ export default function SpecialtySidebar({
 }: SpecialtySidebarProps) {
     // Get doctors count by specialty
     const getDoctorCount = (specialtyId: string) => {
-        return mockDoctors.filter(d => d.specialty_id === specialtyId).length
+        return Doctors.filter(d => d.specialty_id === specialtyId).length
     }
 
     const handleSelectAll = () => {
@@ -36,12 +36,12 @@ export default function SpecialtySidebar({
         setActiveTab('overview')
     }
 
-    const filteredSpecialties = mockSpecialties.filter(s =>
+    const filteredSpecialties = Specialties.filter(s =>
         s.name.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
     return (
-        <div className="lg:w-1/3">
+        <div>
             <div className="bg-white rounded-xl shadow-sm p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">
                     Danh sách chuyên khoa
@@ -74,7 +74,7 @@ export default function SpecialtySidebar({
                         <div className="flex items-center justify-between">
                             <span className="font-medium">Tất cả chuyên khoa</span>
                             <span className="text-sm text-gray-500">
-                                {mockDoctors.length} bác sĩ
+                                {Doctors.length} bác sĩ
                             </span>
                         </div>
                     </button>
@@ -104,13 +104,13 @@ export default function SpecialtySidebar({
                     <div className="flex items-center justify-between">
                         <span className="text-gray-600">Tổng số bác sĩ:</span>
                         <span className="font-semibold text-blue-600">
-                            {mockDoctors.length}
+                            {Doctors.length}
                         </span>
                     </div>
                     <div className="flex items-center justify-between">
                         <span className="text-gray-600">Số chuyên khoa:</span>
                         <span className="font-semibold text-green-600">
-                            {mockSpecialties.length}
+                            {Specialties.length}
                         </span>
                     </div>
                 </div>

@@ -120,8 +120,6 @@ export default function SpecialtyPage() {
         }
     };
 
-    // XÓA HÀM handleDeleteSpecialty CŨ
-
     return (
         <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
             {/* Header */}
@@ -150,7 +148,7 @@ export default function SpecialtyPage() {
                 specialties={specialties}
                 onViewSpecialty={handleViewSpecialty}
                 onEditSpecialty={handleEditSpecialty}
-                onDeleteSpecialty={handleDeleteClick} // THAY ĐỔI THÀNH handleDeleteClick
+                onDeleteSpecialty={handleDeleteClick}
             />
 
             {/* Modal cho Thêm/Sửa */}

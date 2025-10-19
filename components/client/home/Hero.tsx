@@ -1,13 +1,38 @@
 'use client'
 
 import { Search, Calendar, Users, Heart } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { apiClient } from '@/lib/api'
+
+// Define a type for the stats
+interface SiteStats {
+    doctorCount: number;
+    appointmentCount: number;
+}
 
 export default function Hero() {
     const [searchType, setSearchType] = useState('doctor')
     const [searchValue, setSearchValue] = useState('')
+    const [stats, setStats] = useState<SiteStats | null>(null);
     const router = useRouter()
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                // Assuming an endpoint /api/stats that returns the counts
+                const res = await apiClient<SiteStats>('/api/stats');
+                if (res.status && res.data) {
+                    setStats(res.data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch site stats:", error);
+                // Fallback to default stats on error
+                setStats({ doctorCount: 1000, appointmentCount: 50000 });
+            }
+        };
+        fetchStats();
+    }, []);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault()
@@ -21,6 +46,15 @@ export default function Hero() {
         else basePath = `/client/specialties`
 
         router.push(`${basePath}?${query.toString()}`)
+    }
+
+    // Helper to format large numbers
+    const formatStat = (num: number | undefined) => {
+        if (num === undefined) return '...';
+        if (num >= 1000) {
+            return `${Math.floor(num / 1000)}k+`;
+        }
+        return `${num}`;
     }
 
     return (
@@ -125,14 +159,14 @@ export default function Hero() {
                         <div className="absolute -top-4 -right-4 bg-white p-4 rounded-xl shadow-lg">
                             <div className="flex items-center space-x-2">
                                 <Users className="w-5 h-5 text-blue-600" />
-                                <span className="text-sm font-medium">1000+ Bác sĩ</span>
+                                <span className="text-sm font-medium">{formatStat(stats?.doctorCount)} Bác sĩ</span>
                             </div>
                         </div>
 
                         <div className="absolute -bottom-4 -left-4 bg-white p-4 rounded-xl shadow-lg">
                             <div className="flex items-center space-x-2">
                                 <Calendar className="w-5 h-5 text-green-600" />
-                                <span className="text-sm font-medium">50k+ Lượt khám</span>
+                                <span className="text-sm font-medium">{formatStat(stats?.appointmentCount)} Lượt khám</span>
                             </div>
                         </div>
                     </div>

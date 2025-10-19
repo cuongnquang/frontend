@@ -3,7 +3,7 @@ import AllSpecialtiesGrid from './AllSpecialtiesGrid'
 import SelectedSpecialtyDetail from './SelectedSpecialtyDetail'
 
 interface SpecialtyMainContentProps {
-    mockSpecialties: Specialty[]
+    Specialties: Specialty[]
     filteredDoctors: Doctor[]
     selectedSpecialty: string | null
     setSelectedSpecialty: (id: string) => void
@@ -13,7 +13,7 @@ interface SpecialtyMainContentProps {
 }
 
 export default function SpecialtyMainContent({
-    mockSpecialties,
+    Specialties,
     filteredDoctors,
     selectedSpecialty,
     setSelectedSpecialty,
@@ -21,14 +21,14 @@ export default function SpecialtyMainContent({
     setActiveTab,
     getDoctorCount,
 }: SpecialtyMainContentProps) {
-    const selectedSpecialtyData = mockSpecialties.find((s: Specialty) => s.specialty_id === selectedSpecialty)
+    const selectedSpecialtyData = Specialties.find((s: Specialty) => s.specialty_id === selectedSpecialty)
 
     return (
-        <div className="lg:w-2/3">
+        <div>
             {/* Overview Tab - All Specialties Grid */}
             {selectedSpecialty === null && (
                 <AllSpecialtiesGrid
-                    mockSpecialties={mockSpecialties}
+                    Specialties={Specialties}
                     getDoctorCount={getDoctorCount}
                     setSelectedSpecialty={setSelectedSpecialty}
                 />

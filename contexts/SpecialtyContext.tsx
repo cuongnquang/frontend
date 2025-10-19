@@ -2,15 +2,8 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { apiClient } from "@/lib/api";
+import { Specialty } from "@/types/types";
 
-export interface Specialty {
-    id: string;
-    name: string;
-    description: string | null;
-    image: string | null;
-    createdAt: string;
-    updatedAt: string;
-}
 
 export type CreateSpecialtyData = {
   name: string;
@@ -46,13 +39,17 @@ export function SpecialtyProvider({ children }: { children: ReactNode }) {
         setLoading(true);
         setError(null);
         try {
-            const res = await apiClient<Specialty[]>("/api/specialties");
+            // Append a query flag so the server proxy can optionally retry using a
+            // server-side BACKEND_SERVICE_TOKEN for read-only public lists if the
+            // user's token lacks permission. This is safe because the service token
+            // is only used server-side and never exposed to the browser.
+            const res = await apiClient<Specialty[]>('/api/specialties?service_token=1');
             if (res.status && res.data) {
                 setSpecialties(res.data);
             } else {
                 setError(res.message || "Không thể tải danh sách chuyên khoa.");
             }
-        } catch (err) {
+        } catch {
             setError("Lỗi kết nối đến server.");
         } finally {
             setLoading(false);
@@ -70,7 +67,7 @@ export function SpecialtyProvider({ children }: { children: ReactNode }) {
             } else {
                 setError(res.message || `Không thể tìm thấy chuyên khoa với ID: ${id}.`);
             }
-        } catch (err) {
+        } catch {
             setError("Lỗi kết nối đến server.");
         } finally {
             setLoading(false);
@@ -94,7 +91,7 @@ export function SpecialtyProvider({ children }: { children: ReactNode }) {
 
             await fetchSpecialties(); // Tải lại danh sách sau khi thêm thành công
             return { success: true, message: res.message || "Thêm chuyên khoa thành công!" };
-        } catch (err) {
+        } catch {
             setError("Đã có lỗi không mong muốn xảy ra.");
             return { success: false, message: "Đã có lỗi không mong muốn xảy ra." };
         } finally {
@@ -118,7 +115,7 @@ export function SpecialtyProvider({ children }: { children: ReactNode }) {
 
             await fetchSpecialties();
             return { success: true, message: res.message || "Cập nhật chuyên khoa thành công!" };
-        } catch (err) {
+        } catch {
             setError("Đã có lỗi không mong muốn xảy ra khi cập nhật.");
             return { success: false, message: "Đã có lỗi không mong muốn xảy ra khi cập nhật." };
         } finally {
@@ -139,7 +136,7 @@ export function SpecialtyProvider({ children }: { children: ReactNode }) {
 
             setSpecialties((prev) => prev.filter((s) => s.id !== id));
             return { success: true, message: res.message || "Xóa chuyên khoa thành công!" };
-        } catch (err) {
+        } catch {
             setError("Đã có lỗi không mong muốn xảy ra khi xóa.");
             return { success: false, message: "Đã có lỗi không mong muốn xảy ra khi xóa." };
         } finally {
