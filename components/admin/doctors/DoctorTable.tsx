@@ -1,117 +1,115 @@
 import React from 'react'
-import { Edit, Trash2, Eye, Mail, Phone, MapPin, Award, Star, Clock, CheckCircle, XCircle, PauseCircle } from 'lucide-react'
-import { Doctor } from './DoctorTypes'
+import { Eye, Mail, Phone, Award, Star, Clock } from 'lucide-react'
+import { Doctor } from '@/contexts/DoctorContext'
 
-// --- Component phụ: DoctorTableRow ---
 interface DoctorTableRowProps {
     doctor: Doctor
-    getAvailabilityColor: (availability: Doctor['availability']) => string
     onView: (doctor: Doctor) => void
-    onEdit: (doctor: Doctor) => void
-    onDelete: (doctor: Doctor) => void
 }
 
-const getAvailabilityText = (availability: Doctor['availability']) => {
-    switch (availability) {
-        case 'available': return 'Sẵn sàng'
-        case 'busy': return 'Đang bận'
-        case 'off': return 'Nghỉ'
-        default: return 'Không rõ'
-    }
+const getAvailabilityText = (isAvailable: boolean) => {
+    return isAvailable ? 'Sẵn sàng' : 'Không khả dụng'
+}
+
+const getAvailabilityColor = (isAvailable: boolean) => {
+    return isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
 }
 
 const DoctorTableRow: React.FC<DoctorTableRowProps> = ({
     doctor,
-    getAvailabilityColor,
     onView,
-    onEdit,
-    onDelete,
 }) => (
     <tr key={doctor.id} className="hover:bg-gray-50">
-        {/* Cột 1: Bác sĩ */}
-        <td className="px-6 py-4 whitespace-nowrap">
+        {/* Cột 1: Bác sĩ - Thu hẹp lại */}
+        <td className="px-4 py-4 whitespace-nowrap w-48">
             <div className="flex items-center">
-                <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                    <span className="text-indigo-600 font-semibold">{doctor.name.charAt(4)}</span>
+                <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center overflow-hidden">
+                    {doctor.avatar_url ? (
+                        <img 
+                            src={doctor.avatar_url} 
+                            alt={doctor.full_name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const fallback = target.nextSibling as HTMLElement;
+                                if (fallback) fallback.style.display = 'flex';
+                            }}
+                        />
+                    ) : null}
+                    <div 
+                        className={`w-full h-full flex items-center justify-center bg-indigo-100 ${
+                            doctor.avatar_url ? 'hidden' : 'flex'
+                        }`}
+                    >
+                        <span className="text-indigo-600 font-semibold text-sm">
+                            {doctor.full_name?.charAt(0) || 'B'}
+                        </span>
+                    </div>
                 </div>
-                <div className="ml-4">
-                    <div className="text-sm font-medium text-gray-900">{doctor.name}</div>
-                    <div className="text-sm text-gray-500">Mã: {doctor.id}</div>
+                <div className="ml-3">
+                    <div className="text-sm font-medium text-gray-900">
+                        {doctor.title} {doctor.full_name}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-0.5">Mã: {doctor.id}</div>
                 </div>
             </div>
         </td>
 
-        {/* Cột 2: Chuyên môn */}
-        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-            <p className="font-medium text-gray-900">{doctor.specialization}</p>
+        {/* Cột 2: Chuyên môn - Thu hẹp lại */}
+        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 w-40">
+            <p className="font-medium text-gray-900">{doctor.specialty_name}</p>
             <p className="text-xs mt-1 flex items-center">
                 <Award className="w-3 h-3 inline mr-1 text-gray-400" />
-                {doctor.qualification} ({doctor.experience} năm KN)
+                {doctor.experience_years} năm KN
             </p>
         </td>
 
-        {/* Cột 3: Liên hệ/Mã số */}
-        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-            <div className="flex items-center space-x-2">
-                <Phone className="w-4 h-4 text-gray-400" />
-                <span>{doctor.phone}</span>
-            </div>
-            <div className="flex items-center space-x-2 mt-1">
-                <MapPin className="w-4 h-4 text-gray-400" />
-                <span className="truncate max-w-xs">{doctor.licenseNumber}</span>
+        {/* Cột 3: Kinh nghiệm - Thu hẹp lại */}
+        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 w-32">
+            <div className="flex items-center">
+                <Clock className="w-4 h-4 text-gray-400 mr-2" />
+                <span>{doctor.experience_years} năm</span>
             </div>
         </td>
 
-        {/* Cột 4: Đánh giá & Bệnh nhân */}
-        <td className="px-6 py-4 whitespace-nowrap text-sm">
-            <div className="flex items-center space-x-2 text-gray-600">
-                <Star className="w-4 h-4 text-yellow-500" fill="#f59e0b" />
-                <span>{doctor.rating.toFixed(1)} / 5.0</span>
-            </div>
-            <p className="mt-1 text-xs font-medium text-gray-500">
-                {doctor.totalPatients.toLocaleString()} bệnh nhân
+        {/* Cột 4: Giới thiệu - Mở rộng hơn */}
+        <td className="px-4 py-4 text-sm text-gray-600 min-w-80 max-w-96">
+            <p className="line-clamp-2">
+                {doctor.introduction || 'Chưa có giới thiệu'}
             </p>
         </td>
 
-        {/* Cột 5: Tình trạng */}
-        <td className="px-6 py-4 whitespace-nowrap">
-            <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getAvailabilityColor(doctor.availability)}`}>
-                {getAvailabilityText(doctor.availability)}
+        {/* Cột 5: Tình trạng - Căn giữa và giữ bên phải */}
+        <td className="px-4 py-4 whitespace-nowrap text-center w-28">
+            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getAvailabilityColor(doctor.is_available)}`}>
+                {getAvailabilityText(doctor.is_available)}
             </span>
         </td>
 
-        {/* Cột 6: Thao tác */}
-        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-            <div className="flex space-x-2">
-                <button onClick={() => onView(doctor)} className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition" title="Xem">
+        {/* Cột 6: Thao tác - Căn giữa và giữ bên phải */}
+        <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-center w-28">
+            <div className="flex justify-center">
+                <button 
+                    onClick={() => onView(doctor)} 
+                    className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition" 
+                    title="Xem chi tiết"
+                >
                     <Eye className="w-5 h-5" />
-                </button>
-                <button onClick={() => onEdit(doctor)} className="text-yellow-600 hover:text-yellow-900 p-1 rounded hover:bg-yellow-50 transition" title="Sửa">
-                    <Edit className="w-5 h-5" />
-                </button>
-                <button onClick={() => onDelete(doctor)} className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition" title="Xóa">
-                    <Trash2 className="w-5 h-5" />
                 </button>
             </div>
         </td>
     </tr>
 )
 
-// --- Component chính: DoctorTable ---
 interface DoctorTableProps {
     filteredDoctors: Doctor[]
-    getAvailabilityColor: (availability: Doctor['availability']) => string
     onViewDoctor: (doctor: Doctor) => void
-    onEditDoctor: (doctor: Doctor) => void
-    onDeleteDoctor: (doctor: Doctor) => void
 }
 
 export default function DoctorTable({
     filteredDoctors,
-    getAvailabilityColor,
     onViewDoctor,
-    onEditDoctor,
-    onDeleteDoctor,
 }: DoctorTableProps) {
     return (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -128,22 +126,22 @@ export default function DoctorTable({
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-48">
                                 Bác sĩ
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-40">
                                 Chuyên môn
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Liên hệ/Mã số
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32">
+                                Kinh nghiệm
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Đánh giá
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-80">
+                                Giới thiệu
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider w-28">
                                 Tình trạng
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider w-20">
                                 Thao tác
                             </th>
                         </tr>
@@ -153,10 +151,7 @@ export default function DoctorTable({
                             <DoctorTableRow
                                 key={doctor.id}
                                 doctor={doctor}
-                                getAvailabilityColor={getAvailabilityColor}
                                 onView={onViewDoctor}
-                                onEdit={onEditDoctor}
-                                onDelete={onDeleteDoctor}
                             />
                         ))}
                         {filteredDoctors.length === 0 && (

@@ -1,5 +1,6 @@
+// components/admin/doctors/form/DoctorFormActions.tsx
 interface DoctorFormActionsProps {
-    mode: 'create' | 'edit' | 'view'
+    mode: 'create' | 'view'
     onClose: () => void
     isReadOnly: boolean
 }
@@ -11,7 +12,7 @@ export function DoctorFormActions({ mode, onClose, isReadOnly }: DoctorFormActio
             <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
             >
                 {isReadOnly ? 'Đóng' : 'Hủy'}
             </button>
@@ -20,8 +21,7 @@ export function DoctorFormActions({ mode, onClose, isReadOnly }: DoctorFormActio
             {!isReadOnly && (
                 <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                    disabled={isReadOnly}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
                 >
                     {mode === 'create' ? 'Thêm Bác sĩ' : 'Lưu Thay đổi'}
                 </button>

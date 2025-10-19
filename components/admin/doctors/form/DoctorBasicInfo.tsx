@@ -1,16 +1,21 @@
-// Helper type cho formData và setFormData
-type DoctorFormData = any; // Thay thế bằng type cụ thể nếu có
-type SetFormData = React.Dispatch<React.SetStateAction<DoctorFormData>>;
-
+// components/admin/doctors/form/DoctorBasicInfo.tsx
 interface DoctorBasicInfoProps {
-    formData: DoctorFormData
-    setFormData: SetFormData
+    formData: any
+    setFormData: React.Dispatch<React.SetStateAction<any>>
     isReadOnly: boolean
+    specialties: any[]
+    specialtiesLoading: boolean
 }
 
-export function DoctorBasicInfo({ formData, setFormData, isReadOnly }: DoctorBasicInfoProps) {
-    const handleChange = (field: string, value: string | number) => {
-        setFormData((prev: DoctorFormData) => ({ ...prev, [field]: value }))
+export function DoctorBasicInfo({ 
+    formData, 
+    setFormData, 
+    isReadOnly, 
+    specialties, 
+    specialtiesLoading 
+}: DoctorBasicInfoProps) {
+    const handleChange = (field: string, value: string | number | boolean) => {
+        setFormData((prev: any) => ({ ...prev, [field]: value }))
     }
 
     return (
@@ -19,19 +24,25 @@ export function DoctorBasicInfo({ formData, setFormData, isReadOnly }: DoctorBas
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Họ và tên */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Họ và tên *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Họ và tên *
+                    </label>
                     <input
                         type="text"
                         required
                         disabled={isReadOnly}
-                        value={formData.name}
-                        onChange={(e) => handleChange('name', e.target.value)}
+                        value={formData.full_name}
+                        onChange={(e) => handleChange('full_name', e.target.value)}
                         className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
+                        placeholder="Nhập họ và tên đầy đủ"
                     />
                 </div>
+                
                 {/* Email */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Email *
+                    </label>
                     <input
                         type="email"
                         required
@@ -39,54 +50,47 @@ export function DoctorBasicInfo({ formData, setFormData, isReadOnly }: DoctorBas
                         value={formData.email}
                         onChange={(e) => handleChange('email', e.target.value)}
                         className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
+                        placeholder="example@youmed.vn"
                     />
                 </div>
-                {/* Số điện thoại */}
+                
+                {/* Chuyên khoa */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Số điện thoại *</label>
-                    <input
-                        type="tel"
-                        required
-                        disabled={isReadOnly}
-                        value={formData.phone}
-                        onChange={(e) => handleChange('phone', e.target.value)}
-                        className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
-                    />
-                </div>
-                {/* Ngày sinh */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Ngày sinh</label>
-                    <input
-                        type="date"
-                        disabled={isReadOnly}
-                        value={formData.dateOfBirth}
-                        onChange={(e) => handleChange('dateOfBirth', e.target.value)}
-                        className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
-                    />
-                </div>
-                {/* Giới tính */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Giới tính</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Chuyên khoa *
+                    </label>
                     <select
-                        disabled={isReadOnly}
-                        value={formData.gender}
-                        onChange={(e) => handleChange('gender', e.target.value)}
+                        required
+                        disabled={isReadOnly || specialtiesLoading}
+                        value={formData.specialty_name}
+                        onChange={(e) => handleChange('specialty_name', e.target.value)}
                         className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     >
-                        <option value="male">Nam</option>
-                        <option value="female">Nữ</option>
-                        <option value="other">Khác</option>
+                        <option value="">Chọn chuyên khoa</option>
+                        {specialtiesLoading ? (
+                            <option value="" disabled>Đang tải chuyên khoa...</option>
+                        ) : (
+                            specialties.map((specialty) => (
+                                <option key={specialty.id} value={specialty.name}>
+                                    {specialty.name}
+                                </option>
+                            ))
+                        )}
                     </select>
                 </div>
-                {/* Địa chỉ */}
+                
+                {/* Chức danh */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Địa chỉ</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Chức danh
+                    </label>
                     <input
                         type="text"
                         disabled={isReadOnly}
-                        value={formData.address}
-                        onChange={(e) => handleChange('address', e.target.value)}
+                        value={formData.title}
+                        onChange={(e) => handleChange('title', e.target.value)}
                         className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
+                        placeholder="VD: Bác sĩ, Tiến sĩ, Thạc sĩ..."
                     />
                 </div>
             </div>

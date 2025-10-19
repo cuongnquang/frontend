@@ -11,7 +11,6 @@ export type CreateSpecialtyData = {
   image_url?: string;
 };
 
-
 export type UpdateSpecialtyData = Partial<CreateSpecialtyData>;
 
 interface SpecialtyContextType {
@@ -33,7 +32,6 @@ export function SpecialtyProvider({ children }: { children: ReactNode }) {
     const [selectedSpecialty, setSelectedSpecialty] = useState<Specialty | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
 
     const fetchSpecialties = useCallback(async () => {
         setLoading(true);
@@ -57,7 +55,6 @@ export function SpecialtyProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const fetchSpecialtyById = useCallback(async (id: string) => {
-        setLoading(true);
         setError(null);
         setSelectedSpecialty(null);
         try {
@@ -69,16 +66,12 @@ export function SpecialtyProvider({ children }: { children: ReactNode }) {
             }
         } catch {
             setError("Lỗi kết nối đến server.");
-        } finally {
-            setLoading(false);
         }
     }, []);
 
     const createSpecialty = async (data: CreateSpecialtyData): Promise<{ success: boolean; message: string }> => {
-        setLoading(true);
         setError(null);
         try {
-
             const res = await apiClient("/api/specialties", {
                 method: "POST",
                 body: JSON.stringify(data),
@@ -94,13 +87,10 @@ export function SpecialtyProvider({ children }: { children: ReactNode }) {
         } catch {
             setError("Đã có lỗi không mong muốn xảy ra.");
             return { success: false, message: "Đã có lỗi không mong muốn xảy ra." };
-        } finally {
-            setLoading(false);
         }
     };
 
     const updateSpecialty = async (id: string, data: UpdateSpecialtyData): Promise<{ success: boolean; message: string }> => {
-        setLoading(true);
         setError(null);
         try {
             const res = await apiClient(`/api/specialties/${id}`, {
@@ -118,17 +108,14 @@ export function SpecialtyProvider({ children }: { children: ReactNode }) {
         } catch {
             setError("Đã có lỗi không mong muốn xảy ra khi cập nhật.");
             return { success: false, message: "Đã có lỗi không mong muốn xảy ra khi cập nhật." };
-        } finally {
-            setLoading(false);
         }
     };
 
     const deleteSpecialty = async (id: string): Promise<{ success: boolean; message: string }> => {
-        setLoading(true);
         setError(null);
         try {
             const res = await apiClient(`/api/specialties/${id}`, { method: "DELETE" });
-            console.log(res.data);
+            
             if (!res.status) {
                 setError(res.message || "Xóa chuyên khoa thất bại.");
                 return { success: false, message: res.message || "Xóa chuyên khoa thất bại." };
@@ -139,8 +126,6 @@ export function SpecialtyProvider({ children }: { children: ReactNode }) {
         } catch {
             setError("Đã có lỗi không mong muốn xảy ra khi xóa.");
             return { success: false, message: "Đã có lỗi không mong muốn xảy ra khi xóa." };
-        } finally {
-            setLoading(false);
         }
     };
 

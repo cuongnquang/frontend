@@ -1,9 +1,10 @@
 import { PatientFormInfoProps } from '@/components/admin/patients/form/PatientFormType'
 
 export function PatientBasicInfo({ formData, setFormData, isReadOnly }: PatientFormInfoProps) {
-    const handleChange = (field: string, value: string | number) => {
-        setFormData((prev: FormData) => ({ ...prev, [field]: value }))
+    const handleChange = (field: string, value: string) => {
+        setFormData((prev: any) => ({ ...prev, [field]: value }))
     }
+
     return (
         <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Thông tin cơ bản</h3>
@@ -16,22 +17,21 @@ export function PatientBasicInfo({ formData, setFormData, isReadOnly }: PatientF
                         type="text"
                         required
                         disabled={isReadOnly}
-                        value={formData.name}
-                        onChange={(e) => handleChange('name', e.target.value)}
+                        value={formData.full_name}
+                        onChange={(e) => handleChange('full_name', e.target.value)}
                         className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     />
                 </div>
 
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email *
+                        Số CMND/CCCD
                     </label>
                     <input
-                        type="email"
-                        required
+                        type="text"
                         disabled={isReadOnly}
-                        value={formData.email}
-                        onChange={(e) => handleChange('email', e.target.value)}
+                        value={formData.identity_number}
+                        onChange={(e) => handleChange('identity_number', e.target.value)}
                         className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     />
                 </div>
@@ -44,8 +44,8 @@ export function PatientBasicInfo({ formData, setFormData, isReadOnly }: PatientF
                         type="tel"
                         required
                         disabled={isReadOnly}
-                        value={formData.phone}
-                        onChange={(e) => handleChange('phone', e.target.value)}
+                        value={formData.phone_number}
+                        onChange={(e) => handleChange('phone_number', e.target.value)}
                         className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     />
                 </div>
@@ -58,8 +58,8 @@ export function PatientBasicInfo({ formData, setFormData, isReadOnly }: PatientF
                         type="date"
                         required
                         disabled={isReadOnly}
-                        value={formData.dateOfBirth}
-                        onChange={(e) => handleChange('dateOfBirth', e.target.value)}
+                        value={formData.date_of_birth}
+                        onChange={(e) => handleChange('date_of_birth', e.target.value)}
                         className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
                     />
                 </div>
@@ -82,6 +82,19 @@ export function PatientBasicInfo({ formData, setFormData, isReadOnly }: PatientF
 
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Dân tộc
+                    </label>
+                    <input
+                        type="text"
+                        disabled={isReadOnly}
+                        value={formData.ethnicity}
+                        onChange={(e) => handleChange('ethnicity', e.target.value)}
+                        className="w-full p-3 border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-black disabled:bg-gray-100"
+                    />
+                </div>
+
+                <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                         Địa chỉ
                     </label>
                     <input
@@ -94,6 +107,5 @@ export function PatientBasicInfo({ formData, setFormData, isReadOnly }: PatientF
                 </div>
             </div>
         </div>
-
     )
 }
