@@ -1,5 +1,6 @@
 import React from 'react';
 import { Doctor } from '@/types/types';
+import { useSpecialty } from '@/contexts/SpecialtyContext'
 import { MapPin, Award, Clock, Calendar } from 'lucide-react';
 
 interface DoctorCardProps {
@@ -9,7 +10,29 @@ interface DoctorCardProps {
 }
 
 export default function DoctorCard({ doctor, onBook, onSelect }: DoctorCardProps) {
-  return ( 
+  const { specialties } = useSpecialty()
+
+  const specialtyName = (() => {
+    // 1) relation included
+    const rel = (doctor as unknown as { Specialty?: { name?: string; title?: string; specialty_id?: string; id?: string } }).Specialty
+    if (rel?.name) return rel.name
+    if (rel?.title) return rel.title
+
+    // 2) alternate flattened fields
+    const alt = (doctor as unknown as { specialty?: { name?: string }; specialty_name?: string })
+    if (alt?.specialty?.name) return alt.specialty.name
+    if (alt?.specialty_name) return alt.specialty_name
+
+    // 3) lookup by specialty_id
+    const sid = (doctor as unknown as { specialty_id?: string }).specialty_id
+    if (sid) {
+      const looked = specialties.find(s => (s as unknown as { specialty_id?: string; id?: string }).specialty_id === sid || (s as unknown as { specialty_id?: string; id?: string }).id === sid)
+      if (looked) return (looked as unknown as { name?: string; title?: string }).name ?? (looked as unknown as { name?: string; title?: string }).title
+    }
+
+    return 'Chuyên khoa'
+  })()
+  return (
     <div
       className="bg-white rounded-xl shadow-md hover:shadow-lg transition p-5 border border-gray-100"
     >
@@ -30,11 +53,9 @@ export default function DoctorCard({ doctor, onBook, onSelect }: DoctorCardProps
         <div className="flex-1">
           <div  onClick={onSelect} className="flex items-center justify-between cursor-pointer">
             <h3 className="text-xl font-bold text-gray-900 leading-snug">
-              {doctor.title ? `${doctor.title} ` : ''}{doctor.full_name}
+              {doctor.full_name ?? 'Bác sĩ'}
             </h3>
-            <span className="text-base font-semibold text-blue-600 px-3 py-0.5 bg-blue-50 rounded-lg flex-shrink-0">
-              {doctor.Specialty.name}
-            </span>
+            <span className="text-base font-semibold text-blue-600 px-3 py-0.5 bg-blue-50 rounded-lg flex-shrink-0">{specialtyName}</span>
           </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 mt-1 mb-2">
             {doctor.experience_years && (
@@ -52,21 +73,21 @@ export default function DoctorCard({ doctor, onBook, onSelect }: DoctorCardProps
           </div>
           {doctor.introduction && (
             <p className="text-gray-700 text-sm mb-3 line-clamp-2 italic">
-              {doctor.introduction} 
+              {doctor.introduction}
             </p>
           )}
-          
+
           <div className="flex items-center justify-between pt-3 border-t border-gray-100">
             <div className='flex items-center text-sm text-gray-500'>
               {doctor.specializations && (
                 <div className="flex items-center">
                   <Clock className="w-4 h-4 mr-1" />
-                  Chuyên về: <span className='font-medium ml-1 line-clamp-1'>{doctor.specializations.split(',')[0]}...</span>
+                  Chuyên về: <span className='font-medium ml-1 line-clamp-1'>{doctor.specializations?.split(',')[0] ?? doctor.specializations}...</span>
                 </div>
               )}
             </div>
-            
-            <button 
+
+            <button
               onClick={onBook}
               className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-1 font-semibold text-sm shadow-md"
             >

@@ -1,4 +1,5 @@
-"use client";
+'use client';
+
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { apiClient } from "@/lib/api";
@@ -52,6 +53,7 @@ interface DoctorContextType {
 const DoctorContext = createContext<DoctorContextType | undefined>(undefined);
 
 export function DoctorProvider({ children }: { children: ReactNode }) {
+
     const [doctors, setDoctors] = useState<Doctor[]>([]);
     const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
     const [loading, setLoading] = useState(true);
@@ -203,4 +205,5 @@ export function useDoctor() {
         throw new Error("useDoctor must be used within a DoctorProvider");
     }
     return context;
+
 }

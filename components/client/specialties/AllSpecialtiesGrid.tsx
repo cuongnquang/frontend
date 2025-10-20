@@ -3,13 +3,13 @@ import { Specialty } from '@/types/types'
 import { getSpecialtyIcon, getSpecialtyColor } from '@/components/client/specialties/icons/LucideIconMap'
 
 interface AllSpecialtiesGridProps {
-    mockSpecialties: Specialty[]
+    Specialties: Specialty[]
     getDoctorCount: (specialtyId: string) => number
     setSelectedSpecialty: (id: string) => void
 }
 
 export default function AllSpecialtiesGrid({
-    mockSpecialties,
+    Specialties,
     getDoctorCount,
     setSelectedSpecialty,
 }: AllSpecialtiesGridProps) {
@@ -25,7 +25,7 @@ export default function AllSpecialtiesGrid({
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
-                {mockSpecialties.map((specialty: Specialty) => {
+                {Specialties.map((specialty: Specialty) => {
                     const Icon = getSpecialtyIcon(specialty.name)
                     const doctorCount = getDoctorCount(specialty.specialty_id)
                     const colorClasses = getSpecialtyColor(specialty.name)
