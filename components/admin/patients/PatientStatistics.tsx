@@ -11,7 +11,7 @@ export default function PatientStatistics({ patients }: PatientStatisticsProps) 
     const hasInsurance = patients.filter(p => p.health_insurance_number).length
     const hasIdentity = patients.filter(p => p.identity_number).length
     const recentPatients = patients.filter(p => {
-        const createdDate = new Date(p.created_at)
+        const createdDate = new Date(p.createdAt)
         const thirtyDaysAgo = new Date()
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
         return createdDate >= thirtyDaysAgo

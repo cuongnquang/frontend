@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from '@/contexts/AuthContext'
 import {
   LayoutDashboard,
   CalendarDays,
@@ -56,16 +57,23 @@ const navGroups = [
 ];
 
 export default function Sidebar() {
+  const { logout } = useAuth()
+  const router = useRouter()
   const pathname = usePathname();
 
   const isActive = (href: string) => pathname.startsWith(href);
+
+  const handleLogout = () => {
+    logout()
+    router.push('/auth/login')
+  }
 
   return (
     <aside className="w-64 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col">
       {/* Logo/Title */}
       <div className="h-16 flex items-center justify-start px-4 border-b border-gray-200 text-3xl font-extrabold tracking-tight">
         <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-500">
-        Medi
+          Medi
         </span>
         <span className="text-purple-700">Doctor</span>
       </div>
@@ -84,10 +92,9 @@ export default function Sidebar() {
                   href={link.href}
                   className={`
                     flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors
-                    ${
-                      isActive(link.href)
-                        ? "bg-blue-50 text-blue-600"
-                        : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                    ${isActive(link.href)
+                      ? "bg-blue-50 text-blue-600"
+                      : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                     }
                   `}
                 >
@@ -107,10 +114,9 @@ export default function Sidebar() {
             href="/doctor/settings"
             className={`
               flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors
-              ${
-                isActive("/doctor/settings")
-                  ? "bg-blue-50 text-blue-600"
-                  : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+              ${isActive("/doctor/settings")
+                ? "bg-blue-50 text-blue-600"
+                : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
               }
             `}
           >
@@ -118,9 +124,10 @@ export default function Sidebar() {
             Cài đặt
           </Link>
           <button
-            className="w-full flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+            onClick={handleLogout}
+            className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
           >
-            <LogOut className="h-5 w-5 mr-3" />
+            <LogOut className="w-5 h-5 mr-3" />
             Đăng xuất
           </button>
         </div>
