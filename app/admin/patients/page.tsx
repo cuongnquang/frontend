@@ -51,7 +51,7 @@ export default function AdminPatients() {
     const filteredPatients = useMemo(() => {
         return patients.filter(patient => {
             const matchesSearch = patient.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                patient.patient_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                patient.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 patient.phone_number.includes(searchTerm) ||
                 patient.identity_number?.includes(searchTerm)
 
@@ -68,7 +68,7 @@ export default function AdminPatients() {
 
     const handleViewPatient = async (patient: Patient) => {
         try {
-            await fetchPatientById(patient.patient_id)
+            await fetchPatientById(patient.id)
             setCurrentPatient(patient)
             setFormMode('view')
             setIsFormOpen(true)

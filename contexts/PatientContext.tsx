@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { apiClient } from "@/lib/api";
 
 export interface Patient {
-    patient_id: string;
+    id: string;
     user_id: string;
     full_name: string;
     identity_number: string | null;
@@ -16,8 +16,8 @@ export interface Patient {
     health_insurance_number: string | null;
     referral_code: string | null;
     occupation: string | null;
-    created_at: string;
-    updated_at: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export type CreatePatientData = {
@@ -164,7 +164,7 @@ export function PatientProvider({ children }: { children: ReactNode }) {
                 return { success: false, message: res.message || "Xóa bệnh nhân thất bại." };
             }
 
-            setPatients(prev => prev.filter(patient => patient.patient_id !== id));
+            setPatients(prev => prev.filter(patient => patient.id !== id));
             return { success: true, message: res.message || "Xóa bệnh nhân thành công!" };
         } catch (err) {
             setError("Đã có lỗi không mong muốn xảy ra khi xóa.");

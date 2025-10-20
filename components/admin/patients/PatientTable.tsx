@@ -14,7 +14,7 @@ const PatientTableRow: React.FC<PatientTableRowProps> = ({
     onView,
 }) => {
     return (
-        <tr className="hover:bg-gray-50 border-b border-gray-200"> {/* ĐÃ XÓA key Ở ĐÂY */}
+        <tr key={patient.id} className="hover:bg-gray-50 border-b border-gray-200">
             {/* Cột 1: Bệnh nhân */}
             <td className="px-4 py-4">
                 <div className="flex items-center space-x-3">
@@ -26,10 +26,10 @@ const PatientTableRow: React.FC<PatientTableRowProps> = ({
                             {patient.full_name}
                         </h3>
                         <p className="text-xs font-medium text-gray-500 mt-1">
-                            Mã: {patient.patient_id}
+                            Mã: {patient.id}
                         </p>
                         <p className="text-xs text-gray-600 mt-1 capitalize">
-                            {patient.gender === 'male' ? 'Nam' : patient.gender === 'female' ? 'Nữ' : 'Khác'}
+                            Giới tính: {patient.gender === 'male' ? 'Nam' : patient.gender === 'female' ? 'Nữ' : 'Khác'}
                         </p>
                     </div>
                 </div>
@@ -65,7 +65,7 @@ const PatientTableRow: React.FC<PatientTableRowProps> = ({
                     {patient.identity_number && (
                         <div className="flex items-center text-xs text-gray-500">
                             <IdCard className="w-3 h-3 mr-1 flex-shrink-0" />
-                            <span>CMND: {patient.identity_number}</span>
+                            <span>CCCD: {patient.identity_number}</span>
                         </div>
                     )}
                 </div>
@@ -93,10 +93,7 @@ const PatientTableRow: React.FC<PatientTableRowProps> = ({
             <td className="px-4 py-4">
                 <div className="text-center">
                     <p className="text-sm font-bold text-gray-900">
-                        {new Date(patient.created_at).toLocaleDateString('vi-VN')}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                        Ngày tạo
+                        {new Date(patient.createdAt).toLocaleDateString('vi-VN')}
                     </p>
                 </div>
             </td>
@@ -154,7 +151,7 @@ export default function PatientTable({
                             <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wide w-1/6">
                                 Liên hệ & Định danh
                             </th>
-                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wide w-1/4">
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wide w-1/6">
                                 Địa chỉ & BHYT
                             </th>
                             <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wide w-1/6">
@@ -168,7 +165,7 @@ export default function PatientTable({
                     <tbody className="divide-y divide-gray-200">
                         {filteredPatients.map((patient) => (
                             <PatientTableRow
-                                key={patient.patient_id}
+                                key={patient.id}
                                 patient={patient}
                                 calculateAge={calculateAge}
                                 onView={onViewPatient}
