@@ -108,7 +108,7 @@ export default function DoctorInfoTabs({ doctor, reviews }: DoctorInfoTabsProps)
         <div className="flex">
           <TabButton tabName="overview" label="Tổng quan" />
           <TabButton tabName="experience" label="Kinh nghiệm" />
-          <TabButton tabName="reviews" label="Đánh giá" />
+          {/* <TabButton tabName="reviews" label="Đánh giá" /> */}
         </div>
       </div>
       <div className="p-6">

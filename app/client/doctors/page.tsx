@@ -16,14 +16,13 @@ export default function DoctorPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Filters - State là nguồn chân lý (source of truth)
+
   const [selectedSpecialtyName, setselectedSpecialtyName] = useState<string>(
     searchParams.get("specialty") || "all"
   );
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
   const [sortBy, setSortBy] = useState<string>(searchParams.get('sort') || 'relevance');
 
-  // Tối ưu 2: Tạo giá trị debounce cho searchQuery để cập nhật URL
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
 
   useEffect(() => {
@@ -36,8 +35,6 @@ export default function DoctorPage() {
     };
   }, [searchQuery]);
 
-
-  // Contexts
   const {
     doctors,
     loading: doctorsLoading,
@@ -66,15 +63,14 @@ export default function DoctorPage() {
   }, [allSpecialties, fetchSpecialties]);
 
   useEffect(() => {
-    if (doctors.length === 0) {
-      fetchDoctors({ limit: 500 }).catch(() => {});
+    if (!doctors || doctors.length === 0) {
+      fetchDoctors().catch(() => {});
     }
   }, [doctors.length, fetchDoctors]);
 
-  // Tối ưu 2: Update URL với giá trị 'debounced'
   useEffect(() => {
     const qp = new URLSearchParams();
-    const trimmedQuery = debouncedSearchQuery.trim(); // Dùng giá trị debounced
+    const trimmedQuery = debouncedSearchQuery.trim();
     
     if (trimmedQuery) qp.set('q', trimmedQuery);
     if (selectedSpecialtyName && selectedSpecialtyName !== 'all') {
@@ -85,16 +81,13 @@ export default function DoctorPage() {
     const qs = qp.toString();
     const base = '/client/doctors';
     router.replace(qs ? `${base}?${qs}` : base, { scroll: false });
-  }, [debouncedSearchQuery, selectedSpecialtyName, sortBy, router]); // Dùng giá trị debounced
+  }, [debouncedSearchQuery, selectedSpecialtyName, sortBy, router]);
 
-  // Lọc và sắp xếp TOÀN BỘ ở Client (với cấu trúc backend mới)
-  // Logic này giờ là nguồn chân lý duy nhất cho việc hiển thị
   const filteredDoctors = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase(); // Dùng searchQuery (tức thì)
+    const q = searchQuery.trim().toLowerCase();
     
     let result = doctors || [];
     
-    // 1. Lọc theo Chuyên khoa (từ Dropdown)
     if (selectedSpecialtyName && selectedSpecialtyName !== "all") {
       const selectedSpecialty = specialties.find(
         (s) => String(s.name) === String(selectedSpecialtyName)
@@ -110,7 +103,6 @@ export default function DoctorPage() {
       }
     }
     
-    // 2. Lọc theo Tên (từ Ô tìm kiếm)
     if (q) {
       result = result.filter((doctor) => {
         const searchableFields = [
@@ -125,7 +117,6 @@ export default function DoctorPage() {
       });
     }
 
-    // 3. Sắp xếp
     const sorted = [...result];
     switch (sortBy) {
       case "name_asc":
@@ -144,9 +135,8 @@ export default function DoctorPage() {
     }
 
     return sorted;
-  }, [doctors, searchQuery, sortBy, selectedSpecialtyName, specialties]); // Dùng searchQuery (tức thì)
+  }, [doctors, searchQuery, sortBy, selectedSpecialtyName, specialties]); 
 
-  // Memoized handlers
   const handleAppointmentDoctor = useCallback((doctorId: string) => {
     router.push(`/client/appointments?doctorId=${doctorId}`);
   }, [router]);
@@ -155,24 +145,21 @@ export default function DoctorPage() {
     router.push(`/client/doctors/${doctorId}`);
   }, [router]);
 
-  // Tối ưu 3: Đã xóa useEffect dùng để debug
 
-  // Highlight specific doctor if search matches ID or exact name
   const highlightedDoctorId = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q || !doctors) return null;
     
-    // Dùng mảng đã lọc (filteredDoctors) sẽ nhanh hơn
-    const byId = filteredDoctors.find(d => String(d.doctor_id) === q);
-    if (byId) return byId.doctor_id;
+    
+    const byId = filteredDoctors.find(d => String(d.id) === q);
+    if (byId) return byId.id;
     
     const byName = filteredDoctors.find(d => 
       (d.full_name || '').toLowerCase() === q
     );
-    return byName ? byName.doctor_id : null;
+    return byName ? byName.id : null;
   }, [filteredDoctors, searchQuery]);
 
-  // 'doctorsLoading' giờ đây chỉ 'true' khi tải lần đầu
   const isLoading = doctorsLoading || specialtiesLoading;
   const error = doctorsError || specialtiesError;
 
@@ -196,7 +183,7 @@ export default function DoctorPage() {
       ) : error ? (
         <Alert message={error} type="error" />
       ) : (
-        <DoctorList
+        <DoctorList 
           doctors={filteredDoctors}
           resultsCount={filteredDoctors.length}
           onSelectDoctor={handleSelectDoctor}

@@ -4,7 +4,7 @@ import SpecialtyListItem from './SpecialtyListItem'
 
 interface SpecialtySidebarProps {
     Specialties: Specialty[]
-    Doctors: Doctor[]
+    doctorCounts: Map<string, number>
     selectedSpecialty: string | null
     setSelectedSpecialty: (id: string | null) => void
     setActiveTab: (tab: 'overview' | 'doctors') => void
@@ -13,28 +13,27 @@ interface SpecialtySidebarProps {
 }
 
 export default function SpecialtySidebar({
-    Specialties,
-    Doctors,
+    Specialties = [],
+    doctorCounts,
     selectedSpecialty,
     setSelectedSpecialty,
     setActiveTab,
     searchQuery,
     setSearchQuery,
 }: SpecialtySidebarProps) {
-    // Get doctors count by specialty
-    const getDoctorCount = (specialtyId: string) => {
-        return Doctors.filter(d => d.specialty_id === specialtyId).length
-    }
 
     const handleSelectAll = () => {
         setSelectedSpecialty(null)
-        setActiveTab('overview')
     }
 
     const handleSelectSpecialty = (specialtyId: string) => {
         setSelectedSpecialty(specialtyId)
-        setActiveTab('overview')
     }
+
+    // THAY ĐỔI: Tính tổng số bác sĩ từ map
+    const totalDoctors = Array.from(doctorCounts.values()).reduce(
+        (sum, count) => sum + count, 0
+    );
 
     const filteredSpecialties = Specialties.filter(s =>
         s.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -74,7 +73,7 @@ export default function SpecialtySidebar({
                         <div className="flex items-center justify-between">
                             <span className="font-medium">Tất cả chuyên khoa</span>
                             <span className="text-sm text-gray-500">
-                                {Doctors.length} bác sĩ
+                                {totalDoctors} bác sĩ
                             </span>
                         </div>
                     </button>
@@ -84,9 +83,9 @@ export default function SpecialtySidebar({
                         <SpecialtyListItem
                             key={specialty.specialty_id}
                             specialty={specialty}
-                            doctorCount={getDoctorCount(specialty.specialty_id)}
-                            isSelected={selectedSpecialty === specialty.specialty_id}
-                            onClick={() => handleSelectSpecialty(specialty.specialty_id)}
+                            doctorCount={doctorCounts.get(specialty.name) || 0}
+                            isSelected={selectedSpecialty === specialty.name}
+                            onClick={() => handleSelectSpecialty(specialty.name)}
                         />
                     ))}
                     {filteredSpecialties.length === 0 && searchQuery && (
@@ -104,7 +103,7 @@ export default function SpecialtySidebar({
                     <div className="flex items-center justify-between">
                         <span className="text-gray-600">Tổng số bác sĩ:</span>
                         <span className="font-semibold text-blue-600">
-                            {Doctors.length}
+                            {totalDoctors}
                         </span>
                     </div>
                     <div className="flex items-center justify-between">

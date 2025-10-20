@@ -1,7 +1,22 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Doctor } from '@/types/types';
 import DoctorCard from './DoctorCard'; // Import component con
 
+export interface Doctor {
+    id: string;
+    user_id: string;
+    specialty_name: string;
+    full_name: string;
+    title: string | null;
+    introduction: string | null;
+    avatar_url: string | null;
+    specializations: string | null;
+    work_experience: string | null;
+    achievements: string | null;
+    experience_years: number | null;
+    is_available: boolean;
+    created_at: string;
+    updated_at: string;
+}
 interface DoctorListProps {
   doctors: Doctor[];
   resultsCount: number;
@@ -30,7 +45,7 @@ export default function DoctorList({ doctors, resultsCount, onSelectDoctor, onAp
   // if a highlightId is provided, ensure the page containing that doctor is active
   useEffect(() => {
     if (!highlightId) return;
-    const idx = doctors.findIndex((d) => String(d.doctor_id) === String(highlightId));
+    const idx = doctors.findIndex((d) => String(d.id) === String(highlightId));
     if (idx === -1) return;
     const pageFor = Math.floor(idx / ITEMS_PER_PAGE) + 1;
     if (pageFor !== currentPage) setCurrentPage(pageFor);
@@ -58,7 +73,7 @@ export default function DoctorList({ doctors, resultsCount, onSelectDoctor, onAp
       <div className="space-y-4">
         {visibleDoctors.map((doctor, idx) => {
           const alt = (doctor as unknown as Record<string, unknown>)['doctorId'] as string | undefined;
-          const idFromDoctor = doctor.doctor_id ?? (doctor as unknown as { id?: string }).id ?? alt ?? '';
+          const idFromDoctor = doctor.id ?? (doctor as unknown as { id?: string }).id ?? alt ?? '';
           const doctorId = idFromDoctor ? String(idFromDoctor) : '';
           return (
             <DoctorCard

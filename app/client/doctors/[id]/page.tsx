@@ -43,15 +43,16 @@ export default function DoctorDetailPage() {
     setLocalLoading(true);
     setLocalError(null);
 
-    const fetchSchedules = apiClient<DoctorSchedule[]>(`/api/doctors/${id}/schedules`);
+    const fetchSchedules = apiClient<DoctorSchedule[]>(`/v1/doctors/${id}/schedules`);
+    const fetchReviews = apiClient<Review[]>(`/v1/reviews/doctor/${id}`);
 
-    Promise.all([fetchSchedules])
-      .then(([sRes]) => {
+    Promise.all([fetchSchedules, fetchReviews])
+      .then(([sRes, rRes]) => {
         if (!mounted) return;
         if (sRes.status && sRes.data) setSchedulesData(sRes.data as DoctorSchedule[]);
-        // if (rRes.status && rRes.data) setReviewsData(rRes.data as Review[]);
-        // if endpoints return not-ok, we silently fallback to doctor's own schedules / mockReviews
-        if ((!sRes.status ) ){
+        if (rRes.status && rRes.data) setReviewsData(rRes.data as Review[]);
+        // if endpoints return not-ok, we silently fallback to doctor's own schedules / mockReviews for now
+        if (!sRes.status || !rRes.status) {
           // do nothing special, fallback will be used
         }
       })

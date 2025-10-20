@@ -6,10 +6,10 @@ interface SpecialtyMainContentProps {
     Specialties: Specialty[]
     filteredDoctors: Doctor[]
     selectedSpecialty: string | null
-    setSelectedSpecialty: (id: string) => void
+    setSelectedSpecialty: (id: string | null) => void
     activeTab: 'overview' | 'doctors'
     setActiveTab: (tab: 'overview' | 'doctors') => void
-    getDoctorCount: (specialtyId: string) => number
+    doctorCounts: Map<string, number> // Giữ lại prop này
 }
 
 export default function SpecialtyMainContent({
@@ -19,31 +19,32 @@ export default function SpecialtyMainContent({
     setSelectedSpecialty,
     activeTab,
     setActiveTab,
-    getDoctorCount,
+    doctorCounts,
 }: SpecialtyMainContentProps) {
-    const selectedSpecialtyData = Specialties.find((s: Specialty) => s.specialty_id === selectedSpecialty)
+    const selectedSpecialtyData = Specialties.find((s: Specialty) => s.name === selectedSpecialty)
 
     return (
         <div>
             {/* Overview Tab - All Specialties Grid */}
-            {selectedSpecialty === null && (
+             {selectedSpecialty === null ? (
                 <AllSpecialtiesGrid
                     Specialties={Specialties}
-                    getDoctorCount={getDoctorCount}
+                    doctorCounts={doctorCounts}
                     setSelectedSpecialty={setSelectedSpecialty}
                 />
+            ) : (
+                /* Nếu có chuyên khoa được chọn, hiển thị chi tiết chuyên khoa đó */
+                selectedSpecialtyData && (
+                    <SelectedSpecialtyDetail
+                        selectedSpecialtyData={selectedSpecialtyData}
+                        filteredDoctors={filteredDoctors}
+                        activeTab={activeTab}
+                        setActiveTab={setActiveTab}
+                        getDoctorCount={(specialtyName) => doctorCounts.get(specialtyName) || 0}
+                    />
+                )
             )}
 
-            {/* Selected Specialty Detail */}
-            {selectedSpecialty && selectedSpecialtyData && (
-                <SelectedSpecialtyDetail
-                    selectedSpecialtyData={selectedSpecialtyData}
-                    filteredDoctors={filteredDoctors}
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                    getDoctorCount={getDoctorCount}
-                />
-            )}
         </div>
     )
 }

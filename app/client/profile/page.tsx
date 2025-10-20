@@ -8,13 +8,13 @@ import {
     User, Calendar, Settings, LogOut, CheckCircle, FileText, Camera
 } from 'lucide-react'
 
-import ProfileDetails from '@/components/profile/ProfileDetails'
-import AppointmentsList from '@/components/profile/AppointmentsList'
-import MedicalRecordsList from '@/components/profile/MedicalRecordsList'
-import SettingsManagement from '@/components/profile/SettingsManagement'
-import ChangePasswordModal from '@/components/profile/ChangePasswordModal'
-import CancelAppointmentModal from '@/components/profile/CancelAppointmentModal'
-import DeleteAccountModal from '@/components/profile/DeleteAccountModal'
+import ProfileDetails from '@/components/client/profile/ProfileDetails'
+import AppointmentsList from '@/components/client/profile/AppointmentsList'
+import MedicalRecordsList from '@/components/client/profile/MedicalRecordsList'
+import SettingsManagement from '@/components/client/profile/SettingsManagement'
+import ChangePasswordModal from '@/components/client/profile/ChangePasswordModal'
+import CancelAppointmentModal from '@/components/client/profile/CancelAppointmentModal'
+import DeleteAccountModal from '@/components/client/profile/DeleteAccountModal'
 import { useDeleteAccount } from '@/hooks/useDeleteAccount';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/lib/api';

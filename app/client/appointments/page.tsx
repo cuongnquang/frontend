@@ -1,18 +1,20 @@
 'use client'
 
-import { useState, useEffect, useMemo, Suspense } from 'react'
+import { useState, useEffect, useMemo, Suspense, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Calendar, Clock, CheckCircle, ChevronRight } from 'lucide-react'
-import {BookingStep, Doctor, DoctorSchedule, Patient} from '@/types/types'
+import { Calendar, Clock, CheckCircle, ChevronRight, AlertCircle } from 'lucide-react'
+import {BookingStep, Doctor, DoctorSchedule, Patient, Appointment} from '@/types/types'
 import Footer from '@/components/layout/Footer'
 import Header from '@/components/layout/Header'
+import Alert from '@/components/ui/Alert'
 import DateSelector from '@/components/client/appointments/DateSelector'
 import TimeSlotSelector from '@/components/client/appointments/TimeSlotSelector'
+import { apiClient } from '@/lib/api'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import DoctorSidebar from '@/components/client/appointments/DoctorSidebar'
 import BookingProgressBar from '@/components/client/appointments/AppointmentsProgressBar'
 import PatientForm from '@/components/client/appointments/PatientForm'
-import AppointmentConfirmation from '@/components/client/appointments/AppointmentConfirmation'
-import { mockDoctors, mockSchedules, mockPatients } from '@/public/data'
+import AppointmentConfirmation from '@/components/client/appointments/AppointmentConfirmation' 
 // --- Hàm tiện ích ---
 const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
@@ -22,52 +24,114 @@ const formatDate = (dateStr: string) => {
     }
 }
 
-// --- Mock Data (Giữ nguyên) ---
-const doctor: Doctor = mockDoctors[0];
-const schedule: DoctorSchedule[] = mockSchedules;
-
 function AppointmentFlow() {
     const router = useRouter()
     const searchParams = useSearchParams();
+    const doctorIdFromQuery = searchParams.get('doctorId');
     const scheduleId = searchParams.get('scheduleId');
 
     const [currentStep, setCurrentStep] = useState<BookingStep>(BookingStep.DATE_TIME)
     const [selectedDate, setSelectedDate] = useState<string | null>(null)
     const [selectedSchedule, setSelectedSchedule] = useState<DoctorSchedule | null>(null)
-    const [patientData, setPatientData] = useState<Patient>({} as Patient) 
+    const [patientData, setPatientData] = useState<Patient | null>(null)
     const [symptoms, setSymptoms] = useState('')
     const [notes, setNotes] = useState('')
 
+    const [doctor, setDoctor] = useState<Doctor | null>(null);
+    const [schedules, setSchedules] = useState<DoctorSchedule[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
     useEffect(() => {
-        if (scheduleId) {
-            const preSelectedSchedule = schedule.find(s => s.schedule_id === scheduleId);
-            if (preSelectedSchedule) {
-                setSelectedSchedule(preSelectedSchedule);
-                setSelectedDate(preSelectedSchedule.schedule_date);
-                setCurrentStep(BookingStep.PROFILE);
+        const fetchData = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                let doctorId = doctorIdFromQuery;
+                if (doctorId === 'undefined') {
+                    doctorId = null;
+                }
+
+                let fetchedSchedules: DoctorSchedule[] = [];
+
+                // 1. Determine Doctor ID
+                if (scheduleId && !doctorId) {
+                    const scheduleRes = await apiClient<DoctorSchedule>(`/v1/schedules/${scheduleId}`);
+                    if (scheduleRes.status && scheduleRes.data) {
+                        const scheduleData = scheduleRes.data as DoctorSchedule;
+                        doctorId = scheduleData.doctor_id;
+                        setSelectedSchedule(scheduleData);
+                        setSelectedDate(scheduleData.schedule_date);
+                        setCurrentStep(BookingStep.PROFILE);
+                    } else {
+                        throw new Error("Không tìm thấy lịch khám.");
+                    }
+                }
+
+                if (!doctorId) {
+                    throw new Error("Không có thông tin bác sĩ.");
+                }
+
+                // 2. Fetch Doctor and Schedules
+                const doctorRes = apiClient<Doctor>(`/v1/doctors/${doctorId}`);
+                const schedulesRes = apiClient<DoctorSchedule[]>(`/v1/doctors/${doctorId}/schedules`);
+                const patientRes = apiClient<Patient>('/v1/patients/me');
+
+                const [doc, sched, pat] = await Promise.all([doctorRes, schedulesRes, patientRes]);
+
+                if (doc.status && doc.data) {
+                    setDoctor(doc.data as Doctor);
+                } else {
+                    throw new Error("Không thể tải thông tin bác sĩ.");
+                }
+
+                if (sched.status && sched.data) {
+                    fetchedSchedules = sched.data as DoctorSchedule[];
+                    setSchedules(fetchedSchedules);
+                } else {
+                    // Silently fail on schedules for now, maybe doctor has no schedule
+                }
+
+                if (pat.status && pat.data) {
+                    setPatientData(pat.data as Patient);
+                } else {
+                    // It's possible user is not logged in or has no patient profile
+                    // We can create a blank one
+                    setPatientData({} as Patient);
+                }
+
+                // If scheduleId was passed, find it in the full list
+                if (scheduleId && !selectedSchedule) {
+                    const preSelected = fetchedSchedules.find(s => s.schedule_id === scheduleId);
+                    if (preSelected) {
+                        setSelectedSchedule(preSelected);
+                        setSelectedDate(preSelected.schedule_date);
+                        setCurrentStep(BookingStep.PROFILE);
+                    }
+                }
+
+            } catch (e: any) {
+                setError(e.message || "Đã có lỗi xảy ra khi tải dữ liệu.");
+            } finally {
+                setLoading(false);
             }
-        }
-    }, [scheduleId]);
-    
-
-    // Load mock patient data
-    useEffect(() => {
-        const patient: Patient = mockPatients[0]
-
-        setPatientData(patient)
-    }, [])
+        };
+        fetchData();
+    }, [scheduleId, doctorIdFromQuery]);
     
     // Group schedules by date
     const groupedSchedules = useMemo(() => {
         const grouped: { [key: string]: DoctorSchedule[] } = {}
-        schedule.forEach(schedule => {
+        schedules.forEach(schedule => {
             if (!grouped[schedule.schedule_date]) {
                 grouped[schedule.schedule_date] = []
             }
             grouped[schedule.schedule_date].push(schedule)
         })
         return grouped
-    }, [])
+    }, [schedules])
     
     const availableDates = Object.keys(groupedSchedules)
 
@@ -90,26 +154,50 @@ function AppointmentFlow() {
     }
 
     const handlePatientDataChange = (field: keyof Patient, value: string) => {
-        setPatientData(prev => ({
+        setPatientData(prev => prev && ({
             ...prev,
             [field]: value
         }))
     }
 
-    const handleSubmit = () => {
-        console.log('Appointment data submitted!')
-        alert('Đặt lịch thành công! Chúng tôi sẽ liên hệ với bạn sớm.')
-        
-        setSelectedSchedule(null)
-        setSelectedDate(null)
-        setSymptoms('')
-        setNotes('')
-        router.push('/')
-    }
+    const handleSubmit = useCallback(async () => {
+        if (!doctor || !selectedSchedule || !patientData) {
+            setSubmitError("Thiếu thông tin cần thiết để đặt lịch.");
+            return;
+        }
+
+        setIsSubmitting(true);
+        setSubmitError(null);
+
+        try {
+            const appointmentData = {
+                doctor_id: doctor.doctor_id,
+                schedule_id: selectedSchedule.schedule_id,
+                symptoms: symptoms,
+                notes: notes,
+            };
+
+            const response = await apiClient<Appointment>('/v1/appointments', {
+                method: 'POST',
+                body: JSON.stringify(appointmentData),
+            });
+
+            if (response.status && response.data) {
+                alert('Đặt lịch thành công! Chúng tôi sẽ liên hệ với bạn sớm.');
+                router.push('/client/me/appointments');
+            } else {
+                throw new Error(response.message || "Đặt lịch thất bại. Vui lòng thử lại.");
+            }
+        } catch (e: any) {
+            setSubmitError(e.message || "Đã có lỗi xảy ra. Vui lòng thử lại sau.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, [doctor, selectedSchedule, patientData, symptoms, notes, router]);
 
     // --- Điều kiện chuyển bước ---
     const canProceedStep1 = selectedSchedule !== null
-    const canProceedStep2 = !!patientData.full_name && !!patientData.phone_number && !!patientData.date_of_birth && !!symptoms
+    const canProceedStep2 = !!patientData?.full_name && !!patientData?.phone_number && !!patientData?.date_of_birth && !!symptoms
 
     return (
         <div>
@@ -128,6 +216,23 @@ function AppointmentFlow() {
 
             {/* Main Content */}
             <div className="container mx-auto px-4 py-8">
+                {loading && (
+                    <div className="flex justify-center items-center h-64">
+                        <LoadingSpinner />
+                    </div>
+                )}
+                {submitError && (
+                    <Alert message={submitError} type="error" duration={5000} />
+                )}
+                {error && !loading && (
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative max-w-3xl mx-auto" role="alert">
+                        <strong className="font-bold flex items-center"><AlertCircle className="w-5 h-5 mr-2"/>Lỗi!</strong>
+                        <span className="block sm:inline ml-8">{error}</span>
+                    </div>
+                )}
+                {!loading && !error && doctor && patientData && (
+
+                
                 <div className="max-w-7xl mx-auto">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         
@@ -222,11 +327,13 @@ function AppointmentFlow() {
                                     formatDate={formatDate}
                                     onBack={() => setCurrentStep(BookingStep.PROFILE)}
                                     onSubmit={handleSubmit}
+                                    isSubmitting={isSubmitting}
                                 />
                             )}
                         </div>
                     </div>
                 </div>
+                )}
             </div>
             
         </div>
