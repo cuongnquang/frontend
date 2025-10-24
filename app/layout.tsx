@@ -5,6 +5,7 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { SpecialtyProvider } from "@/contexts/SpecialtyContext";
 import { DoctorProvider } from "@/contexts/DoctorContext";
 import { PatientProvider } from '@/contexts/PatientContext';
+import { ScheduleProvider } from '@/contexts/ScheduleContext';
 
 
 const inter = Inter({ subsets: ['latin', 'vietnamese'] })
@@ -26,7 +27,9 @@ export default function RootLayout({
           <SpecialtyProvider>
             <DoctorProvider>
               <PatientProvider>
-                {children}
+                <ScheduleProvider>
+                  {children}
+                </ScheduleProvider>
               </PatientProvider>
             </DoctorProvider>
           </SpecialtyProvider>

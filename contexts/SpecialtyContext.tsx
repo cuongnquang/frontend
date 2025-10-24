@@ -37,11 +37,7 @@ export function SpecialtyProvider({ children }: { children: ReactNode }) {
         setLoading(true);
         setError(null);
         try {
-            // Append a query flag so the server proxy can optionally retry using a
-            // server-side BACKEND_SERVICE_TOKEN for read-only public lists if the
-            // user's token lacks permission. This is safe because the service token
-            // is only used server-side and never exposed to the browser.
-            const res = await apiClient<Specialty[]>('/api/specialties?service_token=1');
+            const res = await apiClient<Specialty[]>('/api/specialties');
             if (res.status && res.data) {
                 setSpecialties(res.data);
             } else {
@@ -121,7 +117,7 @@ export function SpecialtyProvider({ children }: { children: ReactNode }) {
                 return { success: false, message: res.message || "Xóa chuyên khoa thất bại." };
             }
 
-            setSpecialties((prev) => prev.filter((s) => s.id !== id));
+            setSpecialties((prev) => prev.filter((s) => s.specialty_id !== id));
             return { success: true, message: res.message || "Xóa chuyên khoa thành công!" };
         } catch {
             setError("Đã có lỗi không mong muốn xảy ra khi xóa.");

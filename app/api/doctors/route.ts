@@ -5,7 +5,6 @@ export async function POST(req: NextRequest) {
     return forwardRequest(req, `/v1/doctors`);
 }
 
-
 export async function GET(req: NextRequest) {
     return forwardRequest(req, `/v1/doctors?type=all`);
 }
