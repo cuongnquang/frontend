@@ -5,6 +5,7 @@ export function getRedirectPathByRole(role: string): string {
         case "doctor":
             return "/doctor/dashboard";
         case "patient":
+            return "/";
         default:
             return "/";
     }

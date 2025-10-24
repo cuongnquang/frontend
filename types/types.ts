@@ -61,20 +61,20 @@ export interface Specialty {
 }
 
 export interface Doctor {
-  doctor_id: string;
-  user_id: string;
-  specialty_id: string;
-  full_name: string;
-  title?: string;
-  introduction?: string;
-  avatar_url?: string;
-  specializations?: string;
-  work_experience?: string;
-  achievements?: string[];
-  experience_years?: number;
-  is_available: boolean;
-  created_at: string;
-  updated_at: string;
+  id: string;
+      user_id: string;
+      specialty_name: string;
+      full_name: string;
+      title: string | null;
+      introduction: string | null;
+      avatar_url: string | null;
+      specializations: string | null;
+      work_experience: string | null;
+      achievements: string | null;
+      experience_years: number | null;
+      is_available: boolean;
+      created_at: string;
+      updated_at: string;
   User: User;
   Specialty: Specialty;
   Schedules: DoctorSchedule[];

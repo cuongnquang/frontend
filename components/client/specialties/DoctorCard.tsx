@@ -1,5 +1,6 @@
 import { Doctor } from '@/types/types'
-import { MapPin, Award, Star } from 'lucide-react'
+import { MapPin, Award, Star, Calendar, User } from 'lucide-react'
+import Link from 'next/link'
 
 interface DoctorCardProps {
     doctor: Doctor
@@ -7,48 +8,61 @@ interface DoctorCardProps {
 
 export default function DoctorCard({ doctor }: DoctorCardProps) {
     return (
-        <div key={doctor.doctor_id} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+        <div key={doctor.id} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-shadow duration-300">
             <div className="flex items-start space-x-4">
                 <img
-                    src={doctor.avatar_url}
+                    src={doctor.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'}
                     alt={doctor.full_name}
-                    className="w-20 h-20 rounded-lg object-cover"
+                    className="w-24 h-24 rounded-full object-cover border-4 border-blue-100"
                 />
                 <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                        {doctor.title} {doctor.full_name}
-                    </h3>
-                    <p className="text-blue-600 text-sm mb-2">
-                        {doctor.Specialty.name}
+                    <div className="flex justify-between items-start">
+                        <h3 className="text-xl font-bold text-gray-900">
+                            {doctor.full_name}
+                        </h3>
+                        {doctor.is_available && (
+                            <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+                                Có lịch trống
+                            </span>
+                        )}
+                    </div>
+                    <p className="text-blue-600 font-semibold text-sm mb-2">
+                        Chuyên khoa {doctor.specialty_name}
                     </p>
-                    <div className="flex items-center space-x-4 text-sm text-gray-600 mb-2">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 mb-3">
                         <div className="flex items-center">
-                            <MapPin className="w-4 h-4 mr-1" />
-                            {doctor.work_experience}
-                        </div>
-                        <div className="flex items-center">
-                            <Award className="w-4 h-4 mr-1" />
+                            <Award className="w-4 h-4 mr-1.5 text-indigo-500" />
                             {doctor.experience_years} năm kinh nghiệm
                         </div>
+                        <div className="flex items-center">
+                            <MapPin className="w-4 h-4 mr-1.5 text-red-500" />
+                            {doctor.work_experience}
+                        </div>
                     </div>
-                    <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                    <p className="text-gray-500 text-sm mb-4 line-clamp-2 italic">
                         {doctor.introduction}
                     </p>
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                        <div className="flex items-center">
                             <div className="flex items-center">
                                 <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                                <span className="text-sm font-medium ml-1">4.8</span>
+                                <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                                <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                                <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                                <Star className="w-4 h-4 text-gray-300 fill-current" />
+                                <span className="text-xs text-gray-500 ml-2">(12 đánh giá)</span>
                             </div>
-                            {doctor.is_available && (
-                                <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
-                                    Đang nhận khám
-                                </span>
-                            )}
                         </div>
-                        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
-                            Đặt lịch khám
-                        </button>
+                        <div className="flex items-center space-x-2">
+                            <Link href={`/client/doctors/${doctor.id}`} className="px-4 py-2 bg-white border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors text-sm font-semibold flex items-center gap-2">
+                                <User className="w-4 h-4" />
+                                Xem chi tiết
+                            </Link>
+                            <Link href={`/client/appointments?doctorId=${doctor.id}`} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold flex items-center gap-2">
+                                <Calendar className="w-4 h-4" />
+                                Đặt lịch
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </div>

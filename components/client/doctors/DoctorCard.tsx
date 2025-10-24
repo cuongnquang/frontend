@@ -1,8 +1,23 @@
 import React from 'react';
-import { Doctor } from '@/types/types';
 import { useSpecialty } from '@/contexts/SpecialtyContext'
 import { MapPin, Award, Clock, Calendar } from 'lucide-react';
 
+export interface Doctor {
+    id: string;
+    user_id: string;
+    specialty_name: string;
+    full_name: string;
+    title: string | null;
+    introduction: string | null;
+    avatar_url: string | null;
+    specializations: string | null;
+    work_experience: string | null;
+    achievements: string | null;
+    experience_years: number | null;
+    is_available: boolean;
+    created_at: string;
+    updated_at: string;
+}
 interface DoctorCardProps {
   doctor: Doctor;
   onSelect:()=>void;

@@ -38,6 +38,7 @@ export function SpecialtyProvider({ children }: { children: ReactNode }) {
         setError(null);
         try {
             const res = await apiClient<Specialty[]>('/api/specialties');
+
             if (res.status && res.data) {
                 setSpecialties(res.data);
             } else {

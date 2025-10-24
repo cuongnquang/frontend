@@ -1,15 +1,16 @@
 "use client"
-
-import { useState, useMemo } from "react"
-import { Doctor } from "@/types/types"
+import { useState, useMemo } from "react";
+import { Doctor } from "@/types/types";
 import SpecialtySidebar from "@/components/client/specialties/SpecialtySidebar"
 import SpecialtyMainContent from "@/components/client/specialties/SpecialtyMainContent"
 import Header from "@/components/layout/Header"
+import LoadingSpinner from "@/components/ui/LoadingSpinner"
 import Footer from "@/components/layout/Footer"
 import { useSpecialty } from "@/contexts/SpecialtyContext"
 import { useDoctor } from "@/contexts/DoctorContext"
 
 export default function SpecialtiesPage() {
+    // FIX: selectedSpecialty now holds the NAME of the specialty, or null for "All"
     const [selectedSpecialty, setSelectedSpecialty] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<'overview' | 'doctors'>('overview')
     const [searchQuery, setSearchQuery] = useState('')
@@ -17,20 +18,35 @@ export default function SpecialtiesPage() {
     const { specialties, loading: specialtiesLoading, error: specialtiesError } = useSpecialty()
     const { doctors, loading: doctorsLoading, error: doctorsError } = useDoctor()
 
-    // Get doctors count by specialty
-    const getDoctorCount = (specialtyId: string): number => {
-        return doctors.filter(d => d.specialty_id === specialtyId).length
+    const doctorCountsByName = useMemo(() => {
+        const counts = new Map<string, number>();
+        if (Array.isArray(doctors)) {
+            for (const doctor of doctors) {
+                const name = doctor.specialty_name;
+                if (name) {
+                    counts.set(name, (counts.get(name) || 0) + 1);
+                }
+            }
+        }
+        return counts;
+    }, [doctors]);
+
+    // FIX: The parameter is a name, not an ID.
+    const handleSelectSpecialty = (specialtyName: string | null) => {
+        setSelectedSpecialty(specialtyName)
+        setActiveTab(specialtyName ? 'overview' : 'doctors' )
     }
 
-    // Get filtered doctors
     const filteredDoctors = useMemo(() => {
-        return doctors.filter((doctor: Doctor) =>
-            (!selectedSpecialty || doctor.specialty_id === selectedSpecialty) &&
-            (searchQuery === '' ||
-                doctor.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (doctor.Specialty?.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
-        )
-    }, [doctors, selectedSpecialty, searchQuery])
+        if (!Array.isArray(doctors)) return [];
+
+        return doctors.filter((d) => {
+            // FIX: Filter directly by specialty name.
+            const matchesSpecialty = !selectedSpecialty || d.specialty_name === selectedSpecialty;
+            const matchesSearch = !searchQuery || d.full_name.toLowerCase().includes(searchQuery.toLowerCase());
+            return matchesSpecialty && matchesSearch;
+        });
+    }, [doctors, selectedSpecialty, searchQuery]);
 
     const isLoading = specialtiesLoading || doctorsLoading
     const error = specialtiesError || doctorsError
@@ -55,10 +71,10 @@ export default function SpecialtiesPage() {
                     <div className="lg:w-1/3">
                     {/* Sidebar */}
                     <SpecialtySidebar
-                        Specialties={specialties}
-                        Doctors={doctors}
+                        Specialties={specialties || []}
+                        doctorCounts={doctorCountsByName}
                         selectedSpecialty={selectedSpecialty}
-                        setSelectedSpecialty={setSelectedSpecialty}
+                        setSelectedSpecialty={handleSelectSpecialty}
                         setActiveTab={setActiveTab}
                         searchQuery={searchQuery}
                         setSearchQuery={setSearchQuery}
@@ -67,7 +83,9 @@ export default function SpecialtiesPage() {
                     {/* Main Content */}
                     <div className="lg:w-2/3">
                         {isLoading && (
-                            <div className="p-6 bg-white rounded-xl shadow-sm text-center">Đang tải dữ liệu...</div>
+                            <div className="p-6 bg-white rounded-xl shadow-sm text-center">
+                                <LoadingSpinner />
+                            </div>
                         )}
 
                         {error && (
@@ -76,13 +94,13 @@ export default function SpecialtiesPage() {
 
                         {!isLoading && !error && (
                             <SpecialtyMainContent
-                                Specialties={specialties}
+                                Specialties={specialties || []}
                                 filteredDoctors={filteredDoctors}
                                 selectedSpecialty={selectedSpecialty}
-                                setSelectedSpecialty={setSelectedSpecialty as (id: string) => void}
+                                setSelectedSpecialty={handleSelectSpecialty}
                                 activeTab={activeTab}
                                 setActiveTab={setActiveTab}
-                                getDoctorCount={getDoctorCount}
+                                doctorCounts={doctorCountsByName}
                             />
                         )}
                     </div>

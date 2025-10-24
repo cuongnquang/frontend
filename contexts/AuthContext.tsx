@@ -65,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
 
             const userData = await fetchUser();
+            console.log("Logged in user data:", userData);
             
             if (userData && userData.role) {
                 const redirectPath = getRedirectPathByRole(userData.role);

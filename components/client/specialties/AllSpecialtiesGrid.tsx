@@ -4,13 +4,13 @@ import { getSpecialtyIcon, getSpecialtyColor } from '@/components/client/special
 
 interface AllSpecialtiesGridProps {
     Specialties: Specialty[]
-    getDoctorCount: (specialtyId: string) => number
-    setSelectedSpecialty: (id: string) => void
+    doctorCounts: Map<string, number>
+    setSelectedSpecialty: (id: string | null) => void
 }
 
 export default function AllSpecialtiesGrid({
     Specialties,
-    getDoctorCount,
+    doctorCounts,
     setSelectedSpecialty,
 }: AllSpecialtiesGridProps) {
     return (
@@ -27,14 +27,14 @@ export default function AllSpecialtiesGrid({
             <div className="grid md:grid-cols-2 gap-6">
                 {Specialties.map((specialty: Specialty) => {
                     const Icon = getSpecialtyIcon(specialty.name)
-                    const doctorCount = getDoctorCount(specialty.specialty_id)
+                    const doctorCount = doctorCounts.get(specialty.name) || 0 // Lấy số lượng từ Map
                     const colorClasses = getSpecialtyColor(specialty.name)
 
                     return (
                         <div
                             key={specialty.specialty_id}
                             className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all cursor-pointer border border-gray-100"
-                            onClick={() => setSelectedSpecialty(specialty.specialty_id)}
+                            onClick={() => setSelectedSpecialty(specialty.name)}
                         >
                             <div className="flex items-start space-x-4">
                                 <div className={`w-12 h-12 ${colorClasses} rounded-lg flex items-center justify-center`}>

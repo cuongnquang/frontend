@@ -9,7 +9,7 @@ interface SelectedSpecialtyDetailProps {
     filteredDoctors: Doctor[]
     activeTab: 'overview' | 'doctors'
     setActiveTab: (tab: 'overview' | 'doctors') => void
-    getDoctorCount: (specialtyId: string) => number
+    getDoctorCount: (specialtyName: string) => number
 }
 
 export default function SelectedSpecialtyDetail({
@@ -19,7 +19,7 @@ export default function SelectedSpecialtyDetail({
     setActiveTab,
     getDoctorCount,
 }: SelectedSpecialtyDetailProps) {
-    const doctorCount = getDoctorCount(selectedSpecialtyData.specialty_id)
+    const doctorCount = getDoctorCount(selectedSpecialtyData.name)
 
     return (
         <div>
@@ -34,7 +34,9 @@ export default function SelectedSpecialtyDetail({
                     <SpecialtyOverview specialtyData={selectedSpecialtyData} />
                 )}
                 {activeTab === 'doctors' && (
-                    <DoctorList filteredDoctors={filteredDoctors} />
+                    <DoctorList 
+                        filteredDoctors={filteredDoctors}
+                    />
                 )}
             </SpecialtyTabs>
         </div>

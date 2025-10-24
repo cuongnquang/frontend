@@ -63,7 +63,7 @@ export function DoctorProvider({ children }: { children: ReactNode }) {
         setLoading(true);
         setError(null);
         try {
-            const res = await apiClient<Doctor[]>("/api/doctors");
+            const res = await apiClient<Doctor[]>("/api/doctors", { skipRedirect: true });
             if (res.status && res.data) {
                 setDoctors(res.data);
             } else {

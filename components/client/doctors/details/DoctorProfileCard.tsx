@@ -26,9 +26,9 @@ export default function DoctorProfileCard({ doctor, reviews}: DoctorProfileCardP
           <div className="flex items-start justify-between mb-2">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                {doctor.title} {doctor.full_name}
+               {doctor.full_name}
               </h1>
-              <p className="text-lg text-blue-600 font-medium mb-3">{doctor.Specialty.name}</p>
+              <p className="text-lg text-blue-600 font-medium mb-3">{doctor.specialty_name}</p>
             </div>
             {doctor.is_available && (
               <span className="px-4 py-2 bg-green-100 text-green-700 text-sm font-medium rounded-full flex items-center gap-2">
