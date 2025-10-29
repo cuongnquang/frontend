@@ -28,7 +28,7 @@ export default function RootLayout({
             <DoctorProvider>
               <PatientProvider>
                 <ScheduleProvider>
-                  {children}
+                    {children}
                 </ScheduleProvider>
               </PatientProvider>
             </DoctorProvider>

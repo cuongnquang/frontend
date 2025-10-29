@@ -11,7 +11,6 @@ import {
     ArrowRight,
 } from 'lucide-react'
 import SpecialtyCard from '@/components/specialty/SpecialtyCard'
-import DoctorCard from '@/components/doctor/DoctorCard'
 import { Doctor, Specialty } from '@/types/types'
 import { apiClient } from '@/lib/api'
 import FeaturedDoctorCard from '@/components/doctor/DoctorCard'
@@ -29,7 +28,7 @@ export default function Features() {
                 // Gọi API đồng thời để lấy dữ liệu bác sĩ và chuyên khoa
                 const [doctorsRes, specialtiesRes] = await Promise.all([
                     apiClient<Doctor[]>('/api/doctors?featured=true&limit=4'),
-                    apiClient<Specialty[]>('/api/specialties?popular=true&limit=6&service_token=1')
+                    apiClient<Specialty[]>('/api/specialties?popular=true&limit=6')
                 ])
 
                 if (doctorsRes.status && doctorsRes.data) {
@@ -77,14 +76,6 @@ export default function Features() {
     const goAllDoctors = () => router.push('/client/doctors')
     const goAllSpecialties = () => router.push('/client/specialties')
     const handleViewSpecialty = (id: string) => router.push(`/client/specialties/${id}`)
-
-    // if (loading) {
-    //     return (
-    //         <div className="py-16 container mx-auto px-4 text-center">
-    //             <p>Đang tải dữ liệu trang chủ...</p>
-    //         </div>
-    //     )
-    // }
 
     return (
         <>
@@ -137,13 +128,15 @@ export default function Features() {
                         {popularSpecialties.map((specialty, idx) => (
                             <div key={idx} onClick={() => handleViewSpecialty(specialty.specialty_id)}>
                                 <SpecialtyCard
-                                    specialtyId={specialty.specialty_id}
+                                    id={parseInt(specialty.specialty_id)}
                                     name={specialty.name}
                                     icon={popularSpecialtiesIcons[specialty.name] || Stethoscope}
-                                    doctors={specialty.Doctors?.length || 0}
+                                    // TODO: API should return the number of doctors for each specialty
+                                    doctors={0}
                                     description={specialty.description || ''}
-                                    // Các trường này cần được API trả về hoặc tính toán
+                                    // TODO: API should return common conditions for each specialty
                                     commonConditions={['Bệnh A', 'Bệnh B']}
+                                    // TODO: API should return average price for each specialty
                                     averagePrice="300.000đ"
                                     color={popularSpecialtiesColors[specialty.name] || 'bg-gray-50 text-gray-600'}
                                 />

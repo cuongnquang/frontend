@@ -29,11 +29,11 @@ export default function FeaturedDoctorCard({
             setShowAlert(true)
             return
         }
-        router.push(`/client/appointments?doctorId=${doctor.doctor_id}`)
+        router.push(`/client/appointments?doctorId=${doctor.id}`)
     }
 
     const handleViewProfile = () => {
-        router.push(`/client/doctors/${doctor.doctor_id}`)
+        router.push(`/client/doctors/${doctor.id}`)
     }
 
     const toggleFavorite = (e: React.MouseEvent) => {
