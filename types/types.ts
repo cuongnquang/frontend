@@ -51,10 +51,10 @@ export interface Patient {
 }
 
 export interface Specialty {
-  specialty_id: string;
+  id: string;
   name: string;
   description?: string | null;
-  image_url: string | null;
+  image: string | null;
   created_at: string;
   updated_at: string;
   Doctors: Doctor[];
@@ -62,19 +62,21 @@ export interface Specialty {
 
 export interface Doctor {
   id: string;
-      user_id: string;
-      specialty_name: string;
-      full_name: string;
-      title: string | null;
-      introduction: string | null;
-      avatar_url: string | null;
-      specializations: string | null;
-      work_experience: string | null;
-      achievements: string | null;
-      experience_years: number | null;
-      is_available: boolean;
-      created_at: string;
-      updated_at: string;
+  user_id: string;
+  specialty_name: string;
+  full_name: string;
+  title: string | null;
+  experience_years: number | null;
+  specializations: string | null;
+  position: string | null;
+  workplace: string | null;
+  clinic_address: string | null;
+  introduction: string | null;
+  achievements: string | null;
+  avatar_url: string | null;
+  is_available: boolean;
+  created_at: string;
+  updated_at: string;
   User: User;
   Specialty: Specialty;
   Schedules: DoctorSchedule[];
@@ -111,16 +113,16 @@ export interface Appointment {
 }
 
 export interface TimeSlot {
-    id: string;
-    day: 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
-    startTime: string;
-    endTime: string;
-    isAvailable: boolean;
-    maxPatients: number;
-    currentPatients: number;
+  id: string;
+  day: 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
+  startTime: string;
+  endTime: string;
+  isAvailable: boolean;
+  maxPatients: number;
+  currentPatients: number;
 }
 
-export enum BookingStep{
+export enum BookingStep {
   DATE_TIME = 1,
   PROFILE = 2,
   CONFIRMATION = 3
@@ -132,14 +134,14 @@ export interface ChatMessage {
   text: string;
   timestamp: Date;
   options?: string[]; // Ví dụ: ['Đặt lịch', 'Tìm kiếm Bác sĩ']
-  relatedDoctorId?: string; 
+  relatedDoctorId?: string;
 }
 
 export interface Review {
-id: string;
-patient_name: string;
-rating: number;
-comment: string;
-date: string;
-verified: boolean;
+  id: string;
+  patient_name: string;
+  rating: number;
+  comment: string;
+  date: string;
+  verified: boolean;
 }

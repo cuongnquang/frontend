@@ -1,66 +1,85 @@
 'use client'
 
-import { ForwardRefExoticComponent, RefAttributes } from 'react'
-import {
-    ChevronRight,
-    LucideProps
-} from 'lucide-react'
-interface Specialty {
-    id: number;
-    name: string;
-    icon: ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>;
-    doctors: number;
-    description: string;
-    commonConditions: string[];
-    averagePrice: string;
-    color: string
+import { ChevronRight, Stethoscope, Users } from 'lucide-react'
+
+interface SpecialtyCardProps {
+    id: string
+    name: string
+    description: string
+    doctors: number
+    image_url?: string
+    color?: string
 }
 
-export default function SpecialtyCard(specialty: Specialty) {
+export default function SpecialtyCard({
+    id,
+    name,
+    description,
+    doctors,
+    image_url,
+    color = 'bg-gradient-to-br from-blue-50 to-blue-100 text-blue-600'
+}: SpecialtyCardProps) {
     return (
-        <div key={specialty.id} className="bg-white border border-gray-100 rounded-xl p-6 hover:shadow-lg transition-all cursor-pointer group">
-            <div className="flex items-center mb-4">
-                <div className={`w-12 h-12 ${specialty.color} rounded-lg flex items-center justify-center mr-4`}>
-                    <specialty.icon className="w-6 h-6" />
-                </div>
-                <div>
-                    <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                        {specialty.name}
-                    </h3>
-                    <div className="flex items-center space-x-3 text-sm text-gray-600">
-                        <span>{specialty.doctors} bác sĩ</span>
+        <div className="group bg-white rounded-xl shadow-sm hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-blue-200 cursor-pointer">
+            {/* Header with Image/Icon */}
+            <div className="relative h-40 overflow-hidden">
+                {image_url ? (
+                    <div className="relative w-full h-full">
+                        <img 
+                            src={image_url} 
+                            alt={name}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+                    </div>
+                ) : (
+                    <div className={`w-full h-full ${color} flex items-center justify-center relative overflow-hidden`}>
+                        <div className="absolute inset-0 opacity-10">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
+                            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full -ml-12 -mb-12"></div>
+                        </div>
+                        <Stethoscope className="w-16 h-16 relative z-10 group-hover:scale-110 transition-transform duration-300" />
+                    </div>
+                )}
+                
+                {/* Doctor count badge */}
+                <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-full px-3 py-1.5 shadow-lg">
+                    <div className="flex items-center gap-1.5">
+                        <Users className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm font-bold text-gray-900">{doctors}</span>
+                        <span className="text-xs text-gray-600">BS</span>
                     </div>
                 </div>
             </div>
 
-            <p className="text-gray-600 text-sm mb-4 leading-relaxed">
-                {specialty.description}
-            </p>
+            {/* Content */}
+            <div className="p-5">
+                {/* Title */}
+                <h3 className="font-bold text-xl text-gray-900 mb-2 group-hover:text-blue-600 transition-colors line-clamp-1">
+                    {name}
+                </h3>
 
-            <div className="mb-4">
-                <h4 className="text-sm font-semibold text-gray-900 mb-2">Bệnh thường gặp:</h4>
-                <div className="flex flex-wrap gap-1">
-                    {specialty.commonConditions.map((condition, idx) => (
-                        <span key={idx} className="px-2 py-1 bg-gray-50 text-gray-700 rounded text-xs">
-                            {condition}
-                        </span>
-                    ))}
-                </div>
-            </div>
+                {/* Description */}
+                {description && (
+                    <p className="text-sm text-gray-600 leading-relaxed line-clamp-3 mb-4">
+                        {description}
+                    </p>
+                )}
 
-            <div className="flex items-center justify-between border-t pt-4">
-                <div>
-                    <div className="text-lg font-bold text-green-600">
-                        {specialty.averagePrice}
+                {/* Divider */}
+                <div className="border-t border-gray-100 pt-4 mt-4">
+                    <div className="flex items-center justify-between">
+                        <div className="text-sm text-gray-500">
+                            <span className="font-medium text-gray-700">{doctors}</span> bác sĩ chuyên khoa
+                        </div>
+                        
+                        <div className="flex items-center text-blue-600 font-semibold text-sm group-hover:text-blue-700">
+                            <span>Xem chi tiết</span>
+                            <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                        </div>
                     </div>
-                    <div className="text-xs text-gray-500">Giá khám TB</div>
-                </div>
-                <div className="flex items-center text-blue-600 font-medium text-sm">
-                    <span>Tìm hiểu thêm</span>
-                    <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                 </div>
             </div>
         </div>
-
     )
 }

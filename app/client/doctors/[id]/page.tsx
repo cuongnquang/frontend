@@ -32,7 +32,7 @@ export default function DoctorDetailPage() {
 
   useEffect(() => {
     if (id) {
-      fetchDoctorById(id).catch(() => {});
+      fetchDoctorById(id).catch(() => { });
     }
   }, [id, fetchDoctorById]);
 
@@ -81,8 +81,8 @@ export default function DoctorDetailPage() {
     schedulesData && schedulesData.length > 0
       ? schedulesData
       : doctor && doctor.Schedules && doctor.Schedules.length > 0
-      ? doctor.Schedules
-      : mockSchedules;
+        ? doctor.Schedules
+        : mockSchedules;
 
   const reviews: Review[] =
     reviewsData && reviewsData.length > 0
@@ -101,7 +101,7 @@ export default function DoctorDetailPage() {
   const handleBookingSubmit = () => {
     if (!doctor) return;
     if (selectedSchedule) {
-      router.push(`/client/appointments?doctorId=${doctor.doctor_id}&scheduleId=${selectedSchedule.schedule_id}`);
+      router.push(`/client/appointments?doctorId=${doctor.id}&scheduleId=${selectedSchedule.schedule_id}`);
     } else {
       alert('Vui lòng chọn một khung giờ khám bệnh.');
     }

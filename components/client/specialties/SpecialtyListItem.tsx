@@ -12,23 +12,35 @@ export default function SpecialtyListItem({ specialty, doctorCount, isSelected, 
     const Icon = getSpecialtyIcon(specialty.name)
     const colorClasses = getSpecialtyColor(specialty.name)
 
-    const baseClasses = 'w-full text-left p-3 rounded-lg transition-colors'
-    const selectedClasses = 'bg-blue-50 text-blue-700 border border-blue-200'
-    const hoverClasses = 'hover:bg-gray-50 text-gray-700'
-
     return (
         <button
             onClick={onClick}
-            className={`${baseClasses} ${isSelected ? selectedClasses : hoverClasses}`}
+            className={`w-full text-left px-4 py-3 rounded-lg transition-all group ${
+                isSelected 
+                    ? 'bg-gradient-to-r from-blue-50 to-blue-100 shadow-sm' 
+                    : 'hover:bg-gray-50'
+            }`}
         >
-            <div className="flex items-center space-x-3">
-                <div className={`w-10 h-10 ${colorClasses} rounded-lg flex items-center justify-center`}>
-                    <Icon className="w-5 h-5" />
+            <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 ${colorClasses} rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    isSelected ? 'ring-2 ring-blue-200' : ''
+                }`}>
+                    <Icon className="w-4 h-4" />
                 </div>
-                <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                        <span className="font-medium">{specialty.name}</span>
-                        <span className="text-sm text-gray-500">{doctorCount}</span>
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                        <span className={`font-medium text-sm truncate ${
+                            isSelected ? 'text-blue-700' : 'text-gray-700'
+                        }`}>
+                            {specialty.name}
+                        </span>
+                        <span className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${
+                            isSelected 
+                                ? 'bg-blue-600 text-white' 
+                                : 'bg-gray-200 text-gray-600'
+                        }`}>
+                            {doctorCount}
+                        </span>
                     </div>
                 </div>
             </div>

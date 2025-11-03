@@ -2,12 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-    Calendar,
-    Heart,
-    MapPin,
-    Award,
-} from 'lucide-react'
+import { Calendar, Award, Clock } from 'lucide-react'
 import { Doctor } from '@/types/types'
 
 interface FeaturedDoctorCardProps {
@@ -21,7 +16,6 @@ export default function FeaturedDoctorCard({
 }: FeaturedDoctorCardProps) {
     const router = useRouter()
     const [showAlert, setShowAlert] = useState(false)
-    const [isFavorite, setIsFavorite] = useState(false)
 
     const handleBookAppointment = () => {
         const isLoggedIn = true
@@ -29,16 +23,11 @@ export default function FeaturedDoctorCard({
             setShowAlert(true)
             return
         }
-        router.push(`/client/appointments?doctorId=${doctor.doctor_id}`)
+        router.push(`/client/appointments?doctorId=${doctor.id}`)
     }
 
     const handleViewProfile = () => {
-        router.push(`/client/doctors/${doctor.doctor_id}`)
-    }
-
-    const toggleFavorite = (e: React.MouseEvent) => {
-        e.stopPropagation()
-        setIsFavorite(!isFavorite)
+        router.push(`/client/doctors/${doctor.id}`)
     }
 
     // Tìm lịch khám sớm nhất
@@ -46,6 +35,7 @@ export default function FeaturedDoctorCard({
     
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('vi-VN', {
+            weekday: 'short',
             day: '2-digit',
             month: '2-digit',
         })
@@ -54,94 +44,98 @@ export default function FeaturedDoctorCard({
     return (
         <div 
             onClick={handleViewProfile} 
-            className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-4 border border-gray-100 cursor-pointer"
+            className="group bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 p-5 border border-gray-100 hover:border-blue-200 cursor-pointer overflow-hidden relative"
         >
-            {/* Header Section */}
-            <div className="flex items-start space-x-4 mb-4">
-                {/* Avatar */}
-                <div className="relative flex-shrink-0">
-                    {doctor.avatar_url ? (
-                        <img 
-                            src={doctor.avatar_url} 
-                            alt={doctor.full_name}
-                            className="w-16 h-16 rounded-full object-cover"
-                        />
-                    ) : (
-                        <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center">
-                            <span className="text-white font-semibold text-lg">
-                                {doctor.full_name.split(' ').slice(-2).map(n => n[0]).join('')}
-                            </span>
-                        </div>
-                    )}
-                    {doctor.is_available && (
-                        <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
-                    )}
-                </div>
-
-                {/* Doctor Info */}
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-lg text-gray-900 mb-1 truncate">
-                                {doctor.title && `${doctor.title} `}{doctor.full_name}
-                            </h3>
-                            <p className="text-blue-600 font-medium mb-1">
-                                {doctor.Specialty?.name }
-                            </p>
-                            {(doctor.introduction || doctor.work_experience) && (
-                                <p className="text-sm text-gray-600 mb-2 line-clamp-1">
-                                    {doctor.introduction || doctor.work_experience}
-                                </p>
-                            )}
-                        </div>
-                        
-                        {/* Favorite Button */}
-                        <button
-                            onClick={toggleFavorite}
-                            className="flex-shrink-0 p-1 hover:bg-gray-100 rounded-full transition-colors"
-                            aria-label="Yêu thích"
-                        >
-                            <Heart className={`w-5 h-5 ${isFavorite ? 'text-red-500 fill-red-500' : 'text-gray-400'}`} />
-                        </button>
-                    </div>
-
-                    {/* Experience */}
-                    {doctor.experience_years && (
-                        <div className="flex items-center text-sm text-gray-500">
-                            <Award className="w-4 h-4 mr-1" />
-                            <span>{doctor.experience_years} năm kinh nghiệm</span>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Divider */}
-            <div className="border-t border-gray-100 pt-4">
-                {/* Next Available */}
-                {nextAvailableSchedule && (
-                    <div className="flex items-center text-sm text-gray-600 mb-3">
-                        <Calendar className="w-4 h-4 mr-1 text-blue-600" />
-                        <span className="text-gray-500">Sớm nhất:</span>
-                        <span className="ml-1 font-medium text-gray-900">
-                            {formatDate(nextAvailableSchedule.schedule_date)} • {nextAvailableSchedule.start_time}
-                        </span>
-                    </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex items-center justify-between">
-                    <div className="text-sm text-gray-500">
-                        {doctor.is_available ? (
-                            <span className="text-green-600 font-medium">● Đang hoạt động</span>
+            {/* Gradient Background Effect */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-50 to-transparent rounded-full -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            
+            <div className="relative">
+                {/* Header Section */}
+                <div className="flex items-start space-x-4 mb-5">
+                    {/* Avatar with gradient border */}
+                    <div className="flex-shrink-0 relative">
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full blur-sm opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
+                        {doctor.avatar_url ? (
+                            <img 
+                                src={doctor.avatar_url} 
+                                alt={doctor.full_name}
+                                className="relative w-20 h-20 rounded-full object-cover ring-2 ring-white shadow-md"
+                            />
                         ) : (
-                            <span className="text-gray-400">○ Không khả dụng</span>
+                            <div className="relative w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center ring-2 ring-white shadow-md">
+                                <span className="text-white font-bold text-xl">
+                                    {doctor.full_name.split(' ').slice(-2).map(n => n[0]).join('')}
+                                </span>
+                            </div>
                         )}
                     </div>
-                    
+
+                    {/* Doctor Info */}
+                    <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-xl text-gray-900 mb-1.5 truncate group-hover:text-blue-600 transition-colors">
+                            {doctor.full_name}
+                        </h3>
+                        
+                        <div className="inline-flex items-center px-2.5 py-1 bg-blue-50 rounded-full mb-2">
+                            <span className="text-sm font-semibold text-blue-700">
+                                {doctor.specialty_name}
+                            </span>
+                        </div>
+                        
+                        {(doctor.introduction || doctor.achievements) && (
+                            <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+                                {doctor.introduction || doctor.achievements}
+                            </p>
+                        )}
+                    </div>
+                </div>
+
+                {/* Info Cards */}
+                <div className="space-y-3 mb-5">
+                    {/* Experience */}
+                    {doctor.experience_years && (
+                        <div className="flex items-center px-3 py-2 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg">
+                            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center mr-3 shadow-sm">
+                                <Award className="w-4 h-4 text-amber-600" />
+                            </div>
+                            <div>
+                                <p className="text-xs text-gray-500 font-medium">Kinh nghiệm</p>
+                                <p className="text-sm font-bold text-gray-900">{doctor.experience_years} năm</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Next Available Schedule */}
+                    {nextAvailableSchedule && (
+                        <div className="flex items-center px-3 py-2 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
+                            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center mr-3 shadow-sm">
+                                <Calendar className="w-4 h-4 text-green-600" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-xs text-gray-500 font-medium">Lịch khám sớm nhất</p>
+                                <div className="flex items-center gap-2">
+                                    <p className="text-sm font-bold text-gray-900">
+                                        {formatDate(nextAvailableSchedule.schedule_date)}
+                                    </p>
+                                    <span className="text-gray-300">•</span>
+                                    <div className="flex items-center gap-1">
+                                        <Clock className="w-3 h-3 text-gray-400" />
+                                        <p className="text-sm font-semibold text-gray-700">
+                                            {nextAvailableSchedule.start_time}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Action Button */}
+                <div className="relative">
                     {showAlert && (
-                        <div className="absolute top-full left-0 right-0 mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                            <p className="text-xs text-yellow-800">
-                                Bạn cần đăng nhập để thực hiện chức năng này.
+                        <div className="absolute -top-16 left-0 right-0 p-3 bg-amber-50 border border-amber-200 rounded-lg shadow-lg z-10 animate-in fade-in slide-in-from-top-2">
+                            <p className="text-sm text-amber-800 font-medium">
+                                ⚠️ Bạn cần đăng nhập để đặt lịch khám
                             </p>
                         </div>
                     )}
@@ -152,14 +146,14 @@ export default function FeaturedDoctorCard({
                                 e.stopPropagation()
                                 handleBookAppointment() 
                             }}
-                            className={`px-4 py-2 rounded-lg transition-colors font-medium text-sm ${
+                            className={`w-full py-3 rounded-lg font-semibold text-sm transition-all duration-300 ${
                                 doctor.is_available 
-                                    ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                                    : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-md hover:shadow-lg transform hover:-translate-y-0.5' 
+                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             }`}
                             disabled={!doctor.is_available}
                         >
-                            Đặt lịch khám
+                            {doctor.is_available ? '📅 Đặt lịch khám ngay' : 'Hiện không khả dụng'}
                         </button>
                     )}
                 </div>

@@ -28,17 +28,18 @@ export default function Features() {
                 setLoading(true)
                 // Gọi API đồng thời để lấy dữ liệu bác sĩ và chuyên khoa
                 const [doctorsRes, specialtiesRes] = await Promise.all([
-                    apiClient<Doctor[]>('/api/doctors?featured=true&limit=4'),
-                    apiClient<Specialty[]>('/api/specialties?popular=true&limit=6&service_token=1')
+                    apiClient<Doctor[]>('/api/doctors?perpage=4'),
+                    apiClient<Specialty[]>('/api/specialties?type=all')
                 ])
 
-                if (doctorsRes.status && doctorsRes.data) {
-                    setFeaturedDoctors(doctorsRes.data)
-                }
-
-                if (specialtiesRes.status && specialtiesRes.data) {
+                if (doctorsRes.status && doctorsRes.data?.data) {
+                    setFeaturedDoctors(doctorsRes.data.data)
+                  }
+                  
+                  if (specialtiesRes.status && specialtiesRes.data) {
                     setPopularSpecialties(specialtiesRes.data)
-                }
+                  }
+                  
             } catch (error) {
                 console.error("Failed to fetch homepage data:", error)
             } finally {
@@ -107,9 +108,9 @@ export default function Features() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                         {featuredDoctors.map((doctor, idx) => (
-                            <FeaturedDoctorCard 
-                                key={idx} 
-                                doctor={doctor} 
+                            <FeaturedDoctorCard
+                                key={idx}
+                                doctor={doctor}
                                 showBookButton={true}
                             />
                         ))}
@@ -133,19 +134,19 @@ export default function Features() {
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {popularSpecialties.map((specialty, idx) => (
-                            <div key={idx} onClick={() => handleViewSpecialty(specialty.specialty_id)}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {popularSpecialties.map((specialty) => (
+                            <div
+                                key={specialty.id}
+                                onClick={() => handleViewSpecialty(specialty.id)}
+                            >
                                 <SpecialtyCard
-                                    specialtyId={specialty.specialty_id}
+                                    id={specialty.id}
                                     name={specialty.name}
-                                    icon={popularSpecialtiesIcons[specialty.name] || Stethoscope}
+                                    description={specialty.description || 'Chuyên khoa chăm sóc sức khỏe toàn diện'}
                                     doctors={specialty.Doctors?.length || 0}
-                                    description={specialty.description || ''}
-                                    // Các trường này cần được API trả về hoặc tính toán
-                                    commonConditions={['Bệnh A', 'Bệnh B']}
-                                    averagePrice="300.000đ"
-                                    color={popularSpecialtiesColors[specialty.name] || 'bg-gray-50 text-gray-600'}
+                                    image_url={specialty.image ?? undefined}
+                                    color="bg-gradient-to-br from-blue-50 to-blue-100 text-blue-600"
                                 />
                             </div>
                         ))}

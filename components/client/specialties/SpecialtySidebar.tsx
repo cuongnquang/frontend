@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react'
-import { Specialty, Doctor } from '@/types/types'
+import { Specialty } from '@/types/types'
 import SpecialtyListItem from './SpecialtyListItem'
 
 interface SpecialtySidebarProps {
@@ -17,11 +17,9 @@ export default function SpecialtySidebar({
     doctorCounts,
     selectedSpecialty,
     setSelectedSpecialty,
-    setActiveTab,
     searchQuery,
     setSearchQuery,
 }: SpecialtySidebarProps) {
-
     const handleSelectAll = () => {
         setSelectedSpecialty(null)
     }
@@ -30,50 +28,53 @@ export default function SpecialtySidebar({
         setSelectedSpecialty(specialtyId)
     }
 
-    // THAY ĐỔI: Tính tổng số bác sĩ từ map
     const totalDoctors = Array.from(doctorCounts.values()).reduce(
         (sum, count) => sum + count, 0
-    );
+    )
 
     const filteredSpecialties = Specialties.filter(s =>
         s.name.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
     return (
-        <div>
-            <div className="bg-white rounded-xl shadow-sm p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">
-                    Danh sách chuyên khoa
+        <div className="space-y-4">
+            <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+                <h2 className="text-lg font-bold text-gray-900 mb-4">
+                    Chuyên khoa
                 </h2>
 
-                {/* Search specialties */}
+                {/* Search */}
                 <div className="mb-4">
                     <div className="relative">
-                        <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Tìm chuyên khoa..."
+                            placeholder="Tìm kiếm..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 text-black border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                     </div>
                 </div>
 
-                <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                    {/* All Specialties button */}
+                <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
+                    {/* All Specialties */}
                     <button
                         onClick={handleSelectAll}
-                        className={`w-full text-left p-3 rounded-lg transition-colors ${
+                        className={`w-full text-left px-4 py-3 rounded-lg transition-all ${
                             selectedSpecialty === null
-                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                ? 'bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 shadow-sm'
                                 : 'hover:bg-gray-50 text-gray-700'
                         }`}
                     >
                         <div className="flex items-center justify-between">
-                            <span className="font-medium">Tất cả chuyên khoa</span>
-                            <span className="text-sm text-gray-500">
-                                {totalDoctors} bác sĩ
+                            <span className="font-semibold text-sm">Tất cả</span>
+                            <span className={`text-xs px-2 py-1 rounded-full ${
+                                selectedSpecialty === null 
+                                    ? 'bg-blue-600 text-white' 
+                                    : 'bg-gray-200 text-gray-600'
+                            }`}>
+                                {totalDoctors}
                             </span>
                         </div>
                     </button>
@@ -81,7 +82,7 @@ export default function SpecialtySidebar({
                     {/* Specialty List */}
                     {filteredSpecialties.map((specialty: Specialty) => (
                         <SpecialtyListItem
-                            key={specialty.specialty_id}
+                            key={specialty.id}
                             specialty={specialty}
                             doctorCount={doctorCounts.get(specialty.name) || 0}
                             isSelected={selectedSpecialty === specialty.name}
@@ -89,26 +90,26 @@ export default function SpecialtySidebar({
                         />
                     ))}
                     {filteredSpecialties.length === 0 && searchQuery && (
-                        <div className="text-center text-gray-500 text-sm py-4">
-                            Không tìm thấy chuyên khoa phù hợp với {searchQuery}
+                        <div className="text-center text-gray-500 text-sm py-8">
+                            Không tìm thấy kết quả
                         </div>
                     )}
                 </div>
             </div>
 
             {/* Quick Stats */}
-            <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
-                <h3 className="font-semibold text-gray-900 mb-4">Thống kê tổng quan</h3>
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm p-5 border border-blue-100">
+                <h3 className="font-semibold text-gray-900 mb-4 text-sm">Thống kê</h3>
                 <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Tổng số bác sĩ:</span>
-                        <span className="font-semibold text-blue-600">
+                    <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                        <span className="text-gray-600 text-sm">Bác sĩ</span>
+                        <span className="font-bold text-blue-600 text-lg">
                             {totalDoctors}
                         </span>
                     </div>
-                    <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Số chuyên khoa:</span>
-                        <span className="font-semibold text-green-600">
+                    <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                        <span className="text-gray-600 text-sm">Chuyên khoa</span>
+                        <span className="font-bold text-indigo-600 text-lg">
                             {Specialties.length}
                         </span>
                     </div>
