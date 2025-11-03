@@ -11,7 +11,6 @@ import {
     ArrowRight,
 } from 'lucide-react'
 import SpecialtyCard from '@/components/specialty/SpecialtyCard'
-import DoctorCard from '@/components/doctor/DoctorCard'
 import { Doctor, Specialty } from '@/types/types'
 import { apiClient } from '@/lib/api'
 import FeaturedDoctorCard from '@/components/doctor/DoctorCard'
@@ -30,6 +29,7 @@ export default function Features() {
                 const [doctorsRes, specialtiesRes] = await Promise.all([
                     apiClient<Doctor[]>('/api/doctors?perpage=4'),
                     apiClient<Specialty[]>('/api/specialties?type=all')
+
                 ])
 
                 if (doctorsRes.status && doctorsRes.data?.data) {
@@ -78,14 +78,6 @@ export default function Features() {
     const goAllDoctors = () => router.push('/client/doctors')
     const goAllSpecialties = () => router.push('/client/specialties')
     const handleViewSpecialty = (id: string) => router.push(`/client/specialties/${id}`)
-
-    // if (loading) {
-    //     return (
-    //         <div className="py-16 container mx-auto px-4 text-center">
-    //             <p>Đang tải dữ liệu trang chủ...</p>
-    //         </div>
-    //     )
-    // }
 
     return (
         <>
@@ -147,6 +139,7 @@ export default function Features() {
                                     doctors={specialty.Doctors?.length || 0}
                                     image_url={specialty.image ?? undefined}
                                     color="bg-gradient-to-br from-blue-50 to-blue-100 text-blue-600"
+
                                 />
                             </div>
                         ))}
