@@ -1,16 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { socket } from '@/lib/socket';
 import { apiClient } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Doctor } from '@/contexts/DoctorContext';
-import { FloatingChatButton } from './FloatingChatButton';
+import { FloatingChatButton } from './FloatingChatButton'; // Assuming this component exists
 import { ChatList } from './ChatList';
 import { ChatWindow } from './ChatWindow';
 
 export interface Chat {
   id: string;
+  otherParticipantId: string;
   type: 'ai' | 'doctor';
   name: string;
   avatar: string;
@@ -39,34 +40,52 @@ export default function FloatingChatWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
 
-  const [chatList, setChatList] = useState<Chat[]>([]);
+const [chatList, setChatList] = useState<Chat[]>([]);
   const [messageHistory, setMessageHistory] = useState<Record<string, Message[]>>({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Chat[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Thêm AI bot vào danh sách chat
+  const aiBotChat: Chat = {
+    id: 'ai-chatbot',
+    otherParticipantId: 'ai-chatbot',
+    type: 'ai',
+    name: 'MediBot AI',
+    avatar: '🤖',
+    specialty: 'Trợ lý Y tế Thông minh',
+    status: 'online',
+    lastMessage: 'Tôi có thể giúp gì cho bạn?',
+    lastTime: '',
+    unread: 0,
+    color: 'from-blue-500 to-cyan-400'
+  };
   // Lấy danh sách cuộc trò chuyện từ API
   useEffect(() => {
     const fetchConversations = async () => {
-      // TODO: Thay thế bằng API lấy danh sách cuộc trò chuyện thực tế
-      // const response = await apiClient('/api/chat/conversations');
-      // if (response.status && response.data) {
-      //   setChatList(response.data);
-      // }
-
-      // Dùng tạm API lấy danh sách bác sĩ
-      const res = await apiClient<Doctor[]>('/api/doctors');
+      const res = await apiClient<any[]>('/v1/chat/conversations');
       if (res.status && res.data) {
-        const doctorChats: Chat[] = res.data.map((doc) => ({
-          id: doc.user_id, // ID của cuộc trò chuyện là user_id của bác sĩ
-          type: 'doctor',
-          name: doc.full_name || 'Bác sĩ',
-          avatar: '👨‍⚕️',
-          specialty: doc.specialty_name || 'Chuyên khoa',
-          status: 'online', // Cần logic để xác định status
-          lastMessage: 'Bắt đầu cuộc trò chuyện...',
-          lastTime: '',
-          unread: 0,
-          color: 'from-blue-500 to-indigo-600'
-        }));
-        setChatList(doctorChats);
+        const conversationsData: Chat[] = res.data.map(room => {
+          const otherParticipant = room.participants[0];
+          const profile = otherParticipant.user.Patient || otherParticipant.user.Doctor;
+          const lastMessage = room.messages[0];
+          return {
+            id: room.id,
+            otherParticipantId: otherParticipant.user_id,
+            name: profile?.full_name || otherParticipant.user.email,
+            lastMessage: lastMessage?.content || 'Bắt đầu cuộc trò chuyện...',
+            unread: 0,
+            lastTime: lastMessage?.created_at || new Date().toISOString(),
+            avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${profile?.full_name || otherParticipant.user.email}`,
+            online: false,
+            type: otherParticipant.user.role,
+            specialty: profile?.specialty?.name || 'Chuyên khoa',
+            status: 'online',
+            color: 'from-purple-500 to-purple-600'
+          };
+        });
+        setChatList([aiBotChat, ...conversationsData]);
       }
     };
 
@@ -74,13 +93,97 @@ export default function FloatingChatWidget() {
       fetchConversations();
     }
   }, [isOpen, user]);
+  const handleSelectChat = (chat: Chat) => {
+    setSelectedChat(chat);
+    setView('chat');
+  };
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (query.length <= 2) {
+      setIsSearching(false);
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    searchTimeoutRef.current = setTimeout(async () => {
+      const res = await apiClient<any>(`/api/doctors?search=${query}`);
+      if (res.status && res.data?.data) {
+        const doctorChats: Chat[] = res.data.data.map((doc: Doctor) => ({
+          id: doc.user_id,
+          otherParticipantId: doc.user_id,
+          type: 'doctor',
+          name: doc.full_name || 'Bác sĩ không tên',
+          avatar: doc.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${doc.full_name}`,
+          specialty: doc.specialty?.name || 'Chuyên khoa',
+          status: 'online',
+          lastMessage: 'Bắt đầu cuộc trò chuyện...',
+          lastTime: '',
+          unread: 0,
+          color: 'from-green-500 to-teal-500'
+        }));
+        setSearchResults(doctorChats);
+      } else {
+        setSearchResults([]);
+      }
+      setIsSearching(false);
+    }, 500); // Debounce 500ms
+  };
+
+  const handleCreateConversation = async (recipientId: string) => {
+    const res = await apiClient<any>('/v1/chat/conversations', {
+      method: 'POST',
+      body: JSON.stringify({ recipientId }),
+    });
+
+    if (res.status && res.data) {
+      const newConversation = res.data;
+      if (!chatList.some(c => c.id === newConversation.id)) {
+        const otherParticipant = newConversation.participants.find(p => p.user_id !== user.user_id);
+        const profile = otherParticipant.user.Patient || otherParticipant.user.Doctor;
+        const newConvData: Chat = {
+          id: newConversation.id,
+          otherParticipantId: otherParticipant.user_id,
+          name: profile?.full_name || otherParticipant.user.email,
+          lastMessage: '',
+          unread: 0,
+          lastTime: new Date().toISOString(),
+          avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${profile?.full_name || otherParticipant.user.email}`,
+          online: false,
+          type: otherParticipant.user.role,
+          specialty: profile?.specialty?.name || 'Chuyên khoa',
+          status: 'online',
+          color: 'from-purple-500 to-purple-600'
+        };
+        setChatList(prev => [newConvData, ...prev]);
+      }
+      const otherParticipant = newConversation.participants.find(p => p.user_id !== user.user_id);
+      const profile = otherParticipant.user.Patient || otherParticipant.user.Doctor;
+      const chatToOpen: Chat = {
+        id: newConversation.id,
+        otherParticipantId: otherParticipant.user_id,
+        name: profile?.full_name || otherParticipant.user.email,
+        ...newConversation, // Spread the rest of the properties
+      };
+      setSelectedChat(chatToOpen);
+      setView('chat');
+      setIsSearching(false);
+      setSearchQuery("");
+      setSearchResults([]);
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   // Hàm trung tâm để xử lý tin nhắn mới
-  const handleNewMessage = (newMessage: Message) => {
+  const handleNewMessage = useCallback((newMessage: Message) => {
     const chatRoomId = newMessage.senderId === user?.user_id ? newMessage.recipientId : newMessage.senderId;
 
     // 1. Cập nhật lịch sử tin nhắn
@@ -115,7 +218,7 @@ export default function FloatingChatWidget() {
       ];
       return newChatList;
     });
-  };
+  }, [user?.user_id]);
 
   useEffect(() => {
     if (isOpen && selectedChat) {
@@ -123,38 +226,39 @@ export default function FloatingChatWidget() {
       socket.connect();
 
       // Lắng nghe tin nhắn mới từ server và dùng hàm xử lý trung tâm
-      socket.on('privateMessage', handleNewMessage);
+      socket.on('message', handleNewMessage);
 
       return () => {
         socket.off('privateMessage', handleNewMessage);
         socket.disconnect();
       };
     }
-  }, [isOpen, selectedChat, user?.user_id]);
+  }, [isOpen, selectedChat, user?.user_id, handleNewMessage]);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messageHistory, selectedChat]); // Cuộn khi messageHistory thay đổi
+  }, [messageHistory, selectedChat]);
 
   const handleOpenChat = (chat: Chat) => {
     setSelectedChat(chat);
     if (chat.unread > 0) {
       setUnreadTotal(prev => prev - chat.unread);
       chat.unread = 0;
-    }
+    }    
 
     // Lấy lịch sử tin nhắn nếu chưa có
     if (!messageHistory[chat.id]) {
-      // TODO: Gọi API lấy lịch sử tin nhắn
-      // const res = await apiClient(`/api/chat/history/${chat.id}`);
-      // if (res.status && res.data) {
-      //   setMessageHistory(prev => ({ ...prev, [chat.id]: res.data }));
-      // } else {
-      //   // Khởi tạo mảng rỗng nếu không có lịch sử
-      //   setMessageHistory(prev => ({ ...prev, [chat.id]: [] }));
-      // }
+      const fetchHistory = async () => {
+        const res = await apiClient<Message[]>(`/v1/chat/history/${chat.id}`);
+      if (res.status && res.data) {
+        setMessageHistory(prev => ({ ...prev, [chat.id]: res.data }));
+      } else {
+        // Khởi tạo mảng rỗng nếu không có lịch sử
+        setMessageHistory(prev => ({ ...prev, [chat.id]: [] }));
+      }
     }
-
+      fetchHistory();
+    }
     setView('chat');
   };
 
@@ -174,7 +278,7 @@ export default function FloatingChatWidget() {
       };
 
       // Gửi tin nhắn lên server
-      socket.emit('privateMessage', { recipientId: selectedChat.id, content: message });
+      socket.emit('message', { recipientId: selectedChat.id, content: message });
 
       // Sử dụng hàm xử lý trung tâm để cập nhật UI ngay lập tức
       handleNewMessage(newMessage);
@@ -200,7 +304,16 @@ export default function FloatingChatWidget() {
         {isOpen && (
           <div className="mb-4 w-96 bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
             {view === 'list' ? (
-              <ChatList chatList={chatList} onSelectChat={handleOpenChat} onClose={() => setIsOpen(false)} />
+              <ChatList 
+                chatList={chatList} 
+                onSelectChat={handleOpenChat} 
+                onClose={() => setIsOpen(false)} 
+                searchQuery={searchQuery}
+                onSearch={handleSearch}
+                searchResults={searchResults}
+                isSearching={isSearching}
+                onCreateConversation={handleCreateConversation}
+              />
             ) : selectedChat && (
               <ChatWindow
                 chat={selectedChat}
@@ -241,6 +354,17 @@ export default function FloatingChatWidget() {
           }
           50% {
             transform: translateY(-5px);
+          }
+        }
+        
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out;
+        }
+        
+        .animate-bounce-slow {
+          animation: bounce-slow 2s ease-in-out infinite;
+        }
+          translateY(-5px);
           }
         }
         

@@ -28,12 +28,22 @@ interface Message {
   createdAt: string; // ISO string date
 }
 
+interface Doctor {
+  user_id: string;
+  full_name: string;
+  avatar_url: string;
+  specialty: { name: string };
+}
+
 export default function MessagesPage() {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messageHistory, setMessageHistory] = useState<Record<string, Message[]>>({});
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Doctor[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   // Hàm xử lý tin nhắn mới (gửi hoặc nhận)
   const handleNewMessage = useCallback((newMessage: Message) => {
@@ -122,7 +132,7 @@ export default function MessagesPage() {
   useEffect(() => {
     if (user) {
       socket.connect();
-      socket.on('privateMessage', handleNewMessage);
+      socket.on('message', handleNewMessage);
 
       return () => {
         socket.off('privateMessage', handleNewMessage);
@@ -136,11 +146,11 @@ export default function MessagesPage() {
     if (!activeConv || !user?.user_id) return;
 
     // Gửi sự kiện lên server
-    socket.emit('privateMessage', { recipientId: activeConv.otherParticipantId, content });
+    socket.emit('message', { recipientId: activeConv.otherParticipantId, content });
 
     // Tạo tin nhắn tạm thời để cập nhật UI ngay lập tức (Optimistic Update)
     const optimisticMessage: Message = {
-      id: `temp_${Date.now()}`, // ID tạm thời, sẽ được thay thế khi có phản hồi từ server
+      id: `temp_${Date.now()}`,
       senderId: user.user_id,
       recipientId: activeConversationId,
       content: content,
@@ -148,6 +158,52 @@ export default function MessagesPage() {
     };
 
     handleNewMessage(optimisticMessage);
+  };
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (query.length > 2) {
+      setIsSearching(true);
+      const res = await apiClient<Doctor[]>(`/v1/chat/users/search?name=${query}&role=doctor`);
+      if (res.status && res.data) {
+        setSearchResults(res.data);
+      }
+    } else {
+      setIsSearching(false);
+      setSearchResults([]);
+    }
+  };
+
+  const handleCreateConversation = async (recipientId: string) => {
+    const res = await apiClient<any>('/v1/chat/conversations', {
+      method: 'POST',
+      body: JSON.stringify({ recipientId }),
+    });
+
+    if (res.status && res.data) {
+      const newConversation = res.data;
+      // Add the new conversation to the list if it doesn't exist
+      if (!conversations.some(c => c.id === newConversation.id)) {
+        const otherParticipant = newConversation.participants.find(p => p.user_id !== user.user_id);
+        const profile = otherParticipant.user.Patient || otherParticipant.user.Doctor;
+        const newConvData: Conversation = {
+          id: newConversation.id,
+          otherParticipantId: otherParticipant.user_id,
+          name: profile?.full_name || otherParticipant.user.email,
+          lastMessage: '',
+          unread: 0,
+          time: new Date().toISOString(),
+          avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${profile?.full_name || otherParticipant.user.email}`,
+          online: false,
+          type: otherParticipant.user.role,
+        };
+        setConversations(prev => [newConvData, ...prev]);
+      }
+      setActiveConversationId(newConversation.id);
+      setIsSearching(false);
+      setSearchQuery("");
+      setSearchResults([]);
+    }
   };
 
   const activeConversation = conversations.find(c => c.id === activeConversationId);
@@ -160,6 +216,11 @@ export default function MessagesPage() {
         activeConversationId={activeConversationId}
         onConversationSelect={setActiveConversationId}
         loading={loading}
+        searchQuery={searchQuery}
+        onSearch={handleSearch}
+        searchResults={searchResults}
+        isSearching={isSearching}
+        onCreateConversation={handleCreateConversation}
       />
       <ChatWindow
         conversation={activeConversation}
