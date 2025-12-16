@@ -1,76 +1,104 @@
-'use client'
-
 import React from 'react';
-import { Calendar, Heart } from 'lucide-react';
+import { Calendar, Clock, Info } from 'lucide-react';
+import type { DoctorSchedule } from '@/types/types';
 import DateSelector from '@/components/client/appointments/DateSelector';
 import TimeSlotSelector from '@/components/client/appointments/TimeSlotSelector';
-import type { DoctorSchedule } from '@/types/types';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 interface BookingPanelProps {
-  schedules: DoctorSchedule[];
-  selectedDate: string;
-  selectedSchedule: DoctorSchedule | null;
-  onSelectDate: (date: string) => void;
-  onSelectSchedule: (schedule: DoctorSchedule) => void;
-  onSubmit:() => void
+    availableDates: Date[]
+    schedules: DoctorSchedule[]
+    selectedDate: Date | null
+    selectedSchedule: DoctorSchedule | null
+    onSelectDate: (date: Date) => void
+    onSelectSchedule: (schedule: DoctorSchedule) => void
+    onSubmit: () => void
+    isLoading: boolean
+    isLoadingDates?: boolean
+    error: string | null
 }
 
 export default function BookingPanel({
-  schedules,
-  selectedDate,
-  selectedSchedule,
-  onSelectDate,
-  onSelectSchedule,
-  onSubmit,
+    availableDates,
+    schedules,
+    selectedDate,
+    selectedSchedule,
+    onSelectDate,
+    onSelectSchedule,
+    onSubmit,
+    isLoading,
+    isLoadingDates,
+    error
 }: BookingPanelProps) {
-  const availableDates = Array.from(new Set(
-    schedules.filter(s => s.is_available).map(s => s.schedule_date)
-  ));
+     return (
+        <div className="bg-white rounded-lg shadow-lg p-6 sticky top-4">
+            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                <Calendar className="w-6 h-6 mr-2 text-blue-600" />
+                Đặt Lịch Khám
+            </h3>
 
-  const filteredTimeSlots = schedules.filter(s => s.schedule_date === selectedDate);
+            {/* Date Selector */}
+            <div className="mb-6">
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    Chọn Ngày Khám
+                </label>
+                {isLoadingDates ? (
+                    <div className="flex justify-center items-center py-8 bg-gray-50 rounded-lg">
+                        <LoadingSpinner />
+                    </div>
+                ) : (
+                    <DateSelector
+                        availableDates={availableDates}
+                        selectedDate={selectedDate}
+                        onSelectDate={onSelectDate}
+                    />
+                )}
+            </div>
 
-  const isBookingButtonDisabled = !selectedSchedule;
+            {/* Time Slot Section */}
+            <div className="mb-6">
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    Chọn Khung Giờ
+                </label>
+                {!selectedDate ? (
+                    <div className="text-center text-sm text-gray-500 bg-gray-50 p-6 rounded-lg border border-dashed">
+                        <Info className="w-6 h-6 mx-auto mb-2 text-gray-400" />
+                        Vui lòng chọn ngày khám để xem các khung giờ có sẵn.
+                    </div>
+                ) : (
+                    <TimeSlotSelector
+                        schedules={schedules}
+                        selectedSchedule={selectedSchedule}
+                        onSelectSchedule={onSelectSchedule}
+                        error={error}
+                    />
+                )}
+            </div>
 
-  return (
-    <div className="bg-white rounded-xl shadow-sm p-6 sticky top-24">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        <Calendar className="w-5 h-5 text-blue-600" />
-        Đặt lịch khám
-      </h3>
-      
-      <div className="space-y-4 mb-6">
-        <DateSelector
-          availableDates={availableDates}
-          selectedDate={selectedDate}
-          onSelectDate={onSelectDate}
-        />
-        
-        {selectedDate && (
-          <TimeSlotSelector
-            schedules={filteredTimeSlots}
-            selectedSchedule={selectedSchedule}
-            onSelectSchedule={onSelectSchedule}
-          />
-        )}
-      </div>
-      
-      <button
-        onClick={onSubmit}
-        disabled={isBookingButtonDisabled}
-        className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
-      >
-        Xác nhận đặt lịch
-      </button>
-      
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <p className="text-sm text-gray-600 mb-2 flex items-center gap-2">
-          <Heart className="w-4 h-4 text-red-500" />
-          <span className="font-medium">Cam kết chất lượng</span>
-        </p>
-        <ul className="text-sm text-gray-600 space-y-1">
-          {/* ... các cam kết ... */}
-        </ul>
-      </div>
-    </div>
-  );
+            {/* Submit Button */}
+            <button
+                onClick={onSubmit}
+                disabled={!selectedSchedule || isLoading}
+                className={`w-full py-3 rounded-lg font-semibold text-white transition-all ${
+                    selectedSchedule && !isLoading
+                        ? 'bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg'
+                        : 'bg-gray-300 cursor-not-allowed'
+                }`}
+            >
+                {isLoading ? 'Đang tải...' : 'Đặt Lịch Ngay'}
+            </button>
+
+            {/* Info Text */}
+            <p className="text-xs text-gray-500 mt-4 text-center">
+                {selectedDate && selectedSchedule ? (
+                    <>
+                        Bạn đã chọn: <strong>{selectedDate.toLocaleDateString('vi-VN')}</strong> lúc{' '}
+                        <strong>{selectedSchedule.start_time}</strong>.
+                    </>
+                ) : (
+                    'Vui lòng chọn ngày và giờ khám'
+                )}
+            </p>
+        </div>
+    );
 }

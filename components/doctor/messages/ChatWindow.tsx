@@ -25,7 +25,7 @@ interface ChatWindowProps {
   currentUserId: string;
 }
 
-export const ChatWindow = ({ conversation, messages, onSendMessage, currentUserId }: ChatWindowProps) => {
+export default function ChatWindow({ conversation, messages, onSendMessage, currentUserId }: ChatWindowProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 

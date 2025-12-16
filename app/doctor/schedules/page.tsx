@@ -47,7 +47,7 @@ export default function SchedulePage() {
       } else {
         result = await createManySchedules(schedules);
       }
-      
+
       if (result.success) {
         setSuccessMessage(result.message);
         setTimeout(() => {
@@ -104,11 +104,11 @@ export default function SchedulePage() {
 
   return (
     <div className="space-y-6 p-6">
-      <SchedulePageHeader 
+      <SchedulePageHeader
         onAddScheduleClick={handleAddClick}
         onTemplateClick={() => setShowTemplateEditor(true)}
       />
-      
+
       {error && (
         <Alert type="error" message={error} />
       )}
@@ -116,13 +116,13 @@ export default function SchedulePage() {
       {successMessage && (
         <Alert type="success" message={successMessage} />
       )}
-      
+
       <ScheduleStats schedules={schedules} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {showAddForm && (
           <div className="lg:col-span-1">
-            <ScheduleForm 
+            <ScheduleForm
               editingSchedule={editingSchedule}
               onSubmit={handleSubmit}
               onClose={handleCloseForm}
@@ -131,7 +131,7 @@ export default function SchedulePage() {
         )}
 
         <div className={showAddForm ? "lg:col-span-2" : "lg:col-span-3"}>
-          <ScheduleList 
+          <ScheduleList
             schedules={schedules}
             onEdit={handleEditClick}
             onDelete={handleDelete}
@@ -141,7 +141,7 @@ export default function SchedulePage() {
       </div>
 
       {showTemplateEditor && (
-        <WeeklyTemplateEditor 
+        <WeeklyTemplateEditor
           onCreateManySchedules={handleCreateManySchedules}
           onClose={() => setShowTemplateEditor(false)}
         />

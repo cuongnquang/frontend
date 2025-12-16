@@ -21,7 +21,7 @@ interface Recipient {
   };
 }
 
-export default function DoctorMessagesPage() {
+export default function MessagesPage() {
   const { selectedConversation, selectConversation, createConversation, getAvailableRecipients } = useMessage();
   const { user } = useAuth();
   const [showRecipients, setShowRecipients] = useState(false);
@@ -54,30 +54,29 @@ export default function DoctorMessagesPage() {
           {
             user: {
               user_id: recipient.user_id,
-              role: 'patient',
-              Patient: {
-                full_name: recipient.Patient?.full_name || 'Patient',
-              },
-            },
-          },
-          {
-            user: {
-              user_id: user!.user_id,
               role: 'doctor',
               Doctor: {
-                full_name: user!.full_name || 'Doctor',
+                full_name: recipient.Doctor?.full_name || 'Doctor',
+                avatar_url: recipient.Doctor?.avatar_url,
+                title: recipient.          {
+            user: {
+              user_id: user!.user_id,
+              role: 'patient',
+              Patient: {
+                full_name: user!.full_name || 'Patient',
               },
             }
           },
         ],
         messages: [],
       };
+
       selectConversation(tempConversation);
-      const conversation = await createConversation(recipient.user_id, tempConversation.id);
-      // createConversation will select and join the new room; ensure UI reflects the returned conversation
-      selectConversation(conversation);
       setShowRecipients(false);
       setMobileMenuOpen(false);
+
+      const realConversation = await createConversation(recipient.user_id, tempConversation.id);
+      selectConversation(realConversation);
     } catch (error) {
       console.error('Failed to create conversation:', error);
     }
@@ -153,7 +152,7 @@ export default function DoctorMessagesPage() {
               </div>
               <div>
                 <h2 className="text-3xl font-bold text-slate-900 mb-2">No Conversation Selected</h2>
-                <p className="text-slate-500 max-w-sm text-center">Select a conversation from the list or start a new one to begin messaging with your patients</p>
+                <p className="text-slate-500 max-w-sm text-center">Select a conversation from the list or start a new one to begin messaging</p>
               </div>
               <button
                 onClick={handleNewConversation}
@@ -400,6 +399,22 @@ export default function DoctorMessagesPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+
+  return (
+    <div className="h-screen bg-linear-to-br from-slate-50 to-slate-100">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 h-full"></div>
+        {/* Left Sidebar */}
+        <div className="lg:col-span-1 border-r border-slate-200 bg-white hidden lg:flex flex-col shadow-sm">
+        <div className="lg:col-span-2">
+          <ChatWindow
+            conversation={selectedConversation}
+            onBack={() => selectConversation(null)}
+            onClose={() => selectConversation(null)}
+          />
+        </div>
+      </div>
     </div>
   );
 }

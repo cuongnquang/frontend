@@ -1,32 +1,72 @@
-import { ChevronRight, ChevronLeft } from 'lucide-react'
+import React, { useState, useMemo } from 'react';
+import { ChevronRight, ChevronLeft } from 'lucide-react';
+import { toYYYYMMDD } from '@/lib/utils'; // Assuming this utility function exists
+
 
 interface DateSelectorProps {
-    availableDates: string[]
-    selectedDate: string | null
-    onSelectDate: (date: string) => void
+    availableDates: Date[]; // Change to Date[]
+    selectedDate: Date | null; // Change to Date | null
+    onSelectDate: (date: Date) => void; // Change to (date: Date) => void
 }
-
-
-const daysInMonth = 31 
-const firstDayOfWeek = 4 
-
-const getDayInfo = (day: number, availableDates: string[], selectedDate: string | null) => {
-    const date = `2025-10-${String(day).padStart(2, '0')}`
-    const isAvailable = availableDates.includes(date)
-    const isSelected = selectedDate === date
-    const isToday = day === 9
-    return { date, isAvailable, isSelected, isToday }
-}
-
 
 export default function DateSelector({ availableDates, selectedDate, onSelectDate }: DateSelectorProps) {
+    const [currentDate, setCurrentDate] = useState(new Date());
+
+    const { year, month } = useMemo(() => ({
+        year: currentDate.getFullYear(),
+        month: currentDate.getMonth(),
+    }), [currentDate]);
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDayOfWeek = new Date(year, month, 1).getDay();
+
+    const handlePrevMonth = () => {
+        setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1)); // Keep day as 1 to avoid issues with months having fewer days
+    };
+
+    const handleNextMonth = () => {
+        setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1)); // Keep day as 1
+    };
+
+    const getDayInfo = (day: number) => {
+        const dateObj = new Date(year, month, day);
+        const dateString = toYYYYMMDD(dateObj);
+
+        // Check if this date is in the availableDates array (which now contains Date objects)
+        const isAvailable = availableDates.some(d => toYYYYMMDD(d) === dateString);
+        // Check if this date is the selectedDate
+        const isSelected = selectedDate && toYYYYMMDD(selectedDate) === dateString;
+
+        const today = new Date();
+        const isToday = toYYYYMMDD(today) === dateString;
+
+        return { dateObj, dateString, isAvailable, isSelected, isToday };
+    };
+
+    const handleDayClick = (day: number) => {
+        const { dateObj, isAvailable } = getDayInfo(day);
+        if (isAvailable) onSelectDate(dateObj); // Pass the Date object
+    };
+
     return (
         <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
             <div className="flex justify-between items-center mb-4">
-                <h4 className="text-lg font-bold text-gray-800">Tháng 10/2025</h4>
+                <h4 className="text-lg font-bold text-gray-800">
+                    {`Tháng ${month + 1}, ${year}`}
+                </h4>
                 <div className="flex space-x-2">
-                    <button className="p-2 rounded-full text-gray-500 hover:bg-gray-200"><ChevronLeft className="w-5 h-5" /></button>
-                    <button className="p-2 rounded-full text-gray-500 hover:bg-gray-200"><ChevronRight className="w-5 h-5" /></button>
+                    <button
+                        onClick={handlePrevMonth}
+                        className="p-2 rounded-full text-gray-500 hover:bg-gray-200"
+                    >
+                        <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                        onClick={handleNextMonth}
+                        className="p-2 rounded-full text-gray-500 hover:bg-gray-200"
+                    >
+                        <ChevronRight className="w-5 h-5" />
+                    </button>
                 </div>
             </div>
             
@@ -41,21 +81,20 @@ export default function DateSelector({ availableDates, selectedDate, onSelectDat
                 {/* Các ngày trong tháng */}
                 {Array.from({ length: daysInMonth }).map((_, index) => {
                     const day = index + 1
-                    const { date, isAvailable, isSelected, isToday } = getDayInfo(day, availableDates, selectedDate)
+                    const { dateObj, dateString, isAvailable, isSelected, isToday } = getDayInfo(day);
                     
                     return (
                         <button
-                            key={date}
-                            onClick={() => isAvailable && onSelectDate(date)}
-                            disabled={!isAvailable}
+                            key={dateString} // Use the YYYY-MM-DD string as the key
+                            onClick={() => handleDayClick(day)}
                             className={`h-10 rounded-full text-sm font-medium transition-colors border ${
-                                !isAvailable
-                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                    : isSelected
+                                isSelected
                                     ? 'bg-blue-600 text-white border-blue-600 shadow-md'
                                     : isToday
                                     ? 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100'
-                                    : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-100'
+                                    : isAvailable
+                                    ? 'bg-white text-gray-800 border-gray-300 hover:bg-gray-100'
+                                    : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
                             }`}
                         >
                             {day}

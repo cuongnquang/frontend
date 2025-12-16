@@ -10,7 +10,7 @@ interface ChatListProps {
   onSearch: (query: string) => void;
   searchResults: Chat[];
   isSearching: boolean;
-  onCreateConversation: (recipientId: string) => void;
+  onCreateConversation: (recipient: Chat) => void;
 }
 
 export const ChatList = ({ chatList, onSelectChat, onClose, searchQuery, onSearch, searchResults, isSearching, onCreateConversation }: ChatListProps) => {
@@ -69,12 +69,12 @@ export const ChatList = ({ chatList, onSelectChat, onClose, searchQuery, onSearc
         {combinedAndFilteredList.map((chat) => (
           <button
             key={chat.id}
-            onClick={() => chat.lastMessage ? onSelectChat(chat) : onCreateConversation(chat.id)}
+            onClick={() => (chat.lastMessage && chat.lastMessage !== 'Bắt đầu cuộc trò chuyện...') ? onSelectChat(chat) : onCreateConversation(chat)}
             className="w-full p-3 hover:bg-gray-50 rounded-xl transition-all text-left mb-1"
           >
             <div className="flex items-start gap-3">
               <div className="relative">
-                <div className="text-3xl">{chat.avatar}</div>
+                <div><img width={40} src={chat.avatar} alt={chat.name}/></div>
                 {chat.status === 'online' && <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>}
               </div>
               <div className="flex-1 min-w-0">

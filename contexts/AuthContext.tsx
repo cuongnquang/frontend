@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { apiClient } from "@/lib/api";
+import { MessageProvider } from "./MessageContext";
 import { useRouter } from "next/navigation";
 import { getRedirectPathByRole } from "@/utils/redirectByRole";
 
@@ -273,7 +274,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         <AuthContext.Provider
             value={{ user, login, register, logout, loading, verifyEmail, resendVerificationEmail, forgotPassword, verifyResetOTP, resetPassword, refreshUser, error }} 
         >
-            {children}
+            <MessageProvider initialUser={user}>
+                {children}
+            </MessageProvider>
         </AuthContext.Provider>
     );
 }

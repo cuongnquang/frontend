@@ -9,8 +9,9 @@ import Header from '@/components/layout/Header'
 import Alert from '@/components/ui/Alert'
 import DateSelector from '@/components/client/appointments/DateSelector'
 import TimeSlotSelector from '@/components/client/appointments/TimeSlotSelector'
-import { apiClient } from '@/lib/api'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import { apiClient } from '@/lib/api'
+import { toYYYYMMDD } from '@/lib/utils'; // Import toYYYYMMDD
 import DoctorSidebar from '@/components/client/appointments/DoctorSidebar'
 import BookingProgressBar from '@/components/client/appointments/AppointmentsProgressBar'
 import PatientForm from '@/components/client/appointments/PatientForm'
@@ -30,134 +31,152 @@ function AppointmentFlow() {
     const doctorIdFromQuery = searchParams.get('doctorId');
     const scheduleId = searchParams.get('scheduleId');
 
-    const [currentStep, setCurrentStep] = useState<BookingStep>(BookingStep.DATE_TIME)
-    const [selectedDate, setSelectedDate] = useState<string | null>(null)
+    // ✅ Tối ưu: Nếu có scheduleId từ URL, bắt đầu ngay từ bước nhập thông tin.
+    const [currentStep, setCurrentStep] = useState<BookingStep>(
+        scheduleId ? BookingStep.PROFILE : BookingStep.DATE_TIME
+    );
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null)
     const [selectedSchedule, setSelectedSchedule] = useState<DoctorSchedule | null>(null)
     const [patientData, setPatientData] = useState<Patient | null>(null)
     const [symptoms, setSymptoms] = useState('')
     const [notes, setNotes] = useState('')
 
     const [doctor, setDoctor] = useState<Doctor | null>(null);
-    const [schedules, setSchedules] = useState<DoctorSchedule[]>([]);
+    // const [availableDates, setAvailableDates] = useState<string[]>([]); // Sẽ được thay thế bằng useMemo
+    const [allSchedules, setAllSchedules] = useState<DoctorSchedule[]>([]);
+    const [schedulesForSelectedDate, setSchedulesForSelectedDate] = useState<DoctorSchedule[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchData = async () => {
+    const fetchCoreData = useCallback(async (doctorId: string) => {
+        const doctorRes = apiClient<Doctor>(`/api/doctors/${doctorId}`);
+        // Thay vì chỉ lấy ngày, ta lấy tất cả lịch khám có sẵn
+        const allSchedulesRes = apiClient<DoctorSchedule[]>(
+            `/api/schedules?doctor_id=${doctorId}&is_available=true&sort=schedule_date,asc,start_time,asc`
+        );
+        const patientRes = apiClient<Patient>('/api/patients/me');
+
+        const [doc, schedules, pat] = await Promise.all([doctorRes, allSchedulesRes, patientRes]);
+        let scheduleData: DoctorSchedule[] = [];
+ 
+        if (doc.status && doc.data) {
+            setDoctor(doc.data as Doctor);
+        } else {
+            throw new Error("Không thể tải thông tin bác sĩ.");
+        }
+ 
+        if (schedules.status && schedules.data) {
+            // The data from the API should already be in the correct format.
+            const filteredSchedules = (schedules.data as DoctorSchedule[]).filter(s => s.doctor_id === doctorId);
+            scheduleData = filteredSchedules;
+            setAllSchedules(scheduleData); 
+            if (scheduleData.length === 0) {
+                setError("Bác sĩ hiện không có lịch khám nào. Vui lòng quay lại sau.");
+            }
+        } else {
+            setAllSchedules([]);
+            // Sử dụng message từ API nếu có, nếu không thì dùng message mặc định
+            const errorMessage = schedules.message || "Không thể tải được lịch làm việc của bác sĩ.";
+            setError(errorMessage);
+        }
+ 
+        if (pat.status && pat.data) {
+            setPatientData(pat.data as Patient);
+        } else {         
+            setError("Bạn cần đăng nhập và có hồ sơ bệnh nhân để đặt lịch. Đang chuyển hướng...");
+            router.push(`/auth/login`);
+        }
+
+        return scheduleData;
+    }, [router]); // Wrap in useCallback with an empty dependency array to ensure it's created only once.
+ 
+    // Dùng useMemo để tính toán các ngày có sẵn từ tất cả lịch khám
+    // Chỉ tính toán lại khi `allSchedules` thay đổi
+    const availableDates = useMemo(() => {
+        const dateStrings = new Set(allSchedules.map(s => s.schedule_date.split('T')[0]));
+        // Chuyển đổi chuỗi YYYY-MM-DD thành đối tượng Date.
+        // Thêm 'T00:00:00' để tránh các vấn đề về múi giờ khi new Date()
+        return Array.from(dateStrings).map(dateStr => new Date(dateStr + 'T00:00:00'));
+    }, [allSchedules]);
+
+    // Logic fetchTimeSlotsForDate không còn cần thiết vì đã có allSchedules
+    // Tuy nhiên, ta vẫn giữ lại để tương thích với logic khởi tạo từ scheduleId
+    // và sẽ điều chỉnh handleSelectDate
+     useEffect(() => {
+        const initialize = async () => {
             setLoading(true);
-            setError(null);
+            setError(null);            // Lấy doctorId trực tiếp từ query params. Đây là nguồn tin cậy.
+            const doctorIdToFetch = doctorIdFromQuery;
+
             try {
-                let doctorId = doctorIdFromQuery;
-                if (doctorId === 'undefined') {
-                    doctorId = null;
-                }
-
-                let fetchedSchedules: DoctorSchedule[] = [];
-
-                // 1. Determine Doctor ID
-                if (scheduleId && !doctorId) {
-                    const scheduleRes = await apiClient<DoctorSchedule>(`/v1/schedules/${scheduleId}`);
-                    if (scheduleRes.status && scheduleRes.data) {
-                        const scheduleData = scheduleRes.data as DoctorSchedule;
-                        doctorId = scheduleData.doctor_id;
-                        setSelectedSchedule(scheduleData);
-                        setSelectedDate(scheduleData.schedule_date);
-                        setCurrentStep(BookingStep.PROFILE);
-                    } else {
-                        throw new Error("Không tìm thấy lịch khám.");
-                    }
-                }
-
-                if (!doctorId) {
-                    throw new Error("Không có thông tin bác sĩ.");
-                }
-
-                // 2. Fetch Doctor and Schedules
-                const doctorRes = apiClient<Doctor>(`/v1/doctors/${doctorId}`);
-                const schedulesRes = apiClient<DoctorSchedule[]>(`/v1/doctors/${doctorId}/schedules`);
-                const patientRes = apiClient<Patient>('/v1/patients/me');
-
-                const [doc, sched, pat] = await Promise.all([doctorRes, schedulesRes, patientRes]);
-
-                if (doc.status && doc.data) {
-                    setDoctor(doc.data as Doctor);
-                } else {
-                    throw new Error("Không thể tải thông tin bác sĩ.");
-                }
-
-                if (sched.status && sched.data) {
-                    fetchedSchedules = sched.data as DoctorSchedule[];
-                    setSchedules(fetchedSchedules);
-                } else {
-                    // Silently fail on schedules for now, maybe doctor has no schedule
-                }
-
-                if (pat.status && pat.data) {
-                    setPatientData(pat.data as Patient);
-                } else {
-                    // It's possible user is not logged in or has no patient profile
-                    // We can create a blank one
-                    setPatientData({} as Patient);
-                }
-
-                // If scheduleId was passed, find it in the full list
-                if (scheduleId && !selectedSchedule) {
-                    const preSelected = fetchedSchedules.find(s => s.schedule_id === scheduleId);
-                    if (preSelected) {
-                        setSelectedSchedule(preSelected);
-                        setSelectedDate(preSelected.schedule_date);
-                        setCurrentStep(BookingStep.PROFILE);
-                    }
-                }
-
+                 // Nếu không có doctorId, không thể tiếp tục.
+                 if (!doctorIdToFetch) {
+                     throw new Error("Không có thông tin bác sĩ để tải.");
+                 }
+ 
+                 // Tải tất cả dữ liệu cốt lõi chỉ với doctorId.
+                 const fetchedSchedules = await fetchCoreData(doctorIdToFetch);
+ 
+                 // Sau khi đã có tất cả lịch khám, nếu có scheduleId từ URL,
+                 // chúng ta sẽ tìm và chọn lịch khám tương ứng trong danh sách đã tải.
+                 if (scheduleId) {
+                     // Tìm lịch khám tương ứng trong danh sách vừa tải về.
+                     const scheduleToSelect = fetchedSchedules.find(s => s.schedule_id === scheduleId);
+                     if (scheduleToSelect) {
+                         handleSelectSchedule(scheduleToSelect, true, fetchedSchedules); // Chọn lịch và ngày tương ứng
+                     }
+                 }
             } catch (e: any) {
                 setError(e.message || "Đã có lỗi xảy ra khi tải dữ liệu.");
             } finally {
                 setLoading(false);
             }
         };
-        fetchData();
-    }, [scheduleId, doctorIdFromQuery]);
-    
-    // Group schedules by date
-    const groupedSchedules = useMemo(() => {
-        const grouped: { [key: string]: DoctorSchedule[] } = {}
-        schedules.forEach(schedule => {
-            if (!grouped[schedule.schedule_date]) {
-                grouped[schedule.schedule_date] = []
-            }
-            grouped[schedule.schedule_date].push(schedule)
-        })
-        return grouped
-    }, [schedules])
-    
-    const availableDates = Object.keys(groupedSchedules)
-
-    // Schedules cho ngày được chọn
-    const schedulesForSelectedDate = selectedDate ? groupedSchedules[selectedDate] || [] : []
-
+        initialize(); // Chỉ chạy một lần khi component được mount.
+    }, [scheduleId, doctorIdFromQuery, fetchCoreData]);
+     
     // --- Handlers ---
-    const handleSelectDate = (date: string) => {
-        if (selectedDate === date) {
+    const handleSelectDate = useCallback((date: Date) => { // Expect Date directly
+        const newSelectedDate = date; // Already a Date object from DateSelector
+        
+        // So sánh ngày bằng cách chuyển về mili-giây
+        if (selectedDate?.getTime() === newSelectedDate.getTime()) {
             setSelectedDate(null)
             setSelectedSchedule(null)
+            setSchedulesForSelectedDate([]);
         } else {
-            setSelectedDate(date)
-            setSelectedSchedule(null) 
+            setSelectedDate(newSelectedDate);
+            // Sử dụng toYYYYMMDD với đối tượng Date đã được chuẩn hóa
+            const dateString = toYYYYMMDD(newSelectedDate);
+            // Lọc các lịch khám cho ngày đã chọn từ `allSchedules`
+            const schedulesForDate = allSchedules.filter(s => s.schedule_date.startsWith(dateString));
+            setSchedulesForSelectedDate(schedulesForDate);
+            setSelectedSchedule(null); // Reset lựa chọn khung giờ sau khi đã cập nhật danh sách mới
+        }
+    }, [selectedDate, allSchedules, toYYYYMMDD]);
+
+    const handleSelectSchedule = (schedule: DoctorSchedule, shouldUpdateDate: boolean = false, scheduleSource: DoctorSchedule[] = allSchedules) => {
+        setSelectedSchedule(schedule);
+        // Nếu được yêu cầu (khi khởi tạo từ scheduleId), cập nhật cả ngày đã chọn
+        if (shouldUpdateDate) {
+            const date = new Date(schedule.schedule_date.split('T')[0] + 'T00:00:00');
+            setSelectedDate(date);
+            const dateString = toYYYYMMDD(date);
+            const schedulesForDate = scheduleSource.filter(s => s.schedule_date.startsWith(dateString));
+            setSchedulesForSelectedDate(schedulesForDate);
         }
     }
 
-    const handleSelectSchedule = (schedule: DoctorSchedule) => {
-        setSelectedSchedule(schedule)
-    }
-
     const handlePatientDataChange = (field: keyof Patient, value: string) => {
-        setPatientData(prev => prev && ({
-            ...prev,
-            [field]: value
-        }))
+        setPatientData(prev => {
+            // Chỉ cập nhật nếu `prev` không phải là null
+            if (!prev) return null;
+            return {
+                ...prev, [field]: value
+            };
+        })
     }
 
     const handleSubmit = useCallback(async () => {
@@ -169,22 +188,26 @@ function AppointmentFlow() {
         setIsSubmitting(true);
         setSubmitError(null);
 
+        // KIỂM TRA DỮ LIỆU TRƯỚC KHI GỬI
+        console.log('Kiểm tra selectedSchedule trước khi gửi:', selectedSchedule);
+
         try {
             const appointmentData = {
-                doctor_id: doctor.doctor_id,
-                schedule_id: selectedSchedule.schedule_id,
+                doctor_id: doctor.id, // patient_id sẽ được backend tự động lấy từ token
+                schedule_id: selectedSchedule.id,
                 symptoms: symptoms,
                 notes: notes,
+                status: 'pending', // Sửa lại thành chữ thường để khớp với yêu cầu của backend
             };
 
-            const response = await apiClient<Appointment>('/v1/appointments', {
+            const response = await apiClient<Appointment>('/api/appointments', {
                 method: 'POST',
                 body: JSON.stringify(appointmentData),
             });
 
             if (response.status && response.data) {
                 alert('Đặt lịch thành công! Chúng tôi sẽ liên hệ với bạn sớm.');
-                router.push('/client/me/appointments');
+                router.push('/');
             } else {
                 throw new Error(response.message || "Đặt lịch thất bại. Vui lòng thử lại.");
             }
@@ -230,7 +253,7 @@ function AppointmentFlow() {
                         <span className="block sm:inline ml-8">{error}</span>
                     </div>
                 )}
-                {!loading && !error && doctor && patientData && (
+                {!loading && doctor && patientData && (
 
                 
                 <div className="max-w-7xl mx-auto">
@@ -251,21 +274,35 @@ function AppointmentFlow() {
                                             <Calendar className="w-6 h-6 mr-2 text-blue-600" />
                                             Chọn Ngày
                                         </h3>
-                                        <DateSelector
-                                            availableDates={availableDates}
-                                            selectedDate={selectedDate}
-                                            onSelectDate={handleSelectDate}
-                                        />
+                                            <DateSelector 
+                                                availableDates={availableDates}
+                                                selectedDate={selectedDate}
+                                                onSelectDate={handleSelectDate}
+                                            />
                                     </div>
 
                                     {/* Time Slot Selector (Chỉ hiện thị khi đã chọn ngày) */}
                                     {selectedDate && (
-                                        <div className="mt-8">
-                                            <TimeSlotSelector
-                                                schedules={schedulesForSelectedDate}
-                                                selectedSchedule={selectedSchedule}
-                                                onSelectSchedule={handleSelectSchedule}
-                                            />
+                                        <div className="mt-8 transition-all duration-300">
+                                            {/* Hiển thị thông báo nếu không có lịch khám hoặc không có khung giờ nào.
+                                                Sử dụng toYYYYMMDD(selectedDate) để đảm bảo so sánh đúng */}
+                                            {!allSchedules.some(s => s.schedule_date.startsWith(toYYYYMMDD(selectedDate))) ? (
+                                                <div className="text-center text-gray-500 bg-gray-100 p-4 rounded-lg">
+                                                    Bác sĩ không có lịch khám vào ngày này. Vui lòng chọn ngày khác.
+                                                </div>
+                                            ) : schedulesForSelectedDate.length === 0 ? (
+                                                <div className="text-center text-gray-500 bg-gray-100 p-4 rounded-lg">
+                                                    Không còn khung giờ nào trống cho ngày này. Vui lòng chọn ngày khác.
+                                                </div>
+                                            ) : null}
+                                            {/* Chỉ hiển thị TimeSlotSelector khi có lịch khám */}
+                                            {schedulesForSelectedDate.length > 0 && (
+                                                <TimeSlotSelector
+                                                    schedules={schedulesForSelectedDate}
+                                                    selectedSchedule={selectedSchedule}
+                                                    onSelectSchedule={handleSelectSchedule}
+                                                    error={error} />
+                                            )}
                                         </div>
                                     )}
 
@@ -277,7 +314,7 @@ function AppointmentFlow() {
                                             ) : (
                                                 <Clock className="w-5 h-5 mr-2 text-gray-500 flex-shrink-0" />
                                             )}
-                                            {selectedSchedule 
+                                            {selectedSchedule
                                                 ? `Lịch hẹn đã chọn: ${selectedSchedule.start_time} ngày ${formatDate(selectedSchedule.schedule_date).display}`
                                                 : 'Vui lòng chọn ngày và khung giờ khám để tiếp tục.'
                                             }
@@ -302,8 +339,8 @@ function AppointmentFlow() {
                             )}
 
                             {/* Step 2: Nhập thông tin */}
-                            {currentStep === BookingStep.PROFILE && (
-                                <PatientForm
+                            {currentStep === BookingStep.PROFILE && patientData && (
+                                <PatientForm 
                                     patientData={patientData}
                                     symptoms={symptoms}
                                     notes={notes}
@@ -317,7 +354,7 @@ function AppointmentFlow() {
                             )}
 
                             {/* Step 3: Xác nhận */}
-                            {currentStep === BookingStep.CONFIRMATION && selectedSchedule && (
+                            {currentStep === BookingStep.CONFIRMATION && doctor && selectedSchedule && patientData && (
                                 <AppointmentConfirmation
                                     doctor={doctor}
                                     selectedSchedule={selectedSchedule}
@@ -327,7 +364,6 @@ function AppointmentFlow() {
                                     formatDate={formatDate}
                                     onBack={() => setCurrentStep(BookingStep.PROFILE)}
                                     onSubmit={handleSubmit}
-                                    isSubmitting={isSubmitting}
                                 />
                             )}
                         </div>

@@ -2,8 +2,21 @@
 import { Search } from "lucide-react";
 import { ConversationItem } from "./ConversationItem";
 import { DoctorItem } from "./DoctorItem";
+import { Conversation } from "@/contexts/MessageContext";
+import { Doctor } from "@/contexts/DoctorContext";
 
-export const ConversationList = ({ 
+interface ConversationListProps {
+  conversations: Conversation[];
+  activeConversationId: string | null;
+  onConversationSelect: (conversationId: string) => void;
+  searchQuery: string;
+  onSearch: (query: string) => void;
+  searchResults: Doctor[];
+  isSearching: boolean;
+  onCreateConversation: (recipientId: string) => void;
+}
+
+export function ConversationList({
   conversations, 
   activeConversationId, 
   onConversationSelect,
@@ -12,7 +25,7 @@ export const ConversationList = ({
   searchResults,
   isSearching,
   onCreateConversation
-}) => {
+}: ConversationListProps) {
   const filteredConversations = conversations.filter(conv => 
     conv.name.toLowerCase().includes(searchQuery.toLowerCase())
   );

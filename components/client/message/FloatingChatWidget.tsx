@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { socket } from '@/lib/socket';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { apiClient } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Doctor } from '@/contexts/DoctorContext';
+import { useMessage, Conversation } from '@/contexts/MessageContext';
 import { FloatingChatButton } from './FloatingChatButton'; // Assuming this component exists
 import { ChatList } from './ChatList';
 import { ChatWindow } from './ChatWindow';
@@ -12,7 +12,7 @@ import { ChatWindow } from './ChatWindow';
 export interface Chat {
   id: string;
   otherParticipantId: string;
-  type: 'ai' | 'doctor';
+  type: 'ai' | 'doctor' | 'patient' | 'admin';
   name: string;
   avatar: string;
   specialty: string;
@@ -34,14 +34,12 @@ export interface Message {
 export default function FloatingChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<'list' | 'chat'>('list');
-  const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
-  const [message, setMessage] = useState('');
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [unreadTotal, setUnreadTotal] = useState(0);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
+  const { conversations, loadConversations, createConversation } = useMessage();
 
-const [chatList, setChatList] = useState<Chat[]>([]);
-  const [messageHistory, setMessageHistory] = useState<Record<string, Message[]>>({});
+  const [chatList, setChatList] = useState<Chat[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Chat[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -63,40 +61,58 @@ const [chatList, setChatList] = useState<Chat[]>([]);
   };
   // Lấy danh sách cuộc trò chuyện từ API
   useEffect(() => {
-    const fetchConversations = async () => {
-      const res = await apiClient<any[]>('/v1/chat/conversations');
-      if (res.status && res.data) {
-        const conversationsData: Chat[] = res.data.map(room => {
-          const otherParticipant = room.participants[0];
+    if (isOpen && user) {
+      loadConversations();
+    }
+  }, [isOpen, user, loadConversations]);
+
+  useEffect(() => {
+    if (conversations) {
+      const conversationsData: Chat[] = conversations
+        .map(room => {
+          const otherParticipant = room.participants.find(p => p.user.user_id !== user?.user_id);
+          if (!otherParticipant) return null; // Should not happen in a 1-on-1 chat
           const profile = otherParticipant.user.Patient || otherParticipant.user.Doctor;
-          const lastMessage = room.messages[0];
+          const lastMessage = room.messages?.[0];
+          const displayName = profile?.full_name || otherParticipant.user.user_id;
           return {
             id: room.id,
-            otherParticipantId: otherParticipant.user_id,
-            name: profile?.full_name || otherParticipant.user.email,
+            otherParticipantId: otherParticipant.user.user_id,
+            name: displayName,
             lastMessage: lastMessage?.content || 'Bắt đầu cuộc trò chuyện...',
-            unread: 0,
-            lastTime: lastMessage?.created_at || new Date().toISOString(),
-            avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${profile?.full_name || otherParticipant.user.email}`,
-            online: false,
-            type: otherParticipant.user.role,
-            specialty: profile?.specialty?.name || 'Chuyên khoa',
-            status: 'online',
+            unread: 0, // This should come from context later
+            lastTime: lastMessage?.createdAt || room.updatedAt,
+            avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${displayName}`,
+            type: (otherParticipant.user.role as 'doctor' | 'patient' | 'admin') || 'patient',
+            specialty: profile?.title || 'Chuyên khoa',
+            status: 'offline' as const, // This should come from context later
             color: 'from-purple-500 to-purple-600'
           };
-        });
-        setChatList([aiBotChat, ...conversationsData]);
-      }
-    };
-
-    if (isOpen && user) {
-      fetchConversations();
+        })
+        .filter((c): c is Chat => c !== null);
+      setChatList([aiBotChat, ...conversationsData]);
     }
-  }, [isOpen, user]);
-  const handleSelectChat = (chat: Chat) => {
-    setSelectedChat(chat);
-    setView('chat');
-  };
+  }, [conversations, user?.user_id]);
+
+  // Gộp và lọc danh sách để hiển thị trong ChatList
+  const displayList = useMemo(() => {
+    if (!searchQuery) {
+      return chatList; // Nếu không tìm kiếm, hiển thị danh sách chat gốc
+    }
+
+    // 1. Lọc các cuộc trò chuyện hiện có
+    const existingFiltered = chatList.filter(chat =>
+      chat.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    // 2. Lọc kết quả tìm kiếm mới, loại bỏ những ai đã có trong danh sách chat
+    const newResultsFiltered = searchResults.filter(
+      doctor => !chatList.some(chat => chat.id === doctor.id)
+    );
+
+    // 3. Gộp lại, các cuộc trò chuyện cũ lên trước
+    return [...existingFiltered, ...newResultsFiltered];
+  }, [searchQuery, chatList, searchResults]);
   const handleSearch = (query: string) => {
     setSearchQuery(query);
 
@@ -112,7 +128,7 @@ const [chatList, setChatList] = useState<Chat[]>([]);
 
     setIsSearching(true);
     searchTimeoutRef.current = setTimeout(async () => {
-      const res = await apiClient<any>(`/api/doctors?search=${query}`);
+      const res = await apiClient<Doctor>(`/api/doctors?search=${query}`);
       if (res.status && res.data?.data) {
         const doctorChats: Chat[] = res.data.data.map((doc: Doctor) => ({
           id: doc.user_id,
@@ -120,7 +136,7 @@ const [chatList, setChatList] = useState<Chat[]>([]);
           type: 'doctor',
           name: doc.full_name || 'Bác sĩ không tên',
           avatar: doc.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${doc.full_name}`,
-          specialty: doc.specialty?.name || 'Chuyên khoa',
+          specialty: doc.specialty_name|| 'Chuyên khoa',
           status: 'online',
           lastMessage: 'Bắt đầu cuộc trò chuyện...',
           lastTime: '',
@@ -135,162 +151,70 @@ const [chatList, setChatList] = useState<Chat[]>([]);
     }, 500); // Debounce 500ms
   };
 
-  const handleCreateConversation = async (recipientId: string) => {
-    const res = await apiClient<any>('/v1/chat/conversations', {
-      method: 'POST',
-      body: JSON.stringify({ recipientId }),
-    });
+  const handleCreateConversation = async (recipient: Chat) => {
+    try {
+      // Check if a conversation with this recipient already exists
+      const existingConversation = conversations.find(c =>
+        c.participants.some(p => p.user.user_id === recipient.otherParticipantId)
+      );
 
-    if (res.status && res.data) {
-      const newConversation = res.data;
-      if (!chatList.some(c => c.id === newConversation.id)) {
-        const otherParticipant = newConversation.participants.find(p => p.user_id !== user.user_id);
-        const profile = otherParticipant.user.Patient || otherParticipant.user.Doctor;
-        const newConvData: Chat = {
-          id: newConversation.id,
-          otherParticipantId: otherParticipant.user_id,
-          name: profile?.full_name || otherParticipant.user.email,
-          lastMessage: '',
-          unread: 0,
-          lastTime: new Date().toISOString(),
-          avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${profile?.full_name || otherParticipant.user.email}`,
-          online: false,
-          type: otherParticipant.user.role,
-          specialty: profile?.specialty?.name || 'Chuyên khoa',
-          status: 'online',
-          color: 'from-purple-500 to-purple-600'
-        };
-        setChatList(prev => [newConvData, ...prev]);
+      if (existingConversation) {
+        console.log('[FloatingChatWidget] Conversation already exists. Selecting it.');
+        setSelectedConversation(existingConversation);
+        setView('chat');
+        return;
       }
-      const otherParticipant = newConversation.participants.find(p => p.user_id !== user.user_id);
-      const profile = otherParticipant.user.Patient || otherParticipant.user.Doctor;
-      const chatToOpen: Chat = {
-        id: newConversation.id,
-        otherParticipantId: otherParticipant.user_id,
-        name: profile?.full_name || otherParticipant.user.email,
-        ...newConversation, // Spread the rest of the properties
-      };
-      setSelectedChat(chatToOpen);
-      setView('chat');
+
+      console.log('[FloatingChatWidget] Creating new conversation with recipient:', recipient.otherParticipantId);
+      // Use the createConversation function from the context
+      // This function handles API call, state update, and returns the new conversation
+      const newConversation = await createConversation(recipient.otherParticipantId);
+
+      console.log(
+        '[FloatingChatWidget] Backend confirmed creation. Setting selected conversation:',
+        newConversation.id
+      );
+      // The context already added the conversation to the list,
+      // so the UI will update automatically via the useEffect hook.
+      // We just need to select it.
+      setSelectedConversation(newConversation);
+
       setIsSearching(false);
       setSearchQuery("");
       setSearchResults([]);
+      setView('chat');
+
+    } catch (error) {
+      console.error('Error creating conversation:', error);
     }
   };
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  // Hàm trung tâm để xử lý tin nhắn mới
-  const handleNewMessage = useCallback((newMessage: Message) => {
-    const chatRoomId = newMessage.senderId === user?.user_id ? newMessage.recipientId : newMessage.senderId;
-
-    // 1. Cập nhật lịch sử tin nhắn
-    setMessageHistory((prevHistory) => {
-      const currentMessages = prevHistory[chatRoomId] || [];
-      // Tránh thêm tin nhắn trùng lặp (quan trọng cho optimistic UI)
-      if (currentMessages.some(msg => msg.id === newMessage.id)) {
-        return prevHistory;
-      }
-      return {
-        ...prevHistory,
-        [chatRoomId]: [...currentMessages, newMessage],
-      };
-    });
-
-    // 2. Cập nhật và sắp xếp lại danh sách chat
-    setChatList(prevChatList => {
-      const chatIndex = prevChatList.findIndex(c => c.id === chatRoomId);
-      if (chatIndex === -1) return prevChatList; // Bỏ qua nếu không tìm thấy chat
-
-      const updatedChat = {
-        ...prevChatList[chatIndex],
-        lastMessage: newMessage.content,
-        lastTime: newMessage.createdAt,
-      };
-
-      // Xóa chat cũ và đưa chat đã cập nhật lên đầu danh sách
-      const newChatList = [
-        updatedChat,
-        ...prevChatList.slice(0, chatIndex),
-        ...prevChatList.slice(chatIndex + 1)
-      ];
-      return newChatList;
-    });
-  }, [user?.user_id]);
-
-  useEffect(() => {
-    if (isOpen && selectedChat) {
-      // Kết nối socket khi mở cửa sổ chat
-      socket.connect();
-
-      // Lắng nghe tin nhắn mới từ server và dùng hàm xử lý trung tâm
-      socket.on('message', handleNewMessage);
-
-      return () => {
-        socket.off('privateMessage', handleNewMessage);
-        socket.disconnect();
-      };
-    }
-  }, [isOpen, selectedChat, user?.user_id, handleNewMessage]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messageHistory, selectedChat]);
 
   const handleOpenChat = (chat: Chat) => {
-    setSelectedChat(chat);
-    if (chat.unread > 0) {
-      setUnreadTotal(prev => prev - chat.unread);
-      chat.unread = 0;
-    }    
+    // If the chat is from existing conversations, find the full object
+    const existingConversation = conversations.find(c => c.id === chat.id);
 
-    // Lấy lịch sử tin nhắn nếu chưa có
-    if (!messageHistory[chat.id]) {
-      const fetchHistory = async () => {
-        const res = await apiClient<Message[]>(`/v1/chat/history/${chat.id}`);
-      if (res.status && res.data) {
-        setMessageHistory(prev => ({ ...prev, [chat.id]: res.data }));
-      } else {
-        // Khởi tạo mảng rỗng nếu không có lịch sử
-        setMessageHistory(prev => ({ ...prev, [chat.id]: [] }));
-      }
+    if (existingConversation) {
+      setSelectedConversation(existingConversation);
+    } else {
+      // If it's a new chat from search results, trigger the creation flow.
+      // This ensures we always have a backend-confirmed conversation.
+      handleCreateConversation(chat);
+      return; // handleCreateConversation will set the view and selection
     }
-      fetchHistory();
-    }
+
     setView('chat');
   };
 
   const handleBackToList = () => {
     setView('list');
-    setSelectedChat(null);
-  };
-
-  const handleSendMessage = () => {
-    if (message.trim() && selectedChat && user) {
-      const newMessage: Message = {
-        id: Date.now(), // Use a temporary ID
-        senderId: user.user_id,
-        recipientId: selectedChat.id,
-        content: message,
-        createdAt: new Date().toISOString(),
-      };
-
-      // Gửi tin nhắn lên server
-      socket.emit('message', { recipientId: selectedChat.id, content: message });
-
-      // Sử dụng hàm xử lý trung tâm để cập nhật UI ngay lập tức
-      handleNewMessage(newMessage);
-      setMessage('');
-    }
+    setSelectedConversation(null);
   };
 
   const toggleWidget = () => {
     setIsOpen(!isOpen);
     if (!isOpen) {
       setView('list');
-      setSelectedChat(null);
+      setSelectedConversation(null);
     }
   };
 
@@ -305,25 +229,20 @@ const [chatList, setChatList] = useState<Chat[]>([]);
           <div className="mb-4 w-96 bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
             {view === 'list' ? (
               <ChatList 
-                chatList={chatList} 
+                chatList={displayList} 
                 onSelectChat={handleOpenChat} 
                 onClose={() => setIsOpen(false)} 
                 searchQuery={searchQuery}
                 onSearch={handleSearch}
-                searchResults={searchResults}
+                searchResults={displayList} // Truyền danh sách đã được lọc
                 isSearching={isSearching}
                 onCreateConversation={handleCreateConversation}
               />
-            ) : selectedChat && (
+            ) : selectedConversation && (
               <ChatWindow
-                chat={selectedChat}
-                messages={messageHistory[selectedChat.id] || []}
-                currentUserId={user.user_id}
-                inputValue={message}
-                onInputChange={setMessage}
-                onSendMessage={handleSendMessage}
+                conversation={selectedConversation}
                 onBack={handleBackToList}
-                messagesEndRef={messagesEndRef}
+                onClose={() => setIsOpen(false)}
               />
             )
             }

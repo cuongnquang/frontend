@@ -21,6 +21,8 @@ const DoctorSearchBar = memo(function DoctorSearchBar({
   sortBy = 'relevance',
   setSortBy,
 }: DoctorSearchBarProps) {
+  const safeSpecialties = Array.isArray(specialties) ? specialties : [];
+
   return (
     <div className="bg-white shadow-sm border-b top-16 z-30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -28,14 +30,14 @@ const DoctorSearchBar = memo(function DoctorSearchBar({
 
           {/* Search Box */}
           <div className="flex-1 relative">
-            <Search 
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" 
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
               aria-hidden="true"
             />
             <input
               type="text"
               placeholder="Tìm kiếm bác sĩ, chuyên khoa..."
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg 
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg
                 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                 text-gray-900 transition-shadow"
               value={searchQuery}
@@ -46,30 +48,30 @@ const DoctorSearchBar = memo(function DoctorSearchBar({
 
           {/* Specialty Dropdown */}
           <div className="relative min-w-full sm:min-w-[200px]">
-            <Filter 
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" 
+            <Filter
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
               aria-hidden="true"
             />
             <select
               value={selectedSpecialtyName}
               onChange={(e) => setselectedSpecialtyName(e.target.value)}
-              className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg 
+              className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg
                 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                 bg-white appearance-none cursor-pointer text-gray-700 transition-shadow"
               aria-label="Chọn chuyên khoa"
             >
               <option value="all">Tất cả chuyên khoa</option>
-              {specialties.map((specialty) => (
-                <option 
-                  key={specialty.specialty_id} 
+              {safeSpecialties.map((specialty: Specialty) => (
+                <option
+                  key={specialty.id + specialty.name}
                   value={specialty.name}
                 >
                   {specialty.name}
                 </option>
               ))}
             </select>
-            <ChevronDown 
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" 
+            <ChevronDown
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
               aria-hidden="true"
             />
           </div>
@@ -80,7 +82,7 @@ const DoctorSearchBar = memo(function DoctorSearchBar({
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-lg 
+                className="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-lg
                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                   bg-white appearance-none cursor-pointer text-gray-700 transition-shadow"
                 aria-label="Sắp xếp"
@@ -89,8 +91,8 @@ const DoctorSearchBar = memo(function DoctorSearchBar({
                 <option value="name_asc">Tên A → Z</option>
                 <option value="experience_desc">Kinh nghiệm nhiều nhất</option>
               </select>
-              <ChevronDown 
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" 
+              <ChevronDown
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
                 aria-hidden="true"
               />
             </div>

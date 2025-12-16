@@ -33,6 +33,19 @@ export function SpecialtyProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    const normalizeSpecialties = (raw: any[]): Specialty[] => {
+        // Chuẩn hóa dữ liệu trả về từ API về đúng shape frontend dùng
+        return (raw || []).map((item: any) => ({
+            id: item.specialty_id ?? item.id ?? item.specialtyId ?? '',
+            name: item.name ?? '',
+            description: item.description ?? null,
+            image: item.image_url ?? item.image ?? null,
+            created_at: item.created_at ?? item.createdAt ?? '',
+            updated_at: item.updated_at ?? item.updatedAt ?? '',
+            Doctors: item.Doctors ?? item.doctors ?? [],
+        }));
+    };
+
     const fetchSpecialties = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -40,7 +53,8 @@ export function SpecialtyProvider({ children }: { children: ReactNode }) {
             const res = await apiClient<Specialty[]>('/api/specialties');
 
             if (res.status && res.data) {
-                setSpecialties(res.data);
+                const raw = Array.isArray(res.data) ? res.data : (res.data as any)?.data || [];
+                setSpecialties(normalizeSpecialties(raw));
             } else {
                 setError(res.message || "Không thể tải danh sách chuyên khoa.");
             }
@@ -112,7 +126,7 @@ export function SpecialtyProvider({ children }: { children: ReactNode }) {
         setError(null);
         try {
             const res = await apiClient(`/api/specialties/${id}`, { method: "DELETE" });
-            
+
             if (!res.status) {
                 setError(res.message || "Xóa chuyên khoa thất bại.");
                 return { success: false, message: res.message || "Xóa chuyên khoa thất bại." };

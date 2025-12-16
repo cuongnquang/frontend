@@ -55,7 +55,7 @@ export const ScheduleForm = ({ editingSchedule, onSubmit, onClose }: ScheduleFor
   // Các khung giờ có sẵn theo backend service
   const timeSlots = [
     { label: 'Ca sáng', slots: ['08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00'] },
-    { label: 'Ca chiều', slots: ['13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'] }
+    { label: 'Ca chiều', slots: ['13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30'] }
   ];
 
   const handleTimeSlotToggle = (time: string) => {
@@ -64,14 +64,6 @@ export const ScheduleForm = ({ editingSchedule, onSubmit, onClose }: ScheduleFor
         ? prev.filter(t => t !== time)
         : [...prev, time]
     );
-  };
-
-  const formatDateToDDMMYYYY = (dateString: string) => {
-    const date = new Date(dateString);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}-${month}-${year}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -93,7 +85,7 @@ export const ScheduleForm = ({ editingSchedule, onSubmit, onClose }: ScheduleFor
         const endTimeString = `${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`;
 
         const schedule = {
-          schedule_date: formatDateToDDMMYYYY(selectedDate),
+          schedule_date: selectedDate, // Giữ nguyên định dạng YYYY-MM-DD từ input
           start_time: timeSlot,
           end_time: endTimeString
         };
