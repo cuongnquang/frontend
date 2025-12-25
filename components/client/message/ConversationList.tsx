@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useMessage, Conversation } from '@/contexts/MessageContext';
-import { useAuth, User } from '@/contexts/AuthContext';
-import { Search, Plus, MessageCircle } from 'lucide-react';
+import { useMessage, Conversation, Message } from '@/contexts/MessageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { Search, MessageCircle } from 'lucide-react';
 
 interface ConversationListProps {
   onSelectConversation: (conversation: Conversation) => void;
@@ -21,7 +21,13 @@ export default function ConversationList({ onSelectConversation }: ConversationL
   }, [loadConversations]);
 
   useEffect(() => {
-    setFilteredConversations(conversations);
+    // Sort by lastMessageAt (descending) to show most recent first
+    const sorted = [...conversations].sort((a, b) => {
+      const aTime = a.lastMessageAt || a.updatedAt || a.createdAt;
+      const bTime = b.lastMessageAt || b.updatedAt || b.createdAt;
+      return new Date(bTime).getTime() - new Date(aTime).getTime();
+    });
+    setFilteredConversations(sorted);
     setLoading(false);
   }, [conversations]);
 
@@ -37,17 +43,22 @@ export default function ConversationList({ onSelectConversation }: ConversationL
     }
   };
 
+  type Participant = Conversation['participants'][number]['user'] | Message['sender'] | undefined;
+
   const getOtherParticipant = (conversation: Conversation) => {
-    return conversation.participants.find((p) => p.user.user_id !== user?.user_id)?.user;
+    // Prefer using participants array; fallback to deriving from recent messages
+    let other = conversation.participants.find((p) => p.user.Doctor?.full_name !== user?.full_name)?.user;
+    if (!other && conversation.messages && conversation.messages.length > 0) {
+      const recent = conversation.messages.find((m) => m.senderId && m.senderId !== user?.user_id);
+      other = recent?.sender ?? other;
+    }
+    return other as Participant;
   };
 
-  const getParticipantName = (participant: any) => {
+  const getParticipantName = (participant: Participant) => {
     if (!participant) return 'Không rõ';
-    // Ưu tiên lấy tên từ thông tin bác sĩ, sau đó đến bệnh nhân, rồi đến tên chung.
-    const name =
-      participant.Doctor?.full_name ||
-      participant.Patient?.full_name ||
-      participant.full_name;
+    const p = participant as { Doctor?: { full_name?: string }; Patient?: { full_name?: string }; full_name?: string };
+    const name = p.Doctor?.full_name || p.Patient?.full_name || p.full_name;
     return name || 'Không rõ';
   };
 
@@ -56,6 +67,14 @@ export default function ConversationList({ onSelectConversation }: ConversationL
     if (!lastMsg) return 'No messages yet';
     if (lastMsg.isDeleted) return '[Message deleted]';
     return lastMsg.content.substring(0, 50) + (lastMsg.content.length > 50 ? '...' : '');
+  };
+
+  const getLastMessageTime = (conversation: Conversation) => {
+    const lastMsg = conversation.messages?.[0];
+    const time = lastMsg?.createdAt || conversation.lastMessageAt || conversation.updatedAt || conversation.createdAt;
+    if (!time) return '';
+    const date = new Date(time);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
@@ -110,14 +129,19 @@ export default function ConversationList({ onSelectConversation }: ConversationL
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <h3 className="font-semibold text-sm truncate">
-                      {getParticipantName(otherUser)}
-                    </h3>
-                    {unreadCount > 0 && (
-                      <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full flex-shrink-0">
-                        {unreadCount}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-sm truncate">
+                        {getParticipantName(otherUser)}
+                      </h3>
+                      <div className="ml-auto text-xs text-gray-400">
+                        {getLastMessageTime(conversation)}
+                      </div>
+                      {unreadCount > 0 && (
+                        <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full flex-shrink-0">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <p className="text-xs text-gray-500 truncate mt-1">
                     {otherUser?.role === 'doctor' && otherUser.Doctor?.title

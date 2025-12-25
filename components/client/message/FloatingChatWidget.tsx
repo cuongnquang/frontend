@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { apiClient } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Doctor } from '@/contexts/DoctorContext';
-import { useMessage, Conversation } from '@/contexts/MessageContext';
+import { useMessage, Conversation, Message } from '@/contexts/MessageContext';
 import { FloatingChatButton } from './FloatingChatButton'; // Assuming this component exists
 import { ChatList } from './ChatList';
 import { ChatWindow } from './ChatWindow';
@@ -23,13 +23,6 @@ export interface Chat {
   color: string;
 }
 
-export interface Message {
-  id?: string | number; // ID có thể là từ DB hoặc tạm thời
-  senderId: string;
-  recipientId: string;
-  content: string;
-  createdAt: string;
-}
 
 export default function FloatingChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -70,11 +63,19 @@ export default function FloatingChatWidget() {
     if (conversations) {
       const conversationsData: Chat[] = conversations
         .map(room => {
-          const otherParticipant = room.participants.find(p => p.user.user_id !== user?.user_id);
+          // Prefer participant info, otherwise derive from recent messages
+          let otherParticipant = room.participants.find(p => p.user.Doctor?.full_name !== user?.full_name);
+          if (!otherParticipant && room.messages && room.messages.length > 0) {
+            const recent = room.messages.find((m) => (m as Message).senderId && (m as Message).senderId !== user?.user_id) as Message | undefined;
+            if (recent && recent.sender) {
+              otherParticipant = ({ user: recent.sender } as unknown) as Conversation['participants'][number];
+            }
+          }
+
           if (!otherParticipant) return null; // Should not happen in a 1-on-1 chat
           const profile = otherParticipant.user.Patient || otherParticipant.user.Doctor;
           const lastMessage = room.messages?.[0];
-          const displayName = profile?.full_name || otherParticipant.user.user_id;
+          const displayName = profile?.full_name || otherParticipant.user.user_id || room.name;
           return {
             id: room.id,
             otherParticipantId: otherParticipant.user.user_id,
@@ -273,17 +274,6 @@ export default function FloatingChatWidget() {
           }
           50% {
             transform: translateY(-5px);
-          }
-        }
-        
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
-        }
-        
-        .animate-bounce-slow {
-          animation: bounce-slow 2s ease-in-out infinite;
-        }
-          translateY(-5px);
           }
         }
         

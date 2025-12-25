@@ -11,3 +11,12 @@ export async function GET(
   const endpoint = `/v1/chat/conversations/${roomId}/messages${queryString ? `?${queryString}` : ''}`;
   return forwardRequest(req, endpoint);
 }
+
+export async function POST(
+  req: NextRequest,
+  context: { params: Promise<{ roomId: string }> }
+) {
+  const { roomId } = await context.params;
+  const endpoint = `/v1/chat/conversations/${roomId}/messages`;
+  return forwardRequest(req, endpoint);
+}

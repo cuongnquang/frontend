@@ -58,7 +58,11 @@ export default function MessagesPage() {
               Doctor: {
                 full_name: recipient.Doctor?.full_name || 'Doctor',
                 avatar_url: recipient.Doctor?.avatar_url,
-                title: recipient.          {
+                title: recipient.Doctor?.title,
+              },
+            },
+          },
+          {
             user: {
               user_id: user!.user_id,
               role: 'patient',

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
-import { io, Socket } from 'socket.io-client';
+import React, { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
+import { Socket } from 'socket.io-client';
+import { createSocket } from '@/lib/socket';
 
 function getAccessToken(): string | undefined {
   if (typeof document === 'undefined') return undefined;
@@ -56,7 +57,11 @@ export interface Conversation {
     };
   }>;
   messages: Message[];
-}
+  // Optional UI helpers
+  name?: string;
+  avatar?: string;
+  online?: boolean;
+} 
 
 interface MessageContextType {
   conversations: Conversation[];
@@ -69,16 +74,19 @@ interface MessageContextType {
   socket: Socket | null;
 
   // Actions
-  loadConversations: (limit?: number, offset?: number) => Promise<void>;
+  loadConversations: (limit?: number, offset?: number) => Promise<Conversation[] | undefined>;
   loadConversationMessages: (roomId: string, page?: number, pageSize?: number) => Promise<{ messages: Message[], hasMore: boolean }>;
   sendMessage: (roomId: string, content: string) => Promise<void>;
-  selectConversation: (conversation: Conversation) => void;
-  createConversation: (recipientId: string) => Promise<Conversation>;
+  selectConversation: (conversation: Conversation | null) => void;
+  createConversation: (recipientId: string, tempId?: string) => Promise<Conversation>;
   markAsRead: (roomId: string, messageId?: string) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
   editMessage: (messageId: string, content: string) => Promise<void>;
   searchConversations: (query: string) => Promise<Conversation[]>;
   getAvailableRecipients: () => Promise<Record<string, unknown>[]>;
+  // Typing helpers
+  startTyping: (chatRoomId: string) => void;
+  stopTyping: (chatRoomId: string) => void;
 }
 
 const MessageContext = createContext<MessageContextType | undefined>(undefined);
@@ -101,6 +109,8 @@ type Action =
   | { type: 'SET_MESSAGES'; payload: { roomId: string; messages: Message[] } }
   | { type: 'ADD_MESSAGE'; payload: Message }
   | { type: 'PREPEND_MESSAGES'; payload: { roomId: string; messages: Message[] } }
+  | { type: 'APPEND_MESSAGE_TO_CONVERSATION'; payload: Message }
+  | { type: 'SET_CONVERSATION_MESSAGES'; payload: { roomId: string; messages: Message[] } }
   | { type: 'UPDATE_MESSAGE'; payload: Message }
   | { type: 'DELETE_MESSAGE'; payload: string }
   | { type: 'MARK_MESSAGE_FAILED'; payload: { tempId: string } }
@@ -143,7 +153,9 @@ function messageReducer(state: State, action: Action): State {
     }
     case 'SET_MESSAGES': {
       const newMessages = new Map(state.messages);
-      newMessages.set(action.payload.roomId, action.payload.messages);
+      // Normalize messages Map to be oldest-first (ascending by createdAt)
+      const sortedAsc = [...action.payload.messages].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      newMessages.set(action.payload.roomId, sortedAsc);
       return { ...state, messages: newMessages };
     }
     case 'ADD_MESSAGE': {
@@ -156,13 +168,39 @@ function messageReducer(state: State, action: Action): State {
       const { roomId, messages: newMsgs } = action.payload;
       const existingMessages = state.messages.get(roomId) || [];
       const allMessages = [...newMsgs, ...existingMessages];
-      // Loại bỏ tin nhắn trùng lặp để đảm bảo tính nhất quán
+      // Remove duplicates and normalize order (oldest-first)
       const uniqueMessages = allMessages.filter((msg, index, self) =>
         index === self.findIndex((m) => m.id === msg.id)
       );
+      uniqueMessages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
       const newMessagesMap = new Map(state.messages);
       newMessagesMap.set(roomId, uniqueMessages);
       return { ...state, messages: newMessagesMap };
+    }
+    case 'APPEND_MESSAGE_TO_CONVERSATION': {
+      const msg = action.payload;
+      const convIndex = state.conversations.findIndex((c) => c.id === msg.chatRoomId);
+      if (convIndex === -1) return state;
+      const conv = state.conversations[convIndex];
+      // Merge, dedupe and sort newest-first for conversation summaries
+      const merged = [msg, ...(conv.messages || [])];
+      const unique = merged.filter((m, index, self) => index === self.findIndex((x) => x.id === m.id));
+      unique.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const updatedConv: Conversation = {
+        ...conv,
+        messages: unique,
+        lastMessageAt: msg.createdAt,
+        updatedAt: msg.createdAt,
+      };
+      const newConversations = [updatedConv, ...state.conversations.filter((c) => c.id !== updatedConv.id)];
+      return { ...state, conversations: newConversations };
+    }
+    case 'SET_CONVERSATION_MESSAGES': {
+      const { roomId, messages } = action.payload;
+      // Store conversation messages as newest-first for quick previews
+      const sortedDesc = [...messages].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const newConversations = state.conversations.map(c => c.id === roomId ? { ...c, messages: sortedDesc } : c);
+      return { ...state, conversations: newConversations };
     }
     case 'UPDATE_MESSAGE': {
       const roomId = action.payload.chatRoomId;
@@ -172,7 +210,13 @@ function messageReducer(state: State, action: Action): State {
         roomId,
         messages.map((m) => (m.id === action.payload.id ? action.payload : m))
       );
-      return { ...state, messages: newMessages };
+      // Also update conversation.messages if present
+      const newConversations = state.conversations.map((c) =>
+        c.id === roomId
+          ? { ...c, messages: c.messages ? c.messages.map((m) => (m.id === action.payload.id ? action.payload : m)) : c.messages }
+          : c
+      );
+      return { ...state, messages: newMessages, conversations: newConversations };
     }
     case 'DELETE_MESSAGE': {
       // Find which room contains this message and remove it
@@ -183,7 +227,13 @@ function messageReducer(state: State, action: Action): State {
           newMessages.set(roomId, filtered);
         }
       }
-      return { ...state, messages: newMessages };
+      // Also remove from conversation.messages to keep summaries in sync
+      const newConversations = state.conversations.map((c) => {
+        const filtered = c.messages ? c.messages.filter((m) => m.id !== action.payload) : c.messages;
+        const lastMessageAt = filtered && filtered.length > 0 ? filtered[0].createdAt : undefined;
+        return { ...c, messages: filtered, lastMessageAt } as Conversation;
+      });
+      return { ...state, messages: newMessages, conversations: newConversations };
     }
     case 'MARK_MESSAGE_FAILED': {
       const { tempId } = action.payload;
@@ -192,7 +242,12 @@ function messageReducer(state: State, action: Action): State {
         const updated = msgs.map((m) => (m.id === tempId ? { ...m, content: `[Gửi thất bại] ${m.content}` } : m));
         newMessages.set(roomId, updated);
       }
-      return { ...state, messages: newMessages };
+      // Also mark the message in conversation summaries
+      const newConversations = state.conversations.map((c) => ({
+        ...c,
+        messages: c.messages ? c.messages.map((m) => (m.id === tempId ? { ...m, content: `[Gửi thất bại] ${m.content}` } : m)) : c.messages,
+      }));
+      return { ...state, messages: newMessages, conversations: newConversations };
     }
     case 'SET_UNREAD_COUNTS':
       return { ...state, unreadCounts: action.payload };
@@ -230,6 +285,11 @@ type UserRef = { user_id: string; role: string; full_name?: string } | null;
 export function MessageProvider({ children, initialUser }: { children: React.ReactNode; initialUser?: UserRef }) {
   const user = initialUser as UserRef;
   const [state, dispatch] = useReducer(messageReducer, initialState);
+  const typingTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const failureTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  // Keep a stable ref to conversations for use inside socket handlers to avoid stale closure issues
+  const conversationsRef = useRef<Conversation[]>([]);
+  useEffect(() => { conversationsRef.current = state.conversations; }, [state.conversations]);
 
   const loadConversationMessages = useCallback(
     async (roomId: string, page = 1, pageSize = 20, retries = 0) => {
@@ -268,6 +328,8 @@ export function MessageProvider({ children, initialUser }: { children: React.Rea
         
         if (page === 1) {
           dispatch({ type: 'SET_MESSAGES', payload: { roomId, messages: data } });
+          // keep conversation summary in sync with loaded messages
+          dispatch({ type: 'SET_CONVERSATION_MESSAGES', payload: { roomId, messages: data } });
         } else {
           dispatch({ type: 'PREPEND_MESSAGES', payload: { roomId, messages: data } });
         }
@@ -291,7 +353,7 @@ export function MessageProvider({ children, initialUser }: { children: React.Rea
         } else if (prev && !conversation) {
           state.socket?.emit('leaveRoom', prev.id);
         }
-      } catch (err) {
+      } catch {
         // ignore
       }
 
@@ -329,6 +391,37 @@ export function MessageProvider({ children, initialUser }: { children: React.Rea
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
+        console.debug('[MessageContext] createConversation response:', { recipientId, data });
+
+        // Normalize conversation display name/avatar using the OTHER participant if available
+        try {
+          let otherPart = (Array.isArray(data.participants) ? data.participants.find((p: { user?: { user_id?: string } }) => p.user?.user_id !== user?.user_id) : undefined)?.user; 
+
+          // Fallback: if server didn't include other participant details but caller provided a tempId,
+          // try to use the currently selected temp conversation to derive the display name/avatar.
+          if (!otherPart && tempId) {
+            try {
+              const tempSelected = state.selectedConversation && state.selectedConversation.id === tempId ? state.selectedConversation : conversationsRef.current.find((c) => c.id === tempId);
+              if (tempSelected) {
+                otherPart = (Array.isArray(tempSelected.participants) ? tempSelected.participants.find((p: { user?: { user_id?: string } }) => p.user?.user_id !== user?.user_id) : undefined)?.user; 
+                if (otherPart) console.debug('[MessageContext] using temp conversation to normalize display:', { tempId });
+              }
+            } catch {
+              // ignore
+            }
+          }
+
+          if (otherPart) {
+            const displayName = otherPart.Doctor?.full_name || otherPart.Patient?.full_name || otherPart.full_name || otherPart.user_id;
+            data.name = displayName;
+            if (!data.avatar) data.avatar = otherPart.Doctor?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${displayName}`;
+            console.debug('[MessageContext] normalized conversation display from participant:', { id: data.id, name: data.name });
+          } else {
+            console.debug('[MessageContext] createConversation: no other participant available to normalize');
+          }
+        } catch (err) {
+          console.warn('[MessageContext] Failed to normalize conversation display name', err);
+        }
 
         if (tempId) {
           // Replace temp conversation in the list if present
@@ -341,103 +434,41 @@ export function MessageProvider({ children, initialUser }: { children: React.Rea
         selectConversation(data);
 
         return data;
-      } catch (error) {
-        console.error('Failed to create conversation:', error);
-        throw error;
+      } catch (err) {
+        console.error('Failed to create conversation:', err);
+        throw err;
       }
     },
-    [selectConversation]
+    [selectConversation, user, state.selectedConversation]
   );
 
-  // Initialize Socket.io connection
-  useEffect(() => {
-    if (!user) return;
-
-    const token = getAccessToken();
-    if (!token) {
-      console.warn('No access token available for socket connection');
-      return;
+  // Typing helpers
+  const startTyping = useCallback((chatRoomId: string) => {
+    if (!state.socket) return;
+    try {
+      state.socket.emit('userTyping', { chatRoomId, isTyping: true });
+      const existing = typingTimers.current.get(chatRoomId);
+      if (existing) clearTimeout(existing);
+      const t = setTimeout(() => {
+        try { state.socket?.emit('userTyping', { chatRoomId, isTyping: false }); } catch {}
+        typingTimers.current.delete(chatRoomId);
+      }, 2000);
+      typingTimers.current.set(chatRoomId, t);
+    } catch {
+      // ignore
     }
+  }, [state.socket]);
 
-    console.debug('Connecting socket with token:', token.substring(0, 20) + '...');
-    const newSocket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000', {
-      auth: { token },
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-    });
+  const stopTyping = useCallback((chatRoomId: string) => {
+    if (!state.socket) return;
+    try { state.socket.emit('userTyping', { chatRoomId, isTyping: false }); } catch {}
+    const existing = typingTimers.current.get(chatRoomId);
+    if (existing) { clearTimeout(existing); typingTimers.current.delete(chatRoomId); }
+  }, [state.socket]);
 
-    newSocket.on('connect', () => {
-      dispatch({ type: 'SET_CONNECTED', payload: true });
-      console.log('Socket connected');
-    });
-
-    newSocket.on('disconnect', () => {
-      dispatch({ type: 'SET_CONNECTED', payload: false });
-      console.log('Socket disconnected');
-    });
-
-    newSocket.on('privateMessage', (message: Message) => {
-      // If server provides a tempId for an optimistic message, remove the temp one first
-      if (message.tempId) {
-        try {
-          dispatch({ type: 'DELETE_MESSAGE', payload: message.tempId });
-        } catch {
-          // ignore
-        }
-      }
-      dispatch({ type: 'ADD_MESSAGE', payload: message });
-    });
-
-    newSocket.on('messageEdited', (message: Message) => {
-      dispatch({ type: 'UPDATE_MESSAGE', payload: message });
-    });
-
-    newSocket.on('messageDeleted', ({ messageId }: { messageId: string }) => {
-      dispatch({ type: 'DELETE_MESSAGE', payload: messageId });
-    });
-
-    newSocket.on('userOnline', ({ userId }: { userId: string }) => {
-      dispatch({ type: 'ADD_ONLINE_USER', payload: userId });
-    });
-
-    newSocket.on('userOffline', ({ userId }: { userId: string }) => {
-      dispatch({ type: 'REMOVE_ONLINE_USER', payload: userId });
-    });
-
-    newSocket.on('userTyping', (data: { userId: string; chatRoomId: string; isTyping: boolean }) => {
-      dispatch({
-        type: 'SET_TYPING',
-        payload: { userId: data.userId, chatRoomId: data.chatRoomId, isTyping: data.isTyping },
-      });
-    });
-
-    // When the server confirms joining a room, load its messages
-    newSocket.on('joinedRoom', (data: { roomId: string; success: boolean }) => {
-      if (data?.success) {
-        // load first page of messages for this room
-        // Call asynchronously to avoid referencing a function before it's initialized
-        loadConversationMessages(data.roomId, 1, 20).catch(err => console.error("Failed to load messages on join", err));
-      }
-    });
-
-    newSocket.on('messageError', (data: { error: string; tempId?: string }) => {
-      if (data?.tempId) {
-        dispatch({ type: 'MARK_MESSAGE_FAILED', payload: { tempId: data.tempId } });
-      } else {
-        console.error('[MessageContext] messageError:', data.error);
-      }
-    });
-
-    dispatch({ type: 'SET_SOCKET', payload: newSocket });
-
-    return () => {
-      newSocket.disconnect();
-    };
-  }, [user, loadConversationMessages]); 
-
+  // Load conversations
   const loadConversations = useCallback(
-    async (limit = 50, offset = 0) => {
+    async (limit = 50, offset = 0): Promise<Conversation[] | undefined> => {
       try {
         const token = getAccessToken();
         if (!token) {
@@ -460,19 +491,201 @@ export function MessageProvider({ children, initialUser }: { children: React.Rea
           }
           throw new Error(`HTTP ${response.status}`);
         }
-        const data = await response.json();
-        dispatch({ type: 'SET_CONVERSATIONS', payload: data });
+        const data: unknown = await response.json();
+        type ApiConversation = {
+          id?: string;
+          name?: string;
+          avatar?: string;
+          participants?: Array<{ user?: { user_id?: string; Doctor?: { full_name?: string; avatar_url?: string }; Patient?: { full_name?: string } } }>;
+        };
+        console.debug('[MessageContext] loadConversations response:', Array.isArray(data) ? (data as ApiConversation[]).map((c) => ({ id: c.id, name: c.name, participants: (c.participants || []).map((p) => p.user?.user_id) })) : data);
+
+        // Normalize each conversation to prefer the OTHER participant's display name/avatar when available
+        const normalized = (Array.isArray(data) ? (data as ApiConversation[]) : []).map((convRaw) => {
+          const conv = convRaw as ApiConversation & Partial<Conversation>;
+          try {
+            const other = Array.isArray(conv.participants) ? conv.participants.find((p) => p.user?.user_id !== user?.user_id)?.user : undefined;
+            if (other) {
+              const displayName = other.Doctor?.full_name || other.Patient?.full_name || other.full_name || other.user_id;
+              conv.name = displayName;
+              if (!conv.avatar) conv.avatar = other.Doctor?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${displayName}`;
+            }
+          } catch (err) {
+            // ignore
+          }
+          return conv as Conversation;
+        });
+
+        dispatch({ type: 'SET_CONVERSATIONS', payload: normalized });
+        return normalized;
       } catch (error) {
         console.error('Failed to load conversations:', error);
       }
     },
-    []
+    [user]
   );
+
+  // Initialize Socket.io connection
+  useEffect(() => {
+    if (!user) return;
+
+    const token = getAccessToken();
+    if (!token) {
+      console.warn('No access token available for socket connection');
+      return;
+    }
+
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const s = createSocket(token, apiUrl);
+    // Capture the timers map reference for a stable cleanup variable
+    const typingTimersMap = typingTimers.current;
+    const failureTimersMap = failureTimersRef.current;
+
+    s.on('connect', () => {
+      dispatch({ type: 'SET_CONNECTED', payload: true });
+      console.log('Socket connected');
+    });
+
+    s.on('disconnect', () => {
+      dispatch({ type: 'SET_CONNECTED', payload: false });
+      console.log('Socket disconnected');
+    });
+
+    s.on('privateMessage', async (message: Message) => {
+      console.debug('[MessageContext] privateMessage received:', message);
+
+      // If this message confirms an optimistic one, clear the failure timer
+      if (message.tempId) {
+        const timer = failureTimersRef.current.get(message.tempId);
+        if (timer) { clearTimeout(timer); failureTimersRef.current.delete(message.tempId); }
+      }
+
+      // Ignore malformed messages without chatRoomId
+      if (!message.chatRoomId) {
+        console.warn('[MessageContext] Ignoring privateMessage without chatRoomId', message);
+        return;
+      }
+
+      // Check if we already know about this conversation
+      let conversation = conversationsRef.current.find((c) => c.id === message.chatRoomId);
+
+      // If not, try to fetch conversation details from backend
+      if (!conversation) {
+        try {
+          const token = getAccessToken();
+          if (token) {
+            const resp = await fetch(`/api/chat/conversations/${message.chatRoomId}/details`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (resp.ok) {
+              const data = await resp.json();
+              console.debug('[MessageContext] fetched conversation details for incoming message:', { chatRoomId: message.chatRoomId, data });
+
+              // Normalize using other participant if available
+              try {
+                const otherPart = (Array.isArray(data.participants) ? data.participants.find((p: { user?: { user_id?: string } }) => p.user?.user_id !== user?.user_id) : undefined)?.user; 
+                if (otherPart) {
+                  const displayName = otherPart.Doctor?.full_name || otherPart.Patient?.full_name || otherPart.full_name || otherPart.user_id;
+                  data.name = displayName;
+                  if (!data.avatar) data.avatar = otherPart.Doctor?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${displayName}`;
+                  console.debug('[MessageContext] normalized fetched conversation display:', { id: data.id, name: data.name });
+                }
+              } catch (err) {
+                console.warn('[MessageContext] Failed to normalize fetched conversation display', err);
+              }
+
+              dispatch({ type: 'ADD_CONVERSATION', payload: data });
+              conversation = data;
+            } else {
+              // As a fallback, refresh the conversation list
+              console.debug('[MessageContext] conversation details fetch returned non-ok, refreshing conversations list');
+              const refreshedConversations = await loadConversations();
+              if (refreshedConversations) {
+                conversation = refreshedConversations.find((c) => c.id === message.chatRoomId);
+              }
+              console.debug('[MessageContext] conversation found after refresh:', conversation);
+            }
+          }
+        } catch (err) {
+          console.error('[MessageContext] Failed to fetch conversation details for incoming message', err);
+        }
+      }
+
+      if (!conversation) {
+        console.warn('[MessageContext] Received message for unknown conversation', message.chatRoomId);
+        return;
+      }
+
+      // Ensure the current user is a participant of the conversation
+      const isParticipant = conversation.participants?.some((p) => p.user.user_id === user?.user_id);
+      if (!isParticipant) {
+        console.warn('[MessageContext] Ignoring message for conversation the user is not part of', message.chatRoomId);
+        return;
+      }
+
+      if (message.tempId) {
+        try { dispatch({ type: 'DELETE_MESSAGE', payload: message.tempId }); } catch {}
+      }
+      dispatch({ type: 'ADD_MESSAGE', payload: message });
+      console.debug('[MessageContext] dispatched ADD_MESSAGE for', { chatRoomId: message.chatRoomId, id: message.id, tempId: message.tempId });
+      // Keep conversation summary/list in sync with incoming messages
+      try { dispatch({ type: 'APPEND_MESSAGE_TO_CONVERSATION', payload: message }); console.debug('[MessageContext] dispatched APPEND_MESSAGE_TO_CONVERSATION for', { chatRoomId: message.chatRoomId, id: message.id }); } catch {}
+
+    });
+
+    s.on('messageEdited', (message: Message) => {
+      dispatch({ type: 'UPDATE_MESSAGE', payload: message });
+    });
+
+    s.on('messageDeleted', ({ messageId }: { messageId: string }) => {
+      dispatch({ type: 'DELETE_MESSAGE', payload: messageId });
+    });
+
+    s.on('userOnline', ({ userId }: { userId: string }) => {
+      dispatch({ type: 'ADD_ONLINE_USER', payload: userId });
+    });
+
+    s.on('userOffline', ({ userId }: { userId: string }) => {
+      dispatch({ type: 'REMOVE_ONLINE_USER', payload: userId });
+    });
+
+    s.on('userTyping', (data: { userId: string; chatRoomId: string; isTyping: boolean }) => {
+      dispatch({ type: 'SET_TYPING', payload: { userId: data.userId, chatRoomId: data.chatRoomId, isTyping: data.isTyping } });
+    });
+
+    s.on('joinedRoom', (data: { roomId: string; success: boolean }) => {
+      if (data?.success) {
+        loadConversationMessages(data.roomId, 1, 20).catch(err => console.error('Failed to load messages on join', err));
+      }
+    });
+
+    s.on('messageError', (data: { error: string; tempId?: string }) => {
+      if (data?.tempId) {
+        dispatch({ type: 'MARK_MESSAGE_FAILED', payload: { tempId: data.tempId } });
+      } else {
+        console.error('[MessageContext] messageError:', data.error);
+      }
+    });
+
+    dispatch({ type: 'SET_SOCKET', payload: s });
+
+    // actually connect
+    try { s.connect(); } catch (err) { console.warn('Socket connect failed', err); }
+
+    return () => {
+      try { s.disconnect(); } catch { /* ignore */ }
+      typingTimersMap.forEach((t) => clearTimeout(t));
+      typingTimersMap.clear();
+      failureTimersMap.forEach((t) => clearTimeout(t));
+      failureTimersMap.clear();
+      dispatch({ type: 'SET_SOCKET', payload: null });
+    };
+  }, [user, loadConversationMessages, loadConversations]);
 
   const sendMessage = useCallback(
     async (roomId: string, content: string) => {
-      if (!state.socket || !user) {
-        console.error('Socket not connected or user not found');
+      if (!user) {
+        console.error('User not found');
         return;
       }
 
@@ -497,10 +710,90 @@ export function MessageProvider({ children, initialUser }: { children: React.Rea
 
       // Dispatch to show the message immediately
       dispatch({ type: 'ADD_MESSAGE', payload: optimisticMessage });
+      console.debug('[MessageContext] optimistic ADD_MESSAGE:', optimisticMessage);
+      // Update conversation summary immediately (optimistic) so list/header show latest
+      dispatch({ type: 'APPEND_MESSAGE_TO_CONVERSATION', payload: optimisticMessage });
+      console.debug('[MessageContext] optimistic APPEND_MESSAGE_TO_CONVERSATION:', { chatRoomId: optimisticMessage.chatRoomId, tempId });
 
-      // 2. Emit message with acknowledgement
-      // include tempId so the server can echo it back to allow deduplication
-      state.socket.emit('privateMessage', { chatRoomId: roomId, content, tempId });
+      // Failure fallback timeout: if server doesn't confirm the message (via privateMessage with tempId), mark failed
+      const failureTimeoutMs = 8000; // 8 seconds
+      const failureTimer = setTimeout(() => {
+        failureTimersRef.current.delete(tempId);
+        dispatch({ type: 'MARK_MESSAGE_FAILED', payload: { tempId } });
+      }, failureTimeoutMs);
+      failureTimersRef.current.set(tempId, failureTimer);
+
+      // 2a. If socket is connected, emit via socket
+      if (state.socket && state.socket.connected) {
+        try {
+          state.socket.emit('privateMessage', { chatRoomId: roomId, content, tempId });
+          // The main 'privateMessage' handler will now be responsible for clearing the failure timer
+          // when it receives the message back from the server with a matching tempId.
+        } catch {
+          console.error('Socket emit failed, falling back to HTTP');
+
+          // Fall back to HTTP if socket emit failed
+          try {
+            const token = getAccessToken();
+            if (!token) throw new Error('No access token');
+
+            const resp = await fetch(`/api/chat/conversations/${roomId}/messages`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ content }),
+            });
+
+            if (!resp.ok) {
+              if (failureTimersRef.current.has(tempId)) { clearTimeout(failureTimer); failureTimersRef.current.delete(tempId); }
+              dispatch({ type: 'MARK_MESSAGE_FAILED', payload: { tempId } });
+            } else {
+              const msg = await resp.json();
+              if (failureTimersRef.current.has(tempId)) { clearTimeout(failureTimer); failureTimersRef.current.delete(tempId); }
+              // Remove temp message and add server message
+              dispatch({ type: 'DELETE_MESSAGE', payload: tempId });
+              dispatch({ type: 'ADD_MESSAGE', payload: msg as Message });
+              // Ensure conversation summary is updated with confirmed message
+              dispatch({ type: 'APPEND_MESSAGE_TO_CONVERSATION', payload: msg as Message });
+            }
+          } catch {
+            if (failureTimersRef.current.has(tempId)) { clearTimeout(failureTimer); failureTimersRef.current.delete(tempId); }
+            dispatch({ type: 'MARK_MESSAGE_FAILED', payload: { tempId } });
+          }
+        }
+
+        return;
+      }
+
+      // 2b. Socket not connected: use HTTP POST fallback
+      try {
+        console.warn('Socket not connected, sending message via HTTP as fallback');
+        const token = getAccessToken();
+        if (!token) throw new Error('No access token');
+
+        const resp = await fetch(`/api/chat/conversations/${roomId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ content }),
+        });
+
+        if (!resp.ok) {
+          if (failureTimersRef.current.has(tempId)) { clearTimeout(failureTimer); failureTimersRef.current.delete(tempId); }
+          dispatch({ type: 'MARK_MESSAGE_FAILED', payload: { tempId } });
+          return;
+        }
+
+        const msg = await resp.json();
+        if (failureTimersRef.current.has(tempId)) { clearTimeout(failureTimer); failureTimersRef.current.delete(tempId); }
+        // Replace temp message with server message
+        dispatch({ type: 'DELETE_MESSAGE', payload: tempId });
+        dispatch({ type: 'ADD_MESSAGE', payload: msg as Message });
+        // Update conversation summary with confirmed message
+        dispatch({ type: 'APPEND_MESSAGE_TO_CONVERSATION', payload: msg as Message });
+      } catch (err) {
+        if (failureTimersRef.current.has(tempId)) { clearTimeout(failureTimer); failureTimersRef.current.delete(tempId); }
+        console.error('Failed to send message via HTTP fallback:', err);
+        dispatch({ type: 'MARK_MESSAGE_FAILED', payload: { tempId } });
+      }
     },
     [state.socket, user]
   );
@@ -605,6 +898,8 @@ export function MessageProvider({ children, initialUser }: { children: React.Rea
     editMessage,
     searchConversations,
     getAvailableRecipients,
+    startTyping,
+    stopTyping,
   };
 
   return <MessageContext.Provider value={value}>{children}</MessageContext.Provider>;

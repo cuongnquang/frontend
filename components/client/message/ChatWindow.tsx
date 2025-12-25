@@ -20,7 +20,9 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
     deleteMessage: deleteMessageAction,
     editMessage: editMessageAction,
     typingUsers,
-    onlineUsers
+    onlineUsers,
+    startTyping,
+    stopTyping
   } = useMessage();
   const { user } = useAuth();
   const [messageContent, setMessageContent] = useState('');
@@ -33,6 +35,7 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const [isTyping, setIsTyping] = useState(false);
+  const typingDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load messages on conversation change
   useEffect(() => {
@@ -48,24 +51,43 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
     });
   }, [conversation.id, loadConversationMessages, markAsRead]);
 
-  // Auto-scroll to bottom
+  // stop typing when unmounting or when conversation changes
   useEffect(() => {
-    // Only auto-scroll for new messages, not when loading more old messages
-    if (currentPage === 1 && !loading) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
-    }
-  }, [messages.get(conversation.id), currentPage, loading]);
+    return () => {
+      stopTyping(conversation.id);
+      if (typingDebounceRef.current) clearTimeout(typingDebounceRef.current);
+    };
+  }, [conversation.id, stopTyping]);
+
+  // Auto-scroll to bottom on new messages (and after sending)
+  const prevCountRef = useRef<number>(0);
 
   const conversationMessages = messages.get(conversation.id) || [];
 
+  useEffect(() => {
+    const prev = prevCountRef.current;
+    const curr = conversationMessages.length;
+
+    // Only auto-scroll if we're on the first page (not paginating older messages)
+    // or if we've just added a message (curr > prev)
+    if (currentPage === 1 && !loading && curr >= prev) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+
+    prevCountRef.current = curr;
+  }, [conversationMessages.length, currentPage, loading]);
+
+  // Ensure scroll to bottom immediately after send for better UX
+  const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
   const getOtherParticipant = () => {
     if (conversation?.participants?.length > 0) {
-      return conversation.participants.find(p => p.user.user_id !== user?.user_id)?.user;
+      return conversation.participants.find(p => p.user.Doctor?.full_name !== user?.full_name)?.user;
     }
     // Fallback for minimal chat objects from search results
-    const otherId = (conversation as any).otherParticipantId;
+    const otherId = (conversation as unknown as { otherParticipantId?: string })?.otherParticipantId;
     if (otherId) {
-      return { user_id: otherId, Doctor: { full_name: (conversation as any).name } };
+      return { user_id: otherId, Doctor: { full_name: (conversation as unknown as { name?: string }).name || 'User' } };
     }
     return null;
   };
@@ -90,8 +112,15 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
       await sendMessage(conversation.id, messageContent);
     }
 
+    // Ensure other users see that typing has stopped
+    stopTyping(conversation.id);
+    if (typingDebounceRef.current) clearTimeout(typingDebounceRef.current);
+
     setMessageContent('');
     setIsTyping(false);
+
+    // Immediately scroll to the bottom to reveal the sent message
+    scrollToBottom();
   };
 
   const handleDeleteMessage = async (messageId: string) => {
@@ -184,30 +213,46 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
             <p className="text-gray-500">No messages yet. Start the conversation!</p>
           </div>
         ) : (
-          conversationMessages.map((message) => {
-            const isSender = message.senderId === user?.user_id;
-            const senderName = message.sender.Doctor?.full_name || message.sender.Patient?.full_name || 'Unknown';
+          conversationMessages.map((message, idx) => {
+            // Robust sender detection: prefer message.senderId, fall back to nested sender.user_id
+            const msg = message as any;
+            const senderId = msg.senderId || msg.sender_id || (msg.sender?.user_id) || (msg.sender?.id);
+            const messageSenderId = String(senderId || '');
+            const currentUserId = String(user?.user_id || (user as any)?.id || '');
+            const isSender = messageSenderId === currentUserId;
+            let senderName = 'Unknown';
+            if (message.sender) {
+              const senderObj = message.sender as { Doctor?: { full_name?: string }; Patient?: { full_name?: string }; full_name?: string };
+              senderName = senderObj.Doctor?.full_name || senderObj.Patient?.full_name || senderObj.full_name || senderName;
+            } else if (messageSenderId && !isSender) {
+              const p = conversation.participants?.find((pp) => String(pp.user.user_id) === messageSenderId)?.user as { Doctor?: { full_name?: string }; Patient?: { full_name?: string }; full_name?: string } | undefined;
+              senderName = p ? (p.Doctor?.full_name || p.Patient?.full_name || p.full_name || senderName) : senderName;
+            }
+            const prev = conversationMessages[idx - 1];
+            const prevSenderId = prev ? String(prev.senderId || (prev.sender?.user_id) || '') : null;
+            const showSenderName = !isSender && (!prev || prevSenderId !== messageSenderId);
+
+            // layout helpers
+            const outerClass = `flex ${isSender ? 'justify-end' : 'justify-start'} items-end`;
+            const bubbleBase = 'max-w-[70%] group relative rounded-lg p-3';
+            const bubbleVariant = isSender
+              ? 'bg-blue-600 text-white ml-4 mr-2 rounded-tr-lg rounded-bl-lg'
+              : 'bg-gray-100 text-gray-900 mr-4 ml-2 rounded-tl-lg rounded-br-lg';
 
             return (
-              <div key={message.id} className={`flex ${isSender ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className={`max-w-xs lg:max-w-md group relative ${
-                    isSender
-                      ? 'bg-blue-600 text-white rounded-bl-lg'
-                      : 'bg-gray-100 text-gray-900 rounded-br-lg'
-                  } rounded-lg p-3`}
-                >
-                  {!isSender && (
+              <div key={message.id} className={outerClass}>
+                <div className={`${bubbleBase} ${bubbleVariant}`}>
+                  {!isSender && showSenderName && (
                     <p className="text-xs font-semibold text-gray-600 mb-1">
                       {senderName}
                     </p>
                   )}
-                  
+
                   {message.isDeleted ? (
                     <p className="text-sm italic opacity-60">[Message deleted]</p>
                   ) : (
                     <>
-                      <p className="text-sm wrap-break-word">{message.content}</p>
+                      <p className="text-sm break-words">{message.content}</p>
                       {message.isEdited && (
                         <p className="text-xs opacity-75 mt-1">(edited)</p>
                       )}
@@ -216,25 +261,12 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
 
                   {/* Message Actions */}
                   {isSender && !message.isDeleted && (
-                    <div className="absolute right-0 top-0 translate-x-full ml-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                      {/* <button
-                        onClick={() => handleEditMessage(message)}
-                        className="p-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                        title="Edit"
-                      >
-                        <Edit2 size={14} />
-                      </button> */}
-                      {/* <button
-                        onClick={() => handleDeleteMessage(message.id)}
-                        className="p-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 size={14} />
-                      </button> */}
+                    <div className="absolute -left-6 top-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                      {/* actions */}
                     </div>
                   )}
 
-                  <p className={`text-xs ${isSender ? 'text-blue-100' : 'text-gray-500'} mt-1`}>
+                  <p className={`text-xs ${isSender ? 'text-blue-100' : 'text-gray-500'} mt-1 text-right`}> 
                     {new Date(message.createdAt).toLocaleTimeString([], {
                       hour: '2-digit',
                       minute: '2-digit',
@@ -247,18 +279,31 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
         )}
 
         {/* Typing Indicator */}
-        {Array.from(typingUsers.values()).some(
-          (u) => u.chatRoomId === conversation.id && u.isTyping
-        ) && (
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <div className="space-x-1">
-              <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
-              <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></span>
-              <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></span>
-            </div>
-            Someone is typing...
-          </div>
-        )}
+        {
+          (() => {
+            const typers = Array.from(typingUsers.entries())
+              .filter(([uid, u]) => u.chatRoomId === conversation.id && u.isTyping)
+              .map(([uid]) => {
+                const participantUser = conversation.participants?.find(p => p.user.user_id === uid)?.user || null;
+                return getParticipantName(participantUser as Record<string, unknown> | null);
+              });
+
+            if (typers.length === 0) return null;
+
+            const label = `${typers.slice(0, 2).join(', ')}${typers.length > 2 ? ` and ${typers.length - 2} more` : ''} ${typers.length > 1 ? 'are' : 'is'} typing...`;
+
+            return (
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <div className="space-x-1">
+                  <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
+                  <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></span>
+                  <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></span>
+                </div>
+                {label}
+              </div>
+            );
+          })()
+        }
 
         <div ref={messagesEndRef} />
       </div>
@@ -284,13 +329,34 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
           <textarea
             value={messageContent}
             onChange={(e) => {
-              setMessageContent(e.target.value);
-              setIsTyping(e.target.value.length > 0);
+              const val = e.target.value;
+              setMessageContent(val);
+              setIsTyping(val.length > 0);
+
+              // Auto resize
+              try {
+                const ta = e.target as HTMLTextAreaElement;
+                ta.style.height = 'auto';
+                ta.style.height = Math.min(160, ta.scrollHeight) + 'px';
+              } catch {}
+
+              if (val.trim()) {
+                startTyping(conversation.id);
+                if (typingDebounceRef.current) clearTimeout(typingDebounceRef.current);
+                typingDebounceRef.current = setTimeout(() => {
+                  stopTyping(conversation.id);
+                  setIsTyping(false);
+                }, 2000);
+              } else {
+                stopTyping(conversation.id);
+                if (typingDebounceRef.current) clearTimeout(typingDebounceRef.current);
+                setIsTyping(false);
+              }
             }}
             onKeyPress={handleKeyPress}
             placeholder="Type a message..."
             rows={1}
-            className="flex-1 p-3 border border-gray-200 rounded-lg resize-none text-black outline-none"
+            className="flex-1 p-3 border border-gray-200 rounded-lg resize-none text-black outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <button
             onClick={handleSendMessage}

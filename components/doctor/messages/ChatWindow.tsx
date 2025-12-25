@@ -1,25 +1,13 @@
 'use client';
 import { useState, useRef, useEffect } from "react";
-import { Phone, Video, MoreVertical, Paperclip, Send, Smile, Info } from "lucide-react";
-
-interface Conversation {
-  id: string; // user_id
-  name: string;
-  avatar: string;
-  online: boolean;
-  type: 'patient' | 'doctor' | 'admin';
-}
-
-interface Message {
-  id: string | number;
-  senderId: string;
-  recipientId: string;
-  content: string;
-  createdAt: string; // ISO string date
-}
+import { Info, User, Calendar, Phone, X } from "lucide-react";
+import { ChatHeader } from "./ChatHeader";
+import { MessageInput } from "./MessageInput";
+import { MessageBubble } from "./MessageBubble";
+import { Conversation, Message } from "@/contexts/MessageContext";
 
 interface ChatWindowProps {
-  conversation: Conversation | undefined;
+  conversation: Conversation;
   messages: Message[];
   onSendMessage: (content: string) => void;
   currentUserId: string;
@@ -28,6 +16,7 @@ interface ChatWindowProps {
 export default function ChatWindow({ conversation, messages, onSendMessage, currentUserId }: ChatWindowProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showInfo, setShowInfo] = useState(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -52,75 +41,73 @@ export default function ChatWindow({ conversation, messages, onSendMessage, curr
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
+  // Lấy thông tin người tham gia khác (bệnh nhân)
+  const otherParticipant = conversation.participants?.find(p => p.user.user_id !== currentUserId)?.user;
+  const patientInfo = otherParticipant?.Patient;
+  const doctorInfo = otherParticipant?.Doctor;
+  const displayName = patientInfo?.full_name || doctorInfo?.full_name || conversation.name;
+  const displayAvatar = doctorInfo?.avatar_url || conversation.avatar;
 
   return (
     <div className="flex-1 flex flex-col">
       {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between p-4 border-b bg-white">
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <img src={conversation.avatar} alt={conversation.name} className="w-12 h-12 rounded-full object-cover" />
-            {conversation.online && <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-green-400 border-2 border-white"></span>}
-          </div>
-          <div>
-            <p className="font-semibold text-gray-900">{conversation.name}</p>
-            <p className="text-sm text-gray-500">{conversation.online ? 'Đang hoạt động' : 'Ngoại tuyến'}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button className="p-2 rounded-full hover:bg-gray-100 text-gray-500"><Phone size={20} /></button>
-          <button className="p-2 rounded-full hover:bg-gray-100 text-gray-500"><Video size={20} /></button>
-          <button className="p-2 rounded-full hover:bg-gray-100 text-gray-500"><MoreVertical size={20} /></button>
-        </div>
-      </div>
+      <ChatHeader conversation={conversation} onToggleInfo={() => setShowInfo(!showInfo)} />
 
-      {/* Messages */}
-      <div className="flex-1 p-6 overflow-y-auto bg-gray-50 space-y-4">
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex items-end gap-3 ${msg.senderId === currentUserId ? 'justify-end' : ''}`}
-          >
-            {msg.senderId !== currentUserId && (
-              <img src={conversation.avatar} alt={conversation.name} className="w-8 h-8 rounded-full shrink-0" />
-            )}
-            <div
-              className={`max-w-xl p-3 rounded-lg shadow-sm ${
-                msg.senderId === currentUserId
-                  ? 'bg-blue-600 text-white rounded-br-none'
-                  : 'bg-white text-gray-800 rounded-bl-none border border-gray-200'
-              }`}
-            >
-              <p className="text-sm">{msg.content}</p>
+      <div className="flex-1 flex overflow-hidden">
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Messages */}
+          <div className="flex-1 p-4 md:p-6 overflow-y-auto bg-gray-50 space-y-4">
+            {messages.map((msg, index) => {
+              const senderId = msg.senderId || (msg as any).sender_id || (msg.sender as any)?.user_id || (msg.sender as any)?.id;
+              const isMine = Boolean(senderId && currentUserId && String(senderId) === String(currentUserId));
+              const senderAvatar = (msg.sender as any)?.avatar_url || (msg.sender as any)?.Doctor?.avatar_url || (msg.sender as any)?.Patient?.avatar_url || displayAvatar;
+
+              return (
+                <MessageBubble 
+                  key={`${msg.id}-${index}`} 
+                  msg={msg} 
+                  avatar={!isMine ? senderAvatar : undefined}
+                  isMine={isMine}
+                />
+              );
+            })}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input */}
+          <MessageInput
+            messageText={input}
+            onTextChange={setInput}
+            onSend={handleSend}
+          />
+        </div>
+
+        {/* Patient Info Sidebar */}
+        {showInfo && (
+          <div className="w-80 border-l border-gray-200 bg-white p-6 overflow-y-auto hidden md:block animate-in slide-in-from-right duration-300">
+            <div className="text-center mb-6">
+              <img src={displayAvatar} alt={displayName} className="w-20 h-20 rounded-full mx-auto mb-3 object-cover ring-4 ring-gray-50" />
+              <h3 className="font-bold text-lg text-gray-900">{displayName}</h3>
+              <p className="text-sm text-indigo-600 font-medium">{otherParticipant?.role === 'patient' ? 'Bệnh nhân' : 'Bác sĩ'}</p>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b pb-2">Thông tin cá nhân</h4>
+              
+              <div className="flex items-center gap-3 text-sm text-gray-700">
+                <User className="w-4 h-4 text-gray-400" />
+                <span>ID: <span className="font-mono text-xs bg-gray-100 px-1 rounded">{otherParticipant?.user_id.substring(0, 8)}...</span></span>
+              </div>
+              
+              {/* Bạn có thể thêm các trường khác nếu backend trả về (ví dụ: email, sđt) */}
+              <div className="flex items-center gap-3 text-sm text-gray-700">
+                <Calendar className="w-4 h-4 text-gray-400" />
+                <span>Tham gia: {new Date().toLocaleDateString('vi-VN')}</span>
+              </div>
             </div>
           </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input */}
-      <div className="p-4 bg-white border-t">
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="Nhập tin nhắn..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            className="flex-1 px-4 py-2 border rounded-full text-black bg-gray-100 focus:outline-none"
-          />
-          <button className="p-2 rounded-full hover:bg-gray-100 text-gray-500"><Smile /></button>
-          <button className="p-2 rounded-full hover:bg-gray-100 text-gray-500"><Paperclip /></button>
-          <button onClick={handleSend} className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:bg-blue-300" disabled={!input.trim()}>
-            <Send size={18} />
-          </button>
-        </div>
+        )}
       </div>
     </div>
   );
