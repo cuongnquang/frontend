@@ -44,7 +44,7 @@ export default function AppointmentConfirmation({
                     </div>
                     <div className="grid grid-cols-3">
                         <span className="font-medium text-gray-700 flex items-center"><Award className="w-4 h-4 mr-2 text-blue-600" /> Chuyên khoa:</span>
-                        <span className="text-gray-900">{doctor.Specialty.name}</span>
+                        <span className="text-gray-900">{doctor.specialty_name}</span>
                     </div>
                 </div>
             </div>

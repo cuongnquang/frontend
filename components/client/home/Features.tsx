@@ -28,19 +28,26 @@ export default function Features() {
                 setLoading(true)
                 // Gọi API đồng thời để lấy dữ liệu bác sĩ và chuyên khoa
                 const [doctorsRes, specialtiesRes] = await Promise.all([
-                    apiClient<Doctor[]>('/api/doctors?perpage=4'),
-                    apiClient<Specialty[]>('/api/specialties?type=all')
+                    apiClient<Doctor[]>('/api/doctors?perpage=4', { skipRedirect: true, skipRefresh: true }),
+                    apiClient<Specialty[]>('/api/specialties?type=all', { skipRedirect: true, skipRefresh: true })
 
                 ])
 
-                if (doctorsRes.status && doctorsRes.data?.data) {
-                    setFeaturedDoctors(doctorsRes.data.data)
+                if (doctorsRes.status && doctorsRes.data) {
+                    const doctorsData = Array.isArray(doctorsRes.data)
+                        ? doctorsRes.data
+                        : (doctorsRes.data as any)?.data || [];
+                    setFeaturedDoctors(doctorsData.slice(0, 4))
+                  } else {
+                    setFeaturedDoctors([])
                   }
-                  
+
                   if (specialtiesRes.status && specialtiesRes.data) {
-                    setPopularSpecialties(specialtiesRes.data)
+                    setPopularSpecialties(Array.isArray(specialtiesRes.data) ? specialtiesRes.data : [])
+                  } else {
+                    setPopularSpecialties([])
                   }
-                  
+
             } catch (error) {
                 console.error("Failed to fetch homepage data:", error)
             } finally {

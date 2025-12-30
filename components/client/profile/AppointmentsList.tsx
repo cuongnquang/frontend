@@ -2,9 +2,11 @@ import { Calendar, Clock, CreditCard, X, Star } from 'lucide-react'
 import { Dispatch, SetStateAction } from 'react'
 
 interface Appointment {
-    id: number
+    id: string
+    doctorId?: string
     doctorName: string
     doctorSpecialty: string
+    doctorAvatar?: string
     hospital: string
     date: string
     time: string
@@ -15,7 +17,7 @@ interface Appointment {
 
 interface AppointmentsListProps {
     appointments: Appointment[]
-    setShowCancelModal: Dispatch<SetStateAction<number | null>>
+    setShowCancelModal: Dispatch<SetStateAction<string | number | null>>
     isLoading: boolean
     getStatusColor: (status: string) => string
     getStatusText: (status: string) => string
@@ -50,14 +52,21 @@ export default function AppointmentsList({ appointments, setShowCancelModal, isL
                         <div className="flex items-start justify-between">
                             <div className="flex-1">
                                 <div className="flex items-center space-x-3 mb-2">
-                                    <h3 className="text-lg font-semibold text-gray-900">{appointment.doctorName}</h3>
+                                    {appointment.doctorAvatar ? (
+                                        <img src={appointment.doctorAvatar} alt={appointment.doctorName} className="w-10 h-10 rounded-full object-cover mr-3" />
+                                    ) : (
+                                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mr-3 text-gray-500">{appointment.doctorName.split(' ').map(n => n[0]).join('').slice(0,2)}</div>
+                                    )}
+
+                                    <div className="flex-1">
+                                        <h3 className="text-lg font-semibold text-gray-900">{appointment.doctorName}</h3>
+                                        <p className="text-gray-600 text-sm">{appointment.doctorSpecialty || 'Chuyên khoa chưa xác định'} • {appointment.hospital || 'Nơi khám chưa xác định'}</p>
+                                    </div>
+
                                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(appointment.status)}`}>
                                         {getStatusText(appointment.status)}
                                     </span>
                                 </div>
-                                <p className="text-gray-600 mb-4">
-                                    Chuyên khoa: **{appointment.doctorSpecialty}** | Bệnh viện: **{appointment.hospital}**
-                                </p>
 
                                 <div className="flex items-center space-x-6 text-gray-700 text-sm">
                                     <div className="flex items-center">
@@ -98,11 +107,12 @@ export default function AppointmentsList({ appointments, setShowCancelModal, isL
                                         Đánh giá
                                     </button>
                                 )}
-                                <button
+                                <a
+                                    href={appointment.doctorId ? `/client/doctors/${appointment.doctorId}` : '#'}
                                     className="flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                                 >
-                                    Chi tiết
-                                </button>
+                                    Chi tiết bác sĩ
+                                </a>
                             </div>
                         </div>
                     </div>

@@ -2,10 +2,10 @@ import { Calendar, AlertTriangle, X, Trash2 } from 'lucide-react'
 import { Dispatch, SetStateAction } from 'react'
 
 interface CancelAppointmentModalProps {
-    showCancelModal: number | null
-    setShowCancelModal: Dispatch<SetStateAction<number | null>>
+    showCancelModal: string | number | null
+    setShowCancelModal: Dispatch<SetStateAction<string | number | null>>
     isLoading: boolean
-    handleCancelAppointment: (appointmentId: number) => Promise<void>
+    handleCancelAppointment: (appointmentId: string | number) => Promise<void>
 }
 
 export default function CancelAppointmentModal({

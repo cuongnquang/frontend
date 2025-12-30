@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar, Plus, Sun, Moon } from "lucide-react";
 import { ScheduleCard } from "./ScheduleCard";
 
 interface ScheduleListProps {
   schedules: Array<{
     id: string;
-    doctor_name: string;
+    doctorId: string;
+    doctor_name: string; 
     schedule_date: string;
     start_time: string;
     end_time: string;
@@ -21,45 +22,48 @@ interface ScheduleListProps {
 export const ScheduleList = ({ schedules, onEdit, onDelete, onAddSchedule }: ScheduleListProps) => {
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
 
-  // Helper: Get start of week (Monday)
-  const getWeekStart = (date: Date) => {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    return new Date(d.setDate(diff));
-  };
+  const { weekStart, weekEnd, weekDays } = useMemo(() => {
+    // Helper: Get start of week (Monday)
+    const getWeekStart = (date: Date) => {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1); // day is 0 for Sunday
+      return new Date(d.setDate(diff));
+    };
 
-  const getCurrentWeekRange = () => {
     const today = new Date();
     today.setDate(today.getDate() + currentWeekOffset * 7);
     const weekStart = getWeekStart(today);
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
-    return { weekStart, weekEnd };
-  };
 
-  const { weekStart, weekEnd } = getCurrentWeekRange();
+    // Generate all days of the week
+    const weekDays = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(weekStart);
+      date.setDate(weekStart.getDate() + i);
+      return date;
+    });
 
-  // Filter schedules for current week
-  const weekSchedules = schedules.filter(schedule => {
-    const scheduleDate = new Date(schedule.schedule_date);
-    return scheduleDate >= weekStart && scheduleDate <= weekEnd;
-  });
+    return { weekStart, weekEnd, weekDays };
+  }, [currentWeekOffset]);
 
-  // Group by date
-  const groupedSchedules = weekSchedules.reduce((acc, schedule) => {
-    const date = schedule.schedule_date;
-    if (!acc[date]) acc[date] = [];
-    acc[date].push(schedule);
-    return acc;
-  }, {} as Record<string, typeof schedules>);
+  const { weekSchedules, groupedSchedules } = useMemo(() => {
+    // Filter schedules for current week
+    const weekSchedules = schedules.filter(schedule => {
+      const scheduleDate = new Date(schedule.schedule_date);
+      return scheduleDate >= weekStart && scheduleDate <= weekEnd;
+    });
 
-  // Generate all days of the week
-  const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date(weekStart);
-    date.setDate(weekStart.getDate() + i);
-    return date;
-  });
+    // Group by date
+    const groupedSchedules = weekSchedules.reduce((acc, schedule) => {
+      const date = schedule.schedule_date;
+      if (!acc[date]) acc[date] = [];
+      acc[date].push(schedule);
+      return acc;
+    }, {} as Record<string, typeof schedules>);
+
+    return { weekSchedules, groupedSchedules };
+  }, [schedules, weekStart, weekEnd]);
 
   const formatWeekRange = () => {
     const startDay = weekStart.getDate();

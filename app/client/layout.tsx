@@ -8,12 +8,10 @@ export default function ClientLayout({
 }: {
     children: React.ReactNode
 }) {
-    const {user} = useAuth()
+    const { user } = useAuth()
 
-    return (
-        <div>
-            {children}
-            {user && <FloatingChatWidget />}
-        </div >
-    )
+    return (<div>
+        {children}
+        {user && <FloatingChatWidget />}
+    </div>)
 }

@@ -5,6 +5,7 @@ import Hero from '@/components/client/home/Hero'
 import Features from '@/components/client/home/Features'
 import Footer from '@/components/layout/Footer'
 import { useAuth } from '@/contexts/AuthContext'
+import { MessageProvider } from '@/contexts/MessageContext'
 import FloatingChatWidget from '@/components/client/message/FloatingChatWidget'
 export default function HomePage() {
   const {user} = useAuth()
@@ -14,7 +15,11 @@ export default function HomePage() {
       <main>
         <Hero />
         <Features />
-        {user && <FloatingChatWidget />}
+        {user && (
+          <MessageProvider initialUser={user}>
+            <FloatingChatWidget />
+          </MessageProvider>
+        )}
       </main>
       <Footer />
     </>

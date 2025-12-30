@@ -1,25 +1,81 @@
-import React, { useMemo } from 'react';
-import { Clock, CheckCircle } from 'lucide-react';
-
-interface DoctorSchedule {
-  schedule_id: string;
-  schedule_date: string;
-  start_time: string;
-  end_time: string;
-  is_available: boolean;
-}
+import { useMemo } from 'react';
+import { Clock, AlertTriangle, Sun, Moon, Sunset } from 'lucide-react';
+import { DoctorSchedule } from '@/types/types';
 
 interface TimeSlotSelectorProps {
-  schedules: DoctorSchedule[];
-  selectedSchedule: DoctorSchedule | null;
-  onSelectSchedule: (schedule: DoctorSchedule) => void;
+    schedules: DoctorSchedule[]
+    selectedSchedule: DoctorSchedule | null
+    onSelectSchedule: (schedule: DoctorSchedule) => void
+    error: string | null
 }
 
-export default function TimeSlotSelector({ schedules, selectedSchedule, onSelectSchedule }: TimeSlotSelectorProps) {
-  // CHỈ LẤY CÁC CA KHÁM CÓ is_available = true
-  const availableSchedules = useMemo(() => {
-    return schedules.filter(schedule => schedule.is_available === true);
-  }, [schedules]);
+export default function TimeSlotSelector({ schedules, selectedSchedule, onSelectSchedule, error }: TimeSlotSelectorProps) {
+    // Phân loại các khung giờ vào các buổi Sáng, Chiều, Tối
+    const { morningSlots, afternoonSlots, eveningSlots } = useMemo(() => {
+        const morning: DoctorSchedule[] = [];
+        const afternoon: DoctorSchedule[] = [];
+        const evening: DoctorSchedule[] = [];
+
+        schedules.forEach(schedule => {
+            const hour = parseInt(schedule.start_time.split(':')[0]);
+            if (hour < 12) {
+                morning.push(schedule);
+            } else if (hour < 18) {
+                afternoon.push(schedule);
+            } else {
+                evening.push(schedule);
+            }
+        });
+
+        // Sắp xếp các khung giờ trong mỗi buổi
+        morning.sort((a, b) => a.start_time.localeCompare(b.start_time));
+        afternoon.sort((a, b) => a.start_time.localeCompare(b.start_time));
+        evening.sort((a, b) => a.start_time.localeCompare(b.start_time));
+
+        return { morningSlots: morning, afternoonSlots: afternoon, eveningSlots: evening };
+    }, [schedules]);
+
+    // Component để render một nhóm các khung giờ
+    const TimeSlotGroup = ({ title, slots, icon }: { title: string, slots: DoctorSchedule[], icon: React.ReactNode }) => (
+        slots.length > 0 && (
+            <div className="mb-6 animate-fade-in-up">
+                <h5 className="font-bold text-gray-700 mb-3 flex items-center">{icon}{title}</h5>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                    {slots.map(schedule => {
+                        const isSelected = selectedSchedule?.schedule_id === schedule.schedule_id;
+                        return (
+                            <button
+                                key={schedule.schedule_id + schedule.start_time}
+                                onClick={() => onSelectSchedule(schedule)}
+                                disabled={!schedule.is_available}
+                                aria-pressed={isSelected}
+                                aria-label={
+                                    schedule.is_available
+                                        ? isSelected
+                                            ? `Đã chọn khung giờ ${schedule.start_time}`
+                                            : `Chọn khung giờ ${schedule.start_time}`
+                                        : `Khung giờ ${schedule.start_time} không có sẵn`
+                                }
+                                className={`
+                                    h-12 w-full rounded-full transition-colors font-medium text-center text-sm border
+                                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                                    ${
+                                        !schedule.is_available
+                                        ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                                        : isSelected
+                                        ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                                        : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-100'
+                                    }
+                                    `}
+                            >
+                                {schedule.start_time}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+        )
+    );
 
   const sortedSchedules = useMemo(() => {
     return [...availableSchedules].sort((a, b) => {
@@ -31,93 +87,21 @@ export default function TimeSlotSelector({ schedules, selectedSchedule, onSelect
 
   if (sortedSchedules.length === 0) {
     return (
-      <div className="text-center py-8">
-        <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-        <p className="text-gray-500 font-medium">Không có ca khám nào</p>
-        <p className="text-sm text-gray-400 mt-1">Vui lòng chọn ngày khác</p>
-      </div>
-    );
-  }
-
-  const formatTime = (timeString: string) => {
-    return timeString.slice(0, 5);
-  };
-
-  const getTimeLabel = (startTime: string) => {
-    const hour = parseInt(startTime.split(':')[0]);
-    if (hour < 12) return 'Sáng';
-    if (hour < 18) return 'Chiều';
-    return 'Tối';
-  };
-
-  const groupedSchedules = useMemo(() => {
-    const groups: { [key: string]: DoctorSchedule[] } = {
-      'Sáng': [],
-      'Chiều': [],
-      'Tối': []
-    };
-    
-    sortedSchedules.forEach(schedule => {
-      const label = getTimeLabel(schedule.start_time);
-      groups[label].push(schedule);
-    });
-    
-    return Object.entries(groups).filter(([_, schedules]) => schedules.length > 0);
-  }, [sortedSchedules]);
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Clock className="w-5 h-5 text-blue-600" />
-        <h4 className="text-lg font-semibold text-gray-900">Chọn giờ khám</h4>
-        <span className="ml-auto text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-          {sortedSchedules.length} ca trống
-        </span>
-      </div>
-      
-      <div className="space-y-4">
-        {groupedSchedules.map(([timeLabel, schedules]) => (
-          <div key={timeLabel}>
-            <h5 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-              {timeLabel}
-              <span className="text-xs text-gray-500 font-normal">({schedules.length} ca)</span>
-            </h5>
-            <div className="grid grid-cols-3 gap-2">
-              {schedules.map(schedule => {
-                const isSelected = selectedSchedule?.schedule_id === schedule.schedule_id;
-                
-                return (
-                  <button
-                    key={schedule.schedule_id}
-                    onClick={() => onSelectSchedule(schedule)}
-                    className={`relative p-3 rounded-lg border-2 transition-all duration-200 ${
-                      isSelected
-                        ? 'border-green-500 bg-green-50 text-green-700 shadow-md scale-105'
-                        : 'border-gray-200 bg-white text-gray-800 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700'
-                    }`}
-                  >
-                    {isSelected && (
-                      <CheckCircle className="w-4 h-4 text-green-500 absolute -top-1.5 -right-1.5 bg-white rounded-full" />
-                    )}
-                    
-                    <div className="text-center">
-                      <div className={`text-base font-bold ${
-                        isSelected ? 'text-green-600' : 'text-current'
-                      }`}>
-                        {formatTime(schedule.start_time)}
-                      </div>
-                      <div className="text-[10px] opacity-75 mt-0.5">
-                        {formatTime(schedule.end_time)}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+        <div className="p-4 border border-gray-200 rounded-lg bg-gray-50 mt-4">
+            <h4 className="text-lg font-bold text-gray-800 mb-4 flex items-center"><Clock className="w-5 h-5 mr-2 text-blue-600" /> Chọn Khung Giờ</h4>
+            {error ? (
+                <div className="text-center text-red-600 bg-red-50 p-4 rounded-lg flex items-center justify-center">
+                    <AlertTriangle className="w-5 h-5 mr-2" /> {error}
+                </div>
+            ) : schedules.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">Không có khung giờ trống cho ngày này.</p>
+            ) : (
+                <div>
+                    <TimeSlotGroup key="morning" title="Buổi Sáng" slots={morningSlots} icon={<Sun className="w-5 h-5 mr-2 text-yellow-500" />} />
+                    <TimeSlotGroup key="afternoon" title="Buổi Chiều" slots={afternoonSlots} icon={<Sunset className="w-5 h-5 mr-2 text-orange-500" />} />
+                    <TimeSlotGroup key="evening" title="Buổi Tối" slots={eveningSlots} icon={<Moon className="w-5 h-5 mr-2 text-indigo-500" />} />
+                </div>
+            )}
+        </div>
+    )
 }

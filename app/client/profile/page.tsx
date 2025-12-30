@@ -40,9 +40,11 @@ interface UserProfile {
 }
 
 interface Appointment {
-    id: number
+    id: string
+    doctorId?: string
     doctorName: string
     doctorSpecialty: string
+    doctorAvatar?: string
     hospital: string
     date: string
     time: string
@@ -63,16 +65,16 @@ interface MedicalRecord {
 
 export default function ProfilePage() {
     const searchParams = useSearchParams();
-    const { user, logout } = useAuth();
+    const { user, logout, refreshUser } = useAuth();
     const [activeTab, setActiveTab] = useState<'profile' | 'appointments' | 'records' | 'settings'>('profile')
     const [showDeleteModal, setShowDeleteModal] = useState(false)
-    const [showCancelModal, setShowCancelModal] = useState<number | null>(null)
+    const [showCancelModal, setShowCancelModal] = useState<string | number | null>(null)
     const [showChangePassword, setShowChangePassword] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
-    // const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
     const { isDeleting, deleteAccount } = useDeleteAccount();
     
-    const [userProfile, setUserProfile] = useState<User>({
+    const [userProfile, setUserProfile] = useState<UserProfile>({
         id: 0,
         fullName: '',
         email: '',
@@ -139,13 +141,48 @@ export default function ProfilePage() {
             setIsLoading(true);
             setError(null);
             try {
-                const [appointmentsRes, recordsRes] = await Promise.all([
-                    apiClient.get<Appointment[]>('/api/appointments'),
-                    apiClient.get<MedicalRecord[]>('/api/medical-records')
-                ]);
+                // First fetch current patient's profile to obtain patient_id
+                const patientRes = await apiClient('/api/patients/me');
+
+                let appointmentsRes: any = { status: true, data: [] };
+                if (patientRes.status && patientRes.data) {
+                    const patientId = (patientRes.data as any).id || (patientRes.data as any).patient_id || (patientRes.data as any).patientId || '';
+                    console.debug('Profile: current patient id', patientId);
+                    // Use patient-specific endpoint which enforces access control server-side
+                    appointmentsRes = await apiClient(`/api/appointments/${patientId}/patient-medical-history`);
+                } else {
+                    // Fallback: try generic appointments endpoint (may be paginated or restricted)
+                    appointmentsRes = await apiClient('/api/appointments');
+                }
+
+                const recordsRes = await apiClient('/api/medical-records');
+
+                console.debug('Profile: appointments raw response', appointmentsRes);
 
                 if (appointmentsRes.status && appointmentsRes.data) {
-                    setAppointments(appointmentsRes.data);
+                    // Backend may return either an array or a paginated object { data: AppointmentDTO[], pagination }
+                    let rawList: any[] = [];
+                    if (Array.isArray(appointmentsRes.data)) {
+                        rawList = appointmentsRes.data;
+                    } else if (appointmentsRes.data && Array.isArray((appointmentsRes.data as any).data)) {
+                        rawList = (appointmentsRes.data as any).data;
+                    }
+
+                    const normalized = rawList.map((a: any) => ({
+                        id: a.id || a.appointment_id || String(a.appointment_id || a.id || ''),
+                        doctorId: a.doctor_id || (a.Doctor && a.Doctor.doctor_id) || '',
+                        doctorName: a.doctor_name || (a.Doctor && a.Doctor.full_name) || '',
+                        doctorSpecialty: a.doctor_specialty || (a.Doctor && a.Doctor.Specialty && a.Doctor.Specialty.name) || '',
+                        doctorAvatar: a.doctor_avatar_url || (a.Doctor && a.Doctor.avatar_url) || '',
+                        hospital: a.doctor_workplace || (a.Doctor && (a.Doctor.workplace || a.Doctor.clinic_address)) || a.hospital || '',
+                        date: a.schedule_date || a.appointment_date || '',
+                        time: a.start_time || '',
+                        status: a.status || 'pending',
+                        price: a.price ? String(a.price) : '',
+                        notes: a.notes || ''
+                    }));
+
+                    setAppointments(normalized);
                 } else {
                     setError(appointmentsRes.message || 'Không thể tải lịch hẹn.');
                 }
@@ -156,6 +193,7 @@ export default function ProfilePage() {
                     setError(prev => `${prev ? prev + ' ' : ''}${recordsRes.message || 'Không thể tải hồ sơ y tế.'}`);
                 }
             } catch (err) {
+                console.error('Error loading profile data', err);
                 setError('Đã xảy ra lỗi khi tải dữ liệu trang hồ sơ.');
             } finally {
                 setIsLoading(false);
@@ -187,7 +225,7 @@ export default function ProfilePage() {
                 alert(res.message || 'Cập nhật thất bại!');
                 return false;
             } else {
-                await fetchProfile(); // Tải lại thông tin user trong context
+                await refreshUser(); // Tải lại thông tin user trong context
                 alert('Cập nhật thông tin thành công!');
                 return true;
             }
@@ -227,16 +265,17 @@ export default function ProfilePage() {
         }
     }
 
-    const handleCancelAppointment = async (appointmentId: number) => {
+    const handleCancelAppointment = async (appointmentId: string | number) => {
         setIsLoading(true)
         try {
-            const res = await apiClient(`/api/appointments/${appointmentId}/cancel`, {
+            const idStr = String(appointmentId)
+            const res = await apiClient(`/api/appointments/${idStr}/cancel`, {
                 method: 'PATCH'
             });
             if (res.status) {
                 setAppointments(prev =>
                     prev.map(apt =>
-                        apt.id === appointmentId ? { ...apt, status: 'cancelled' } : apt
+                        apt.id === idStr ? { ...apt, status: 'cancelled' } : apt
                     )
                 )
                 setShowCancelModal(null)

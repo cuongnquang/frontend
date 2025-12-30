@@ -1,172 +1,101 @@
 'use client';
-import { useState, useEffect, useCallback } from "react";
-import { ConversationList } from "@/components/doctor/messages/ConversationList";
-import { ChatWindow } from "@/components/doctor/messages/ChatWindow";
-import { apiClient } from "@/lib/api";
-import { socket } from "@/lib/socket";
-import { useAuth } from "@/contexts/AuthContext";
 
+import React, { useState, useEffect } from 'react';
+import { useMessage } from '@/contexts/MessageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { ConversationList } from '@/components/doctor/messages/ConversationList';
+import ChatWindow from '@/components/doctor/messages/ChatWindow';
+import { EmptyChat } from '@/components/doctor/messages/EmptyChat';
 
-// Định nghĩa kiểu dữ liệu cho các đối tượng trong trang
-interface Conversation {
-  id: string; // chat_room_id
-  name: string;
-  lastMessage: string;
-  unread: number;
-  time: string; // ISO string date
-  avatar: string;
-  online: boolean;
-  type: 'patient' | 'doctor' | 'admin';
-  otherParticipantId: string; // user_id của người đối thoại
-}
-
-interface Message {
-  id: string | number;
-  senderId: string;
-  recipientId: string;
-  content: string;
-  createdAt: string; // ISO string date
-}
-
-export default function MessagesPage() {
+export default function DoctorMessagesPage() {
+  const { 
+    conversations, 
+    messages, 
+    selectedConversation, 
+    selectConversation, 
+    createConversation, 
+    sendMessage, 
+    getAvailableRecipients 
+  } = useMessage();
   const { user } = useAuth();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [messageHistory, setMessageHistory] = useState<Record<string, Message[]>>({});
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [allRecipients, setAllRecipients] = useState<any[]>([]);
 
-  // Hàm xử lý tin nhắn mới (gửi hoặc nhận)
-  const handleNewMessage = useCallback((newMessage: Message) => {
-    const conversationId = newMessage.senderId === user?.user_id ? newMessage.recipientId : newMessage.senderId;
+  useEffect(() => {
+    getAvailableRecipients().then(data => setAllRecipients(data));
+  }, [getAvailableRecipients]);
 
-    // Tránh thêm tin nhắn trùng lặp (quan trọng cho optimistic UI)
-    if (messageHistory[conversationId]?.some(msg => msg.id === newMessage.id)) {
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    setIsSearching(true);
+    
+    if (!query.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
       return;
     }
 
-    // Cập nhật lịch sử tin nhắn
-    setMessageHistory(prev => ({
-      ...prev,
-      [conversationId]: [...(prev[conversationId] || []), newMessage],
+    const results = allRecipients.filter(r => {
+       const name = r.Doctor?.full_name || r.Patient?.full_name || '';
+       return name.toLowerCase().includes(query.toLowerCase());
+    }).map(r => ({
+       user_id: r.user_id,
+       full_name: r.Doctor?.full_name || r.Patient?.full_name,
+       avatar_url: r.Doctor?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${r.user_id}`,
+       specialty: { name: r.Doctor?.title || r.role }
     }));
 
-    
-
-    // Cập nhật danh sách cuộc trò chuyện
-    setConversations(prev => {
-      const index = prev.findIndex(c => c.id === conversationId);
-      if (index === -1) return prev; // Nếu không tìm thấy, không làm gì
-
-      const updatedConv = {
-        ...prev[index],
-        lastMessage: newMessage.content,
-        time: newMessage.createdAt,
-      };
-
-      // Đưa cuộc trò chuyện vừa có tin nhắn mới lên đầu
-      const newConversations = [updatedConv, ...prev.slice(0, index), ...prev.slice(index + 1)];
-      return newConversations;
-    });
-  }, [user?.user_id]);
-
-  // Lấy danh sách cuộc trò chuyện ban đầu
-  useEffect(() => {
-    const fetchConversations = async () => {
-      setLoading(true);
-      // Sử dụng API mới để lấy danh sách cuộc trò chuyện
-      const res = await apiClient<any[]>('/v1/chat/conversations');
-      if (res.status && res.data) {
-        // Xử lý dữ liệu trả về từ API
-        const conversationsData: Conversation[] = res.data.map(room => {
-          const otherParticipant = room.participants[0]; // Vì đã lọc ra người dùng hiện tại
-          const profile = otherParticipant.user.Patient || otherParticipant.user.Doctor;
-          const lastMessage = room.messages[0];
-          return {
-            id: room.id, // ID của phòng chat
-            otherParticipantId: otherParticipant.user_id,
-            name: profile?.full_name || otherParticipant.user.email,
-            lastMessage: lastMessage.content,
-            unread: 0, // Cần logic để tính toán
-            time: lastMessage.created_at,
-            avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${profile?.full_name || otherParticipant.user.email}`,
-            online: false,
-            type: otherParticipant.user.role,
-          };
-        });
-        setConversations(conversationsData);
-        if (conversationsData.length > 0) {
-          setActiveConversationId(conversationsData[0].id);
-        }
-      }
-      setLoading(false);
-    };
-    if (user) {
-      fetchConversations();
-    }
-  }, [user]);
-
-  // Tải lịch sử tin nhắn khi chọn một cuộc trò chuyện
-  useEffect(() => {
-    const fetchHistory = async () => {
-      if (activeConversationId && !messageHistory[activeConversationId]) {
-        const res = await apiClient<Message[]>(`/v1/chat/history/${activeConversationId}`);
-        if (res.status && res.data) {
-          setMessageHistory(prev => ({ ...prev, [activeConversationId]: res.data }));
-        }
-      }
-    };
-    fetchHistory();
-  }, [activeConversationId]);
-
-  // Kết nối và lắng nghe Socket.IO
-  useEffect(() => {
-    if (user) {
-      socket.connect();
-      socket.on('privateMessage', handleNewMessage);
-
-      return () => {
-        socket.off('privateMessage', handleNewMessage);
-        socket.disconnect();
-      };
-    }
-  }, [user, handleNewMessage]);
-
-  const handleSendMessage = (content: string) => {
-    const activeConv = conversations.find(c => c.id === activeConversationId);
-    if (!activeConv || !user?.user_id) return;
-
-    // Gửi sự kiện lên server
-    socket.emit('privateMessage', { recipientId: activeConv.otherParticipantId, content });
-
-    // Tạo tin nhắn tạm thời để cập nhật UI ngay lập tức (Optimistic Update)
-    const optimisticMessage: Message = {
-      id: `temp_${Date.now()}`, // ID tạm thời, sẽ được thay thế khi có phản hồi từ server
-      senderId: user.user_id,
-      recipientId: activeConversationId,
-      content: content,
-      createdAt: new Date().toISOString()
-    };
-
-    handleNewMessage(optimisticMessage);
+    setSearchResults(results);
+    setIsSearching(false);
   };
 
-  const activeConversation = conversations.find(c => c.id === activeConversationId);
-  const activeMessages = (activeConversationId && messageHistory[activeConversationId]) || [];
+  const handleCreateConversation = async (recipientId: string) => {
+     try {
+       await createConversation(recipientId);
+       setSearchQuery('');
+       setSearchResults([]);
+     } catch (e) {
+       console.error(e);
+     }
+  };
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden">
-      <ConversationList 
-        conversations={conversations}
-        activeConversationId={activeConversationId}
-        onConversationSelect={setActiveConversationId}
-        loading={loading}
-      />
-      <ChatWindow
-        conversation={activeConversation}
-        messages={activeMessages}
-        onSendMessage={handleSendMessage}
-        currentUserId={user?.user_id || ''}
-      />
+    <div className="h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-3 h-full max-w-screen-2xl mx-auto">
+        <div className="lg:col-span-1 border-r border-slate-200 bg-white flex flex-col h-full shadow-sm z-10">
+          <ConversationList 
+            conversations={conversations}
+            activeConversationId={selectedConversation?.id || null}
+            onConversationSelect={(id) => {
+                const conv = conversations.find(c => c.id === id);
+                selectConversation(conv || null);
+            }}
+            searchQuery={searchQuery}
+            onSearch={handleSearch}
+            searchResults={searchResults}
+            isSearching={isSearching}
+            onCreateConversation={handleCreateConversation}
+          />
+        </div>
+        
+        <div className="lg:col-span-2 flex flex-col h-full bg-white/50 backdrop-blur-sm">
+          {selectedConversation ? (
+            <ChatWindow 
+              conversation={selectedConversation}
+              messages={[...(messages.get(selectedConversation.id) || [])]}
+              onSendMessage={(content) => sendMessage(selectedConversation.id, content)}
+              currentUserId={user?.user_id || ''}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <EmptyChat />
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

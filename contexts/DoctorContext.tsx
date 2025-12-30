@@ -67,13 +67,16 @@ export function DoctorProvider({ children }: { children: ReactNode }) {
         setLoading(true);
         setError(null);
         try {
-            const res = await apiClient<Doctor[]>("/api/doctors", { skipRedirect: true });
+            const res = await apiClient<Doctor[]>("/api/doctors", { skipRedirect: true, skipRefresh: true });
             if (res.status && res.data) {
-                setDoctors(res.data);
+                const doctorsData = Array.isArray(res.data) ? res.data : (res.data as any)?.data || [];
+                setDoctors(doctorsData);
             } else {
+                setDoctors([]);
                 setError(res.message || "Không thể tải danh sách bác sĩ.");
             }
         } catch (err) {
+            setDoctors([]);
             setError("Lỗi kết nối đến server.");
         } finally {
             setLoading(false);
