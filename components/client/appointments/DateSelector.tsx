@@ -1,73 +1,127 @@
-import { ChevronRight, ChevronLeft } from 'lucide-react'
+import React, { useMemo, useRef } from 'react';
+import { Calendar } from 'lucide-react';
+
+interface DoctorSchedule {
+  schedule_id: string;
+  schedule_date: string;
+  start_time: string;
+  end_time: string;
+  is_available: boolean;
+}
 
 interface DateSelectorProps {
-    availableDates: string[]
-    selectedDate: string | null
-    onSelectDate: (date: string) => void
+  availableDates: string[];
+  schedules: DoctorSchedule[];
+  selectedDate: string;
+  onSelectDate: (date: string) => void;
 }
 
+export default function DateSelector({ availableDates, schedules, selectedDate, onSelectDate }: DateSelectorProps) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-const daysInMonth = 31 
-const firstDayOfWeek = 4 
+  const dateItems = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Tạo danh sách 30 ngày tiếp theo
+    const thirtyDays = [];
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      // Đếm số ca khám có sẵn cho ngày này
+      const availableCount = schedules.filter(
+        s => s.schedule_date === dateStr && s.is_available
+      ).length;
+      
+      const dayOfWeek = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][date.getDay()];
+      const day = date.getDate();
+      const month = date.getMonth() + 1;
+      
+      const isToday = i === 0;
+      const isTomorrow = i === 1;
+      
+      thirtyDays.push({
+        dateStr,
+        dayOfWeek,
+        day,
+        month,
+        isToday,
+        isTomorrow,
+        availableCount,
+        hasSchedule: availableCount > 0
+      });
+    }
+    
+    return thirtyDays;
+  }, [schedules]);
 
-const getDayInfo = (day: number, availableDates: string[], selectedDate: string | null) => {
-    const date = `2025-10-${String(day).padStart(2, '0')}`
-    const isAvailable = availableDates.includes(date)
-    const isSelected = selectedDate === date
-    const isToday = day === 9
-    return { date, isAvailable, isSelected, isToday }
-}
-
-
-export default function DateSelector({ availableDates, selectedDate, onSelectDate }: DateSelectorProps) {
-    return (
-        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <div className="flex justify-between items-center mb-4">
-                <h4 className="text-lg font-bold text-gray-800">Tháng 10/2025</h4>
-                <div className="flex space-x-2">
-                    <button className="p-2 rounded-full text-gray-500 hover:bg-gray-200"><ChevronLeft className="w-5 h-5" /></button>
-                    <button className="p-2 rounded-full text-gray-500 hover:bg-gray-200"><ChevronRight className="w-5 h-5" /></button>
-                </div>
-            </div>
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Calendar className="w-5 h-5 text-blue-600" />
+        <h4 className="text-lg font-semibold text-gray-900">Chọn ngày khám</h4>
+      </div>
+      
+      <div className="relative">
+        <div 
+          ref={scrollContainerRef}
+          className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+          style={{ scrollbarWidth: 'thin' }}
+        >
+          {dateItems.map(({ dateStr, dayOfWeek, day, month, isToday, isTomorrow, availableCount, hasSchedule }) => {
+            const isSelected = selectedDate === dateStr;
+            const displayText = isToday ? 'Hôm nay' : isTomorrow ? 'Ngày mai' : dayOfWeek;
             
-            <div className="grid grid-cols-7 text-center text-sm font-semibold text-gray-500 mb-2">
-                {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map(day => <div key={day}>{day}</div>)}
-            </div>
-
-            <div className="grid grid-cols-7 gap-2">
-                {/* Cells trống đầu tháng */}
-                {Array.from({ length: firstDayOfWeek }).map((_, index) => <div key={`empty-${index}`} className="h-10"></div>)}
-
-                {/* Các ngày trong tháng */}
-                {Array.from({ length: daysInMonth }).map((_, index) => {
-                    const day = index + 1
-                    const { date, isAvailable, isSelected, isToday } = getDayInfo(day, availableDates, selectedDate)
-                    
-                    return (
-                        <button
-                            key={date}
-                            onClick={() => isAvailable && onSelectDate(date)}
-                            disabled={!isAvailable}
-                            className={`h-10 rounded-full text-sm font-medium transition-colors border ${
-                                !isAvailable
-                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                    : isSelected
-                                    ? 'bg-blue-600 text-white border-blue-600 shadow-md'
-                                    : isToday
-                                    ? 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100'
-                                    : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-100'
-                            }`}
-                        >
-                            {day}
-                        </button>
-                    )
-                })}
-            </div>
-            <div className="flex justify-start mt-4 text-xs space-x-4">
-                <div className="flex items-center text-black"><span className="w-3 h-3 rounded-full bg-blue-600 mr-1.5"></span>Đã chọn</div>
-                <div className="flex items-center text-black"><span className="w-3 h-3 rounded-full bg-blue-50 border border-blue-300 mr-1.5"></span>Hôm nay</div>
-                <div className="flex items-center text-black"><span className="w-3 h-3 rounded-full bg-white border border-gray-300 mr-1.5"></span>Có lịch</div>
-            </div>
+            return (
+              <button
+                key={dateStr}
+                onClick={() => onSelectDate(dateStr)}
+                className={`flex-shrink-0 w-24 flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-300 ${
+                  isSelected
+                    ? 'bg-gradient-to-br from-blue-600 to-indigo-600 border-blue-600 text-white shadow-lg scale-105'
+                    : !hasSchedule
+                    ? 'bg-gray-50 border-gray-200 text-gray-600 cursor-pointer hover:border-gray-300 hover:bg-gray-100'
+                    : isToday
+                    ? 'bg-orange-50 border-orange-300 text-orange-700 hover:border-orange-400 hover:scale-105'
+                    : 'bg-white border-gray-200 text-gray-800 hover:border-blue-300 hover:bg-blue-50 hover:scale-105'
+                }`}
+              >
+                <span className={`text-xs font-semibold ${
+                  isSelected ? 'text-blue-100' : hasSchedule ? 'text-gray-600' : 'text-gray-500'
+                }`}>
+                  {displayText}
+                </span>
+                <span className={`text-2xl font-bold my-1 ${
+                  isSelected ? 'text-white' : !hasSchedule ? 'text-gray-500' : 'text-gray-900'
+                }`}>
+                  {day}
+                </span>
+                <span className={`text-[10px] ${
+                  isSelected ? 'text-blue-100' : hasSchedule ? 'text-gray-500' : 'text-gray-400'
+                }`}>
+                  Tháng {month}
+                </span>
+                
+                {hasSchedule ? (
+                  <div className={`mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                    isSelected 
+                      ? 'bg-white bg-opacity-30 text-white' 
+                      : 'bg-green-100 text-green-700'
+                  }`}>
+                    {availableCount} ca
+                  </div>
+                ) : (
+                  <div className="mt-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-200 text-gray-500">
+                    Không có
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
-    )
+      </div>
+    </div>
+  );
 }

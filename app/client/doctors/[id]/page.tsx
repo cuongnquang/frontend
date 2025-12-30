@@ -43,13 +43,13 @@ export default function DoctorDetailPage() {
     setLocalLoading(true);
     setLocalError(null);
 
-    const fetchSchedules = apiClient<DoctorSchedule[]>(`/v1/doctors/${id}/schedules`);
+    const fetchSchedules = apiClient<DoctorSchedule[]>(`/api/schedules/doctor-schedules?doctor_id=${id}`);
     const fetchReviews = apiClient<Review[]>(`/v1/reviews/doctor/${id}`);
 
     Promise.all([fetchSchedules, fetchReviews])
       .then(([sRes, rRes]) => {
         if (!mounted) return;
-        if (sRes.status && sRes.data) setSchedulesData(sRes.data as DoctorSchedule[]);
+        if (sRes.status && sRes.data) setSchedulesData(sRes.data.data as DoctorSchedule[]);
         if (rRes.status && rRes.data) setReviewsData(rRes.data as Review[]);
         // if endpoints return not-ok, we silently fallback to doctor's own schedules / mockReviews for now
         if (!sRes.status || !rRes.status) {
@@ -75,19 +75,14 @@ export default function DoctorDetailPage() {
     }
   }, [selectedDoctor]);
 
-  const doctor: Doctor | null = selectedDoctor;
-  // Prefer fetched schedules/reviews, then doctor.Schedules, then mocks
-  const schedules: DoctorSchedule[] =
-    schedulesData && schedulesData.length > 0
-      ? schedulesData
-      : doctor && doctor.Schedules && doctor.Schedules.length > 0
-        ? doctor.Schedules
-        : mockSchedules;
+  const doctor: Doctor | null = selectedDoctor as Doctor | null;
+  // Prefer fetched schedules/reviews, then mocks
+  const schedules: DoctorSchedule[] = schedulesData || mockSchedules;
 
   const reviews: Review[] =
     reviewsData && reviewsData.length > 0
       ? reviewsData
-      : mockReviews; // replace with real reviews API if available
+      : mockReviews;
 
   const handleSelectDate = (date: string) => {
     setSelectedDateString(date);
@@ -110,8 +105,7 @@ export default function DoctorDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* breadcrumb + actions */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3 text-sm text-gray-600">
@@ -129,7 +123,6 @@ export default function DoctorDetailPage() {
             {doctor?.User?.email && (
               <a href={`mailto:${doctor.User.email}`} className="px-3 py-1.5 bg-green-600 text-white rounded-md text-sm hover:bg-green-700">Liên hệ</a>
             )}
-            <button onClick={() => window.print()} className="px-3 py-1.5 border rounded-md text-sm">In trang</button>
           </div>
         </div>
 

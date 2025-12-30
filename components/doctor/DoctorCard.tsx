@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Calendar, Award, Clock } from 'lucide-react'
-import { Doctor } from '@/types/types'
+import { Doctor } from '@/contexts/DoctorContext'
 
 interface FeaturedDoctorCardProps {
     doctor: Doctor
@@ -29,17 +29,7 @@ export default function FeaturedDoctorCard({
     const handleViewProfile = () => {
         router.push(`/client/doctors/${doctor.id}`)
     }
-
-    // Tìm lịch khám sớm nhất
-    const nextAvailableSchedule = doctor.Schedules?.find(s => s.is_available)
     
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('vi-VN', {
-            weekday: 'short',
-            day: '2-digit',
-            month: '2-digit',
-        })
-    }
 
     return (
         <div 
@@ -101,30 +91,6 @@ export default function FeaturedDoctorCard({
                             <div>
                                 <p className="text-xs text-gray-500 font-medium">Kinh nghiệm</p>
                                 <p className="text-sm font-bold text-gray-900">{doctor.experience_years} năm</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Next Available Schedule */}
-                    {nextAvailableSchedule && (
-                        <div className="flex items-center px-3 py-2 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
-                            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center mr-3 shadow-sm">
-                                <Calendar className="w-4 h-4 text-green-600" />
-                            </div>
-                            <div className="flex-1">
-                                <p className="text-xs text-gray-500 font-medium">Lịch khám sớm nhất</p>
-                                <div className="flex items-center gap-2">
-                                    <p className="text-sm font-bold text-gray-900">
-                                        {formatDate(nextAvailableSchedule.schedule_date)}
-                                    </p>
-                                    <span className="text-gray-300">•</span>
-                                    <div className="flex items-center gap-1">
-                                        <Clock className="w-3 h-3 text-gray-400" />
-                                        <p className="text-sm font-semibold text-gray-700">
-                                            {nextAvailableSchedule.start_time}
-                                        </p>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     )}

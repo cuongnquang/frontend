@@ -6,7 +6,6 @@ interface SpecialtyCardProps {
     id: string
     name: string
     description: string
-    doctors: number
     image_url?: string
     color?: string
 }
@@ -15,7 +14,6 @@ export default function SpecialtyCard({
     id,
     name,
     description,
-    doctors,
     image_url,
     color = 'bg-gradient-to-br from-blue-50 to-blue-100 text-blue-600'
 }: SpecialtyCardProps) {
@@ -41,15 +39,6 @@ export default function SpecialtyCard({
                         <Stethoscope className="w-16 h-16 relative z-10 group-hover:scale-110 transition-transform duration-300" />
                     </div>
                 )}
-                
-                {/* Doctor count badge */}
-                <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-full px-3 py-1.5 shadow-lg">
-                    <div className="flex items-center gap-1.5">
-                        <Users className="w-4 h-4 text-blue-600" />
-                        <span className="text-sm font-bold text-gray-900">{doctors}</span>
-                        <span className="text-xs text-gray-600">BS</span>
-                    </div>
-                </div>
             </div>
 
             {/* Content */}
@@ -69,10 +58,6 @@ export default function SpecialtyCard({
                 {/* Divider */}
                 <div className="border-t border-gray-100 pt-4 mt-4">
                     <div className="flex items-center justify-between">
-                        <div className="text-sm text-gray-500">
-                            <span className="font-medium text-gray-700">{doctors}</span> bác sĩ chuyên khoa
-                        </div>
-                        
                         <div className="flex items-center text-blue-600 font-semibold text-sm group-hover:text-blue-700">
                             <span>Xem chi tiết</span>
                             <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />

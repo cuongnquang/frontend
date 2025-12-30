@@ -11,7 +11,8 @@ import {
     ArrowRight,
 } from 'lucide-react'
 import SpecialtyCard from '@/components/specialty/SpecialtyCard'
-import { Doctor, Specialty } from '@/types/types'
+import { Doctor } from '@/contexts/DoctorContext'
+import { Specialty } from '@/contexts/SpecialtyContext'
 import { apiClient } from '@/lib/api'
 import FeaturedDoctorCard from '@/components/doctor/DoctorCard'
 
@@ -50,30 +51,6 @@ export default function Features() {
         fetchData()
     }, [])
 
-    // Ánh xạ tên chuyên khoa với icon và màu sắc
-    const popularSpecialtiesIcons: { [key: string]: React.ElementType } = {
-        'Tim mạch': Heart,
-        'Nhi khoa': Users,
-        'Da liễu': Eye,
-        'Sản phụ khoa': Heart,
-        'Thần kinh': Award,
-        'Ngoại khoa': Stethoscope,
-        'Nội tiết': Award,
-        'Cơ xương khớp': Stethoscope,
-        'Tiêu hóa': Eye
-    }
-
-    const popularSpecialtiesColors: { [key: string]: string } = {
-        'Tim mạch': 'bg-red-50 text-red-600',
-        'Nhi khoa': 'bg-blue-50 text-blue-600',
-        'Da liễu': 'bg-green-50 text-green-600',
-        'Sản phụ khoa': 'bg-pink-50 text-pink-600',
-        'Thần kinh': 'bg-purple-50 text-purple-600',
-        'Ngoại khoa': 'bg-orange-50 text-orange-600',
-        'Nội tiết': 'bg-yellow-50 text-yellow-600',
-        'Cơ xương khớp': 'bg-teal-50 text-teal-600',
-        'Tiêu hóa': 'bg-cyan-50 text-cyan-600'
-    }
 
     const goAllDoctors = () => router.push('/client/doctors')
     const goAllSpecialties = () => router.push('/client/specialties')
@@ -136,7 +113,6 @@ export default function Features() {
                                     id={specialty.id}
                                     name={specialty.name}
                                     description={specialty.description || 'Chuyên khoa chăm sóc sức khỏe toàn diện'}
-                                    doctors={specialty.Doctors?.length || 0}
                                     image_url={specialty.image ?? undefined}
                                     color="bg-gradient-to-br from-blue-50 to-blue-100 text-blue-600"
 

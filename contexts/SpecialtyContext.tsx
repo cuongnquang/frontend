@@ -2,8 +2,16 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { apiClient } from "@/lib/api";
-import { Specialty } from "@/types/types";
 
+
+export interface Specialty {
+    id: string;
+    name: string;
+    description?: string | null;
+    image: string | null;
+    created_at: string;
+    updated_at: string;
+  }
 
 export type CreateSpecialtyData = {
   name: string;
@@ -118,7 +126,7 @@ export function SpecialtyProvider({ children }: { children: ReactNode }) {
                 return { success: false, message: res.message || "Xóa chuyên khoa thất bại." };
             }
 
-            setSpecialties((prev) => prev.filter((s) => s.specialty_id !== id));
+            setSpecialties((prev) => prev.filter((s) => s.id !== id));
             return { success: true, message: res.message || "Xóa chuyên khoa thành công!" };
         } catch {
             setError("Đã có lỗi không mong muốn xảy ra khi xóa.");
