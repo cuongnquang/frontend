@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Alert from '@/components/ui/Alert'
 import { Save, User, Mail, Lock } from 'lucide-react'
 
 export default function AdminProfileSettings() {
@@ -14,22 +15,26 @@ export default function AdminProfileSettings() {
     confirm: '',
   })
   const [isSaving, setIsSaving] = useState(false)
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | null }>({
+    message: '',
+    type: null
+  })
 
   const handleSaveInfo = async () => {
     setIsSaving(true)
     console.log('Saving admin info:', adminInfo)
     await new Promise(resolve => setTimeout(resolve, 1000))
     setIsSaving(false)
-    alert('Đã cập nhật thông tin cá nhân.')
+    setAlert({ message: 'Đã cập nhật thông tin cá nhân.', type: 'success' })
   }
 
   const handleSavePassword = async () => {
     if (password.new !== password.confirm) {
-      alert('Mật khẩu mới không khớp.')
+      setAlert({ message: 'Mật khẩu mới không khớp.', type: 'error' })
       return
     }
     if (password.new.length < 8) {
-      alert('Mật khẩu mới phải có ít nhất 8 ký tự.')
+      setAlert({ message: 'Mật khẩu mới phải có ít nhất 8 ký tự.', type: 'error' })
       return
     }
     setIsSaving(true)
@@ -37,7 +42,7 @@ export default function AdminProfileSettings() {
     await new Promise(resolve => setTimeout(resolve, 1000))
     setIsSaving(false)
     setPassword({ current: '', new: '', confirm: '' })
-    alert('Đã thay đổi mật khẩu.')
+    setAlert({ message: 'Đã thay đổi mật khẩu.', type: 'success' })
   }
 
   return (
@@ -127,6 +132,11 @@ export default function AdminProfileSettings() {
           </button>
         </div>
       </div>
+
+      {/* Alert thông báo */}
+      {alert.type && (
+        <Alert message={alert.message} type={alert.type} duration={5000} />
+      )}
     </div>
   )
 }

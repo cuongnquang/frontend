@@ -3,6 +3,7 @@ import { Clock, CalendarDays, CalendarPlus, TrendingUp } from "lucide-react";
 interface ScheduleStatsProps {
   schedules: Array<{
     id: string;
+    doctor_id: string;
     doctor_name: string;
     schedule_date: string;
     start_time: string;

@@ -1,3 +1,5 @@
+'use client'
+
 import { X, CheckCircle2, XCircle, AlertCircle, Info } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 
@@ -5,15 +7,22 @@ interface AlertProps {
   message: string
   type?: 'info' | 'success' | 'error' | 'warning'
   duration?: number
+  id?: string
+  onClose?: () => void
 }
 
-export default function Alert({ message, type = 'info', duration = 4000 }: AlertProps) {
+export default function Alert({ message, type = 'info', duration = 4000, id, onClose }: AlertProps) {
   const [visible, setVisible] = useState(true)
   const [progress, setProgress] = useState(100)
   const [isExiting, setIsExiting] = useState(false)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
+    // Reset state khi message hay type thay đổi (cho spam alerts)
+    setVisible(true)
+    setProgress(100)
+    setIsExiting(false)
+    
     const start = Date.now()
     intervalRef.current = setInterval(() => {
       const elapsed = Date.now() - start
@@ -27,11 +36,14 @@ export default function Alert({ message, type = 'info', duration = 4000 }: Alert
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
     }
-  }, [duration])
+  }, [message, type, duration])
 
   const handleClose = () => {
     setIsExiting(true)
-    setTimeout(() => setVisible(false), 300)
+    setTimeout(() => {
+      setVisible(false)
+      onClose?.()
+    }, 300)
   }
 
   if (!visible) return null

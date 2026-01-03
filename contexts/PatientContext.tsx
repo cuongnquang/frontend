@@ -6,6 +6,7 @@ import { apiClient } from "@/lib/api";
 export interface Patient {
     id: string;
     user_id: string;
+    email: string;
     full_name: string;
     identity_number: string | null;
     phone_number: string;
@@ -22,11 +23,12 @@ export interface Patient {
 
 export type CreatePatientData = {
     user_id: string;
+    email?: string;
     full_name: string;
     identity_number?: string;
-    phone_number: string;
-    date_of_birth: string;
-    gender: 'male' | 'female' | 'other';
+    phone_number?: string;
+    date_of_birth?: string;
+    gender?: 'male' | 'female' | 'other';
     address?: string;
     ethnicity?: string;
     health_insurance_number?: string;
@@ -34,7 +36,9 @@ export type CreatePatientData = {
     occupation?: string;
 };
 
-export type UpdatePatientData = Partial<Omit<CreatePatientData, 'user_id'>>;
+export type UpdatePatientData = Partial<Omit<CreatePatientData, 'user_id' | 'email'>> & {
+    email?: string;
+};
 
 interface PatientContextType {
     patients: Patient[];
@@ -114,7 +118,7 @@ export function PatientProvider({ children }: { children: ReactNode }) {
         setError(null);
         try {
             const res = await apiClient(`/api/patients/${id}`, {
-                method: "PUT",
+                method: "PATCH",
                 body: JSON.stringify(data),
             });
 
@@ -123,7 +127,14 @@ export function PatientProvider({ children }: { children: ReactNode }) {
                 return { success: false, message: res.message || "Cập nhật bệnh nhân thất bại." };
             }
 
-            await fetchPatients();
+            // Update selectedPatient if it's the one being updated
+            if (selectedPatient?.id === id) {
+                setSelectedPatient(res.data || selectedPatient);
+            }
+            
+            // Update in patients list
+            setPatients(prev => prev.map(p => p.id === id ? (res.data || p) : p));
+            
             return { success: true, message: res.message || "Cập nhật bệnh nhân thành công!" };
         } catch (err) {
             setError("Đã có lỗi không mong muốn xảy ra khi cập nhật.");
@@ -144,7 +155,14 @@ export function PatientProvider({ children }: { children: ReactNode }) {
                 return { success: false, message: res.message || "Cập nhật bệnh nhân thất bại." };
             }
 
-            await fetchPatients();
+            // Update selectedPatient if it's the one being updated
+            if (selectedPatient?.id === id) {
+                setSelectedPatient(res.data || selectedPatient);
+            }
+            
+            // Update in patients list
+            setPatients(prev => prev.map(p => p.id === id ? (res.data || p) : p));
+            
             return { success: true, message: res.message || "Cập nhật bệnh nhân thành công!" };
         } catch (err) {
             setError("Đã có lỗi không mong muốn xảy ra khi cập nhật.");

@@ -6,6 +6,9 @@ import { SpecialtyProvider } from "@/contexts/SpecialtyContext";
 import { DoctorProvider } from "@/contexts/DoctorContext";
 import { PatientProvider } from '@/contexts/PatientContext';
 import { ScheduleProvider } from '@/contexts/ScheduleContext';
+import { AppointmentProvider } from '@/contexts/AppointmentContext';
+import { MessageProvider } from '@/contexts/MessageContext';
+import { AlertProvider } from '@/components/ui/AlertContainer';
 
 
 const inter = Inter({ subsets: ['latin', 'vietnamese'] })
@@ -23,17 +26,23 @@ export default function RootLayout({
   return (
     <html className="mdl-js" lang='vi'>
       <body className={inter.className}>
-        <AuthProvider>
-          <SpecialtyProvider>
-            <DoctorProvider>
-              <PatientProvider>
-                <ScheduleProvider>
-                    {children}
-                </ScheduleProvider>
-              </PatientProvider>
-            </DoctorProvider>
-          </SpecialtyProvider>
-        </AuthProvider>
+        <AlertProvider>
+          <AuthProvider>
+            <SpecialtyProvider>
+              <DoctorProvider>
+                <PatientProvider>
+                  <ScheduleProvider>
+                    <AppointmentProvider>
+                      <MessageProvider>
+                        {children}
+                      </MessageProvider>
+                    </AppointmentProvider>
+                  </ScheduleProvider>
+                </PatientProvider>
+              </DoctorProvider>
+            </SpecialtyProvider>
+          </AuthProvider>
+        </AlertProvider>
       </body>
     </html>
   )

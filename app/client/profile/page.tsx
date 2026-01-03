@@ -16,11 +16,13 @@ import ChangePasswordModal from '@/components/client/profile/ChangePasswordModal
 import CancelAppointmentModal from '@/components/client/profile/CancelAppointmentModal'
 import DeleteAccountModal from '@/components/client/profile/DeleteAccountModal'
 import { useDeleteAccount } from '@/hooks/useDeleteAccount';
+import { PatientAppointment } from '@/hooks/usePatientAppointments';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePatient, UpdatePatientData } from '@/contexts/PatientContext';
 import { apiClient } from '@/lib/api';
 
 interface UserProfile {
-    id: number
+    id: string
     fullName: string
     email: string
     phone: string
@@ -32,25 +34,15 @@ interface UserProfile {
     emailVerified: boolean
     phoneVerified: boolean
     insuranceNumber?: string
+    identityNumber?: string | null
+    ethnicity?: string
+    referralCode?: string
+    occupation?: string
     emergencyContact?: {
         name: string
         phone: string
         relationship: string
     }
-}
-
-interface Appointment {
-    id: string
-    doctorId?: string
-    doctorName: string
-    doctorSpecialty: string
-    doctorAvatar?: string
-    hospital: string
-    date: string
-    time: string
-    status: 'confirmed' | 'pending' | 'completed' | 'cancelled'
-    price: string
-    notes?: string
 }
 
 interface MedicalRecord {
@@ -66,6 +58,7 @@ interface MedicalRecord {
 export default function ProfilePage() {
     const searchParams = useSearchParams();
     const { user, logout, refreshUser } = useAuth();
+    const { selectedPatient, fetchPatientById, patchPatient } = usePatient();
     const [activeTab, setActiveTab] = useState<'profile' | 'appointments' | 'records' | 'settings'>('profile')
     const [showDeleteModal, setShowDeleteModal] = useState(false)
     const [showCancelModal, setShowCancelModal] = useState<string | number | null>(null)
@@ -75,7 +68,7 @@ export default function ProfilePage() {
     const { isDeleting, deleteAccount } = useDeleteAccount();
     
     const [userProfile, setUserProfile] = useState<UserProfile>({
-        id: 0,
+        id: '',
         fullName: '',
         email: '',
         phone: '',
@@ -87,6 +80,10 @@ export default function ProfilePage() {
         emailVerified: false,
         phoneVerified: false,
         insuranceNumber: '',
+        identityNumber: null,
+        ethnicity: '',
+        referralCode: '',
+        occupation: '',
         emergencyContact: {
             name: '',
             phone: '',
@@ -111,28 +108,77 @@ export default function ProfilePage() {
             localStorage.removeItem('activeProfileTab'); // Xóa sau khi sử dụng
         }
     }, [searchParams]);
+    // Fetch patient data when user is available
     useEffect(() => {
-        if (user) {
+        const loadPatientData = async () => {
+            if (user && user.patientId) {
+                try {
+                    await fetchPatientById(user.patientId);
+                } catch (err) {
+                    console.error('Error fetching patient data:', err);
+                }
+            }
+        };
+        loadPatientData();
+    }, [user?.patientId, fetchPatientById]);
+
+    // Update userProfile when selectedPatient is loaded
+    useEffect(() => {
+        if (selectedPatient) {
+            // Format date_of_birth from ISO string to YYYY-MM-DD
+            const formatDateToInput = (dateString: string) => {
+                if (!dateString) return '';
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return '';
+                return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD
+            };
+
             setUserProfile(prevProfile => ({
                 ...prevProfile,
-                id: user.user_id || 0,
+                id: selectedPatient.id || '',
+                fullName: selectedPatient.full_name || '',
+                email: selectedPatient.email || '',
+                phone: selectedPatient.phone_number || '',
+                birthDate: formatDateToInput(selectedPatient.date_of_birth) || prevProfile.birthDate,
+                gender: selectedPatient.gender || prevProfile.gender,
+                address: selectedPatient.address || prevProfile.address || '',
+                avatar: '',
+                joinDate: selectedPatient.createdAt || prevProfile.joinDate,
+                emailVerified: false,
+                phoneVerified: false,
+                insuranceNumber: selectedPatient.health_insurance_number || '',
+                identityNumber: selectedPatient.identity_number || null,
+                ethnicity: selectedPatient.ethnicity || '',
+                referralCode: selectedPatient.referral_code || '',
+                occupation: selectedPatient.occupation || '',
+                emergencyContact: prevProfile.emergencyContact,
+            }));
+        } else if (user) {
+            // Fallback to user data if patient data is not available
+            setUserProfile(prevProfile => ({
+                ...prevProfile,
+                id: user.patientId || user.user_id || '',
                 fullName: user.full_name || '',
                 email: user.email || '',
-                phone: user.phone || '',
-                birthDate: user.birthDate || prevProfile.birthDate,
-                gender: user.gender || prevProfile.gender,
-                address: user.address || prevProfile.address,
-                avatar: user.avatar || prevProfile.avatar,
-                joinDate: user.joinDate || prevProfile.joinDate,
-                emailVerified: user.emailVerified || false,
-                phoneVerified: user.phoneVerified || false,
-                insuranceNumber: user.insuranceNumber || '',
-                emergencyContact: user.emergencyContact || prevProfile.emergencyContact,
+                phone: '',
+                birthDate: '',
+                gender: 'other',
+                address: '',
+                avatar: '',
+                joinDate: user.createdAt || prevProfile.joinDate,
+                emailVerified: false,
+                phoneVerified: false,
+                insuranceNumber: '',
+                identityNumber: null,
+                ethnicity: '',
+                referralCode: '',
+                occupation: '',
+                emergencyContact: prevProfile.emergencyContact,
             }));
         }
-    }, [user]);
+    }, [selectedPatient, user]);
 
-    const [appointments, setAppointments] = useState<Appointment[]>([]);
+    const [appointments, setAppointments] = useState<PatientAppointment[]>([]);
     const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
 
     useEffect(() => {
@@ -149,10 +195,10 @@ export default function ProfilePage() {
                     const patientId = (patientRes.data as any).id || (patientRes.data as any).patient_id || (patientRes.data as any).patientId || '';
                     console.debug('Profile: current patient id', patientId);
                     // Use patient-specific endpoint which enforces access control server-side
-                    appointmentsRes = await apiClient(`/api/appointments/${patientId}/patient-medical-history`);
+                    appointmentsRes = await apiClient('/api/appointments/patient-medical-history');
                 } else {
                     // Fallback: try generic appointments endpoint (may be paginated or restricted)
-                    appointmentsRes = await apiClient('/api/appointments');
+                    appointmentsRes = await apiClient('/api/appointments/patient-medical-history');
                 }
 
                 const recordsRes = await apiClient('/api/medical-records');
@@ -170,16 +216,22 @@ export default function ProfilePage() {
 
                     const normalized = rawList.map((a: any) => ({
                         id: a.id || a.appointment_id || String(a.appointment_id || a.id || ''),
-                        doctorId: a.doctor_id || (a.Doctor && a.Doctor.doctor_id) || '',
-                        doctorName: a.doctor_name || (a.Doctor && a.Doctor.full_name) || '',
-                        doctorSpecialty: a.doctor_specialty || (a.Doctor && a.Doctor.Specialty && a.Doctor.Specialty.name) || '',
-                        doctorAvatar: a.doctor_avatar_url || (a.Doctor && a.Doctor.avatar_url) || '',
+                        patient_id: a.patient_id || '',
+                        patient_name: a.patient_name || '',
+                        doctor_id: a.doctor_id || (a.Doctor && a.Doctor.id) || '',
+                        doctor_name: a.doctor_name || (a.Doctor && a.Doctor.full_name) || '',
+                        doctor_specialty: a.doctor_specialty || (a.Doctor && a.Doctor.Specialty && a.Doctor.Specialty.name) || '',
+                        doctor_avatar: a.doctor_avatar || (a.Doctor && a.Doctor.avatar_url) || '',
+                        schedule_date: a.schedule_date || a.appointment_date || '',
+                        start_time: a.start_time || '',
+                        end_time: a.end_time || '',
                         hospital: a.doctor_workplace || (a.Doctor && (a.Doctor.workplace || a.Doctor.clinic_address)) || a.hospital || '',
-                        date: a.schedule_date || a.appointment_date || '',
-                        time: a.start_time || '',
+                        symptoms: a.symptoms || '',
+                        notes: a.notes || '',
                         status: a.status || 'pending',
-                        price: a.price ? String(a.price) : '',
-                        notes: a.notes || ''
+                        price: a.price ? String(a.price) : undefined,
+                        createdAt: a.created_at || '',
+                        updatedAt: a.updated_at || ''
                     }));
 
                     setAppointments(normalized);
@@ -214,22 +266,42 @@ export default function ProfilePage() {
     })
 
     const handleUpdateProfile = async (profileData: UserProfile) => {
+        if (!user?.patientId) {
+            alert('Không tìm thấy thông tin bệnh nhân. Vui lòng đăng nhập lại.');
+            return false;
+        }
+
         setIsLoading(true);
         try {
-            const res = await apiClient(`/api/user/profile`, {
-                method: 'PUT',
-                body: JSON.stringify(profileData),
-            });
+            // Map UserProfile to Patient update data
+            // UpdatePatientData doesn't accept null, only undefined
+            const updateData: UpdatePatientData = {
+                full_name: profileData.fullName,
+                email: profileData.email,
+                phone_number: profileData.phone,
+                date_of_birth: profileData.birthDate,
+                gender: profileData.gender,
+                address: profileData.address !== '' ? profileData.address : undefined,
+                health_insurance_number: profileData.insuranceNumber ? profileData.insuranceNumber : undefined,
+                identity_number: profileData.identityNumber ? profileData.identityNumber : undefined,
+                ethnicity: profileData.ethnicity ? profileData.ethnicity : undefined,
+            };
 
-            if (!res.status) {
-                alert(res.message || 'Cập nhật thất bại!');
+            // Use patchPatient with patientId from AuthContext
+            const result = await patchPatient(user.patientId, updateData);
+
+            if (!result.success) {
+                alert(result.message || 'Cập nhật thất bại!');
                 return false;
             } else {
+                // Refresh patient data
+                await fetchPatientById(user.patientId);
                 await refreshUser(); // Tải lại thông tin user trong context
                 alert('Cập nhật thông tin thành công!');
                 return true;
             }
         } catch (error) {
+            console.error('Error updating profile:', error);
             alert('Có lỗi xảy ra khi cập nhật.');
             return false;
         } finally {
@@ -291,7 +363,13 @@ export default function ProfilePage() {
     const handleDeleteAccount = async () => {
         setIsLoading(true)
         try {
-            const userId = userProfile.id;
+            // deleteAccount expects a number, but user_id might be string
+            // Use user.user_id if available, otherwise try to parse userProfile.id
+            const userId = user?.user_id ? parseInt(user.user_id, 10) : parseInt(userProfile.id, 10);
+            if (isNaN(userId)) {
+                alert('Không tìm thấy ID người dùng hợp lệ.');
+                return;
+            }
             const success = await deleteAccount(userId);
 
             if (success) {
@@ -306,26 +384,6 @@ export default function ProfilePage() {
             alert('Có lỗi xảy ra. Vui lòng thử lại.')
         } finally {
             setIsLoading(false)
-        }
-    }
-
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'confirmed': return 'bg-green-100 text-green-800'
-            case 'pending': return 'bg-yellow-100 text-yellow-800'
-            case 'completed': return 'bg-blue-100 text-blue-800'
-            case 'cancelled': return 'bg-red-100 text-red-800'
-            default: return 'bg-gray-100 text-gray-800'
-        }
-    }
-
-    const getStatusText = (status: string) => {
-        switch (status) {
-            case 'confirmed': return 'Đã xác nhận'
-            case 'pending': return 'Chờ xác nhận'
-            case 'completed': return 'Đã hoàn thành'
-            case 'cancelled': return 'Đã hủy'
-            default: return status
         }
     }
 
@@ -402,8 +460,6 @@ export default function ProfilePage() {
                                 appointments={appointments}
                                 setShowCancelModal={setShowCancelModal}
                                 isLoading={isLoading}
-                                getStatusColor={getStatusColor}
-                                getStatusText={getStatusText}
                             />
                         )}
 

@@ -10,6 +10,7 @@ interface AppointmentConfirmationProps {
     formatDate: (dateStr: string) => { display: string, iso: string }
     onBack: () => void
     onSubmit: () => void
+    isSubmitting?: boolean
 }
 
 export default function AppointmentConfirmation({
@@ -20,7 +21,8 @@ export default function AppointmentConfirmation({
     notes,
     formatDate,
     onBack,
-    onSubmit
+    onSubmit,
+    isSubmitting = false
 }: AppointmentConfirmationProps) {
     return (
         <div className="bg-white rounded-xl shadow-lg p-8">
@@ -71,9 +73,26 @@ export default function AppointmentConfirmation({
                     <ChevronLeft className="w-5 h-5 mr-2" />
                     Quay lại
                 </button>
-                <button onClick={onSubmit} className="px-8 py-3 rounded-lg font-semibold text-lg flex items-center bg-blue-600 text-white hover:bg-blue-700 shadow-lg transform hover:scale-[1.01] transition-transform">
-                    <CheckCircle className="w-6 h-6 mr-2" />
-                    Xác nhận & Đặt lịch
+                <button 
+                    onClick={onSubmit} 
+                    disabled={isSubmitting}
+                    className={`px-8 py-3 rounded-lg font-semibold text-lg flex items-center transition-all ${
+                        isSubmitting 
+                            ? 'bg-gray-400 text-white cursor-not-allowed' 
+                            : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg transform hover:scale-[1.01]'
+                    }`}
+                >
+                    {isSubmitting ? (
+                        <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2" />
+                            Đang xử lý...
+                        </>
+                    ) : (
+                        <>
+                            <CheckCircle className="w-6 h-6 mr-2" />
+                            Xác nhận & Đặt lịch
+                        </>
+                    )}
                 </button>
             </div>
         </div>

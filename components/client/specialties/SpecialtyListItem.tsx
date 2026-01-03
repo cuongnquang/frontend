@@ -1,5 +1,4 @@
 import { Specialty } from '@/types/types'
-import { getSpecialtyIcon, getSpecialtyColor } from './icons/LucideIconMap'
 
 interface SpecialtyListItemProps {
     specialty: Specialty
@@ -9,9 +8,6 @@ interface SpecialtyListItemProps {
 }
 
 export default function SpecialtyListItem({ specialty, doctorCount, isSelected, onClick }: SpecialtyListItemProps) {
-    const Icon = getSpecialtyIcon(specialty.name)
-    const colorClasses = getSpecialtyColor(specialty.name)
-
     return (
         <button
             onClick={onClick}
@@ -22,10 +18,20 @@ export default function SpecialtyListItem({ specialty, doctorCount, isSelected, 
             }`}
         >
             <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 ${colorClasses} rounded-lg flex items-center justify-center flex-shrink-0 ${
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden ${
                     isSelected ? 'ring-2 ring-blue-200' : ''
                 }`}>
-                    <Icon className="w-4 h-4" />
+                    {specialty.image ? (
+                        <img 
+                            src={specialty.image} 
+                            alt={specialty.name}
+                            className="w-full h-full object-cover"
+                        />
+                    ) : (
+                        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                            <span className="text-xs text-gray-600">N/A</span>
+                        </div>
+                    )}
                 </div>
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">

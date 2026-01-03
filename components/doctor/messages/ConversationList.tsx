@@ -26,9 +26,23 @@ export function ConversationList({
   isSearching,
   onCreateConversation
 }: ConversationListProps) {
-  const filteredConversations = conversations.filter(conv => 
-    conv.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Helper function to get conversation display name from participants
+  const getConversationName = (conv: Conversation): string => {
+    if (conv.name) return conv.name;
+    
+    // Get participant names (excluding current doctor)
+    const participantNames = conv.participants
+      ?.map(p => p.user?.Patient?.full_name || p.user?.Doctor?.full_name || '')
+      .filter(name => name && name.length > 0)
+      .join(', ') || 'Conversation';
+    
+    return participantNames;
+  };
+
+  const filteredConversations = conversations.filter(conv => {
+    const name = getConversationName(conv);
+    return name.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   return (
     <div className="w-full h-full flex flex-col bg-white">

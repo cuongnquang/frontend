@@ -1,14 +1,15 @@
 'use client';
+
 interface Tab {
-  name: string;
-  status: string;
+  id: string;
+  label: string;
   count: number;
 }
 
 interface AppointmentTabsProps {
   tabs: Tab[];
   activeTab: string;
-  onTabChange: (status: string) => void;
+  onTabChange: (id: string) => void;
 }
 
 export const AppointmentTabs = ({ tabs, activeTab, onTabChange }: AppointmentTabsProps) => (
@@ -17,24 +18,24 @@ export const AppointmentTabs = ({ tabs, activeTab, onTabChange }: AppointmentTab
       <nav className="flex space-x-1 px-6" aria-label="Tabs">
         {tabs.map((tab) => (
           <button
-            key={tab.status}
-            onClick={() => onTabChange(tab.status)}
+            key={tab.id}
+            onClick={() => onTabChange(tab.id)}
             className={`
               relative py-4 px-4 font-medium text-sm transition-colors
-              ${activeTab === tab.status
+              ${activeTab === tab.id
                 ? 'text-blue-600'
                 : 'text-gray-600 hover:text-gray-900'}
             `}
           >
-            {tab.name}
+            {tab.label}
             <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-              activeTab === tab.status 
+              activeTab === tab.id
                 ? 'bg-blue-100 text-blue-600' 
                 : 'bg-gray-100 text-gray-600'
             }`}>
               {tab.count}
             </span>
-            {activeTab === tab.status && (
+            {activeTab === tab.id && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
             )}
           </button>

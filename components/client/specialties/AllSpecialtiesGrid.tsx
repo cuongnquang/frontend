@@ -1,6 +1,5 @@
 import { ArrowRight, Users } from 'lucide-react'
 import { Specialty } from '@/types/types'
-import { getSpecialtyIcon, getSpecialtyColor } from '@/components/client/specialties/icons/LucideIconMap'
 
 interface AllSpecialtiesGridProps {
     Specialties: Specialty[]
@@ -26,9 +25,7 @@ export default function AllSpecialtiesGrid({
 
             <div className="grid md:grid-cols-2 gap-5">
                 {Specialties.map((specialty: Specialty) => {
-                    const Icon = getSpecialtyIcon(specialty.name)
                     const doctorCount = doctorCounts.get(specialty.name) || 0
-                    const colorClasses = getSpecialtyColor(specialty.name)
 
                     return (
                         <div
@@ -37,8 +34,16 @@ export default function AllSpecialtiesGrid({
                             onClick={() => setSelectedSpecialty(specialty.name)}
                         >
                             <div className="flex items-start gap-4">
-                                <div className={`w-14 h-14 ${colorClasses} rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
-                                    <Icon className="w-7 h-7" />
+                                <div className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform overflow-hidden bg-gray-100">
+                                    {specialty.image ? (
+                                        <img 
+                                            src={specialty.image} 
+                                            alt={specialty.name}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <span className="text-xs text-gray-500">N/A</span>
+                                    )}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <h3 className="font-bold text-lg text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">

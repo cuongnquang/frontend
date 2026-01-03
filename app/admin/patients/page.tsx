@@ -35,6 +35,8 @@ export default function AdminPatients() {
     const [isFormOpen, setIsFormOpen] = useState(false)
     const [currentPatient, setCurrentPatient] = useState<Patient | null>(null)
     const [formMode, setFormMode] = useState<'create' | 'view'>('create')
+    const [currentPage, setCurrentPage] = useState(1)
+    const [itemsPerPage] = useState(10)
     const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | null }>({
         message: '',
         type: null,
@@ -58,6 +60,16 @@ export default function AdminPatients() {
             return matchesSearch
         })
     }, [patients, searchTerm])
+
+    // Pagination calculations
+    const totalPages = Math.ceil(filteredPatients.length / itemsPerPage)
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const paginatedPatients = filteredPatients.slice(startIndex, startIndex + itemsPerPage)
+
+    // Reset to page 1 when search changes
+    useMemo(() => {
+        setCurrentPage(1)
+    }, [searchTerm])
 
     // --- Action Handlers ---
     const handleAddPatient = () => {
@@ -83,7 +95,7 @@ export default function AdminPatients() {
         setCurrentPatient(null)
     }
 
-    const handleFormSubmit = async (data: any) => {
+    const handleFormSubmit = async (data: Record<string, unknown>) => {
         if (formMode === 'create') {
             const patientData = {
                 user_id: data.user_id || `user_${Date.now()}`,
@@ -157,10 +169,48 @@ export default function AdminPatients() {
 
             {/* Patients Table */}
             <PatientTable
-                filteredPatients={filteredPatients}
+                filteredPatients={paginatedPatients}
                 calculateAge={calculateAge}
                 onViewPatient={handleViewPatient}
             />
+
+            {/* Pagination Controls */}
+            {filteredPatients.length > itemsPerPage && (
+                <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow">
+                    <div className="text-sm text-gray-600">
+                        Hiển thị {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredPatients.length)} của {filteredPatients.length} bệnh nhân
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                            className="px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        >
+                            Trước
+                        </button>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                            <button
+                                key={page}
+                                onClick={() => setCurrentPage(page)}
+                                className={`px-3 py-2 rounded ${
+                                    currentPage === page
+                                        ? 'bg-blue-600 text-white'
+                                        : 'border hover:bg-gray-50'
+                                }`}
+                            >
+                                {page}
+                            </button>
+                        ))}
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        >
+                            Sau
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Patient Form Modal */}
             {isFormOpen && (

@@ -11,12 +11,16 @@ interface TimeSlotSelectorProps {
 
 export default function TimeSlotSelector({ schedules, selectedSchedule, onSelectSchedule, error }: TimeSlotSelectorProps) {
     // Phân loại các khung giờ vào các buổi Sáng, Chiều, Tối
+    // Chỉ lấy các lịch khám còn trống
     const { morningSlots, afternoonSlots, eveningSlots } = useMemo(() => {
         const morning: DoctorSchedule[] = [];
         const afternoon: DoctorSchedule[] = [];
         const evening: DoctorSchedule[] = [];
 
         schedules.forEach(schedule => {
+            // Chỉ hiển thị lịch khám còn trống
+            if (!schedule.is_available) return;
+            
             const hour = parseInt(schedule.start_time.split(':')[0]);
             if (hour < 12) {
                 morning.push(schedule);
@@ -47,22 +51,13 @@ export default function TimeSlotSelector({ schedules, selectedSchedule, onSelect
                             <button
                                 key={schedule.schedule_id + schedule.start_time}
                                 onClick={() => onSelectSchedule(schedule)}
-                                disabled={!schedule.is_available}
                                 aria-pressed={isSelected}
-                                aria-label={
-                                    schedule.is_available
-                                        ? isSelected
-                                            ? `Đã chọn khung giờ ${schedule.start_time}`
-                                            : `Chọn khung giờ ${schedule.start_time}`
-                                        : `Khung giờ ${schedule.start_time} không có sẵn`
-                                }
+                                aria-label={isSelected ? `Đã chọn khung giờ ${schedule.start_time}` : `Chọn khung giờ ${schedule.start_time}`}
                                 className={`
                                     h-12 w-full rounded-full transition-colors font-medium text-center text-sm border
                                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
                                     ${
-                                        !schedule.is_available
-                                        ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                                        : isSelected
+                                        isSelected
                                         ? 'bg-blue-600 text-white border-blue-600 shadow-md'
                                         : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-100'
                                     }
@@ -77,15 +72,6 @@ export default function TimeSlotSelector({ schedules, selectedSchedule, onSelect
         )
     );
 
-  const sortedSchedules = useMemo(() => {
-    return [...availableSchedules].sort((a, b) => {
-      const timeA = a.start_time.split(':').map(Number);
-      const timeB = b.start_time.split(':').map(Number);
-      return timeA[0] * 60 + timeA[1] - (timeB[0] * 60 + timeB[1]);
-    });
-  }, [availableSchedules]);
-
-  if (sortedSchedules.length === 0) {
     return (
         <div className="p-4 border border-gray-200 rounded-lg bg-gray-50 mt-4">
             <h4 className="text-lg font-bold text-gray-800 mb-4 flex items-center"><Clock className="w-5 h-5 mr-2 text-blue-600" /> Chọn Khung Giờ</h4>

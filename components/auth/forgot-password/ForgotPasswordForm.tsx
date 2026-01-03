@@ -7,7 +7,7 @@ import EmailStep from './EmailStep'
 import VerificationStep from './VerificationStep'
 import ResetStep from './ResetStep'
 import SuccessStep from './SuccessStep'
-import Alert from '@/components/ui/Alert'
+import { useAlert } from '@/components/ui/AlertContainer'
 import { useAuth } from '@/contexts/AuthContext'
 
 type Step = 'email' | 'verification' | 'reset' | 'success'
@@ -15,6 +15,7 @@ type Step = 'email' | 'verification' | 'reset' | 'success'
 export default function ForgotPasswordForm() {
     const router = useRouter()
     const { forgotPassword, verifyResetOTP, resetPassword } = useAuth()
+    const { showAlert } = useAlert()
     const [currentStep, setCurrentStep] = useState<Step>('email')
     const [isLoading, setIsLoading] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
@@ -25,11 +26,6 @@ export default function ForgotPasswordForm() {
     const [showNewPassword, setShowNewPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [countdown, setCountdown] = useState(0)
-    const [alert, setAlert] = useState<{ message: string, type: 'success' | 'error' | 'info' | null, duration?: number }>({
-        message: '',
-        type: null,
-        duration: 4000
-    })
 
     const validateEmail = (email: string) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -61,15 +57,15 @@ export default function ForgotPasswordForm() {
         try {
             const result = await forgotPassword(email)
             if (result.success) {
-                setAlert({ message: result.message, type: 'success' })
+                showAlert(result.message, 'success')
                 setCurrentStep('verification')
                 startCountdown()
             } else {
-                setAlert({ message: result.message, type: 'error' })
+                showAlert(result.message, 'error')
                 setErrors({ general: result.message })
             }
         } catch (error) {
-            setAlert({ message: 'Có lỗi xảy ra. Vui lòng thử lại.', type: 'error' })
+            showAlert('Có lỗi xảy ra. Vui lòng thử lại.', 'error')
             setErrors({ general: 'Có lỗi xảy ra. Vui lòng thử lại.' })
         } finally {
             setIsLoading(false)
@@ -90,14 +86,14 @@ export default function ForgotPasswordForm() {
         try {
             const result = await verifyResetOTP(code)
             if (result.success) {
-                setAlert({ message: result.message, type: 'success' })
+                showAlert(result.message, 'success')
                 setCurrentStep('reset')
             } else {
-                setAlert({ message: result.message, type: 'error' })
+                showAlert(result.message, 'error')
                 setErrors({ general: result.message })
             }
         } catch (error) {
-            setAlert({ message: 'Mã xác thực không đúng. Vui lòng thử lại.', type: 'error' })
+            showAlert('Mã xác thực không đúng. Vui lòng thử lại.', 'error')
             setErrors({ general: 'Mã xác thực không đúng. Vui lòng thử lại.' })
         } finally {
             setIsLoading(false)
@@ -124,14 +120,14 @@ export default function ForgotPasswordForm() {
             const code = verificationCode.join('')
             const result = await resetPassword(code, newPassword, confirmPassword)
             if (result.success) {
-                setAlert({ message: result.message, type: 'success' })
+                showAlert(result.message, 'success')
                 setCurrentStep('success')
             } else {
-                setAlert({ message: result.message, type: 'error' })
+                showAlert(result.message, 'error')
                 setErrors({ general: result.message })
             }
         } catch (error) {
-            setAlert({ message: 'Có lỗi xảy ra. Vui lòng thử lại.', type: 'error' })
+            showAlert('Có lỗi xảy ra. Vui lòng thử lại.', 'error')
             setErrors({ general: 'Có lỗi xảy ra. Vui lòng thử lại.' })
         } finally {
             setIsLoading(false)
@@ -161,15 +157,15 @@ export default function ForgotPasswordForm() {
         try {
             const result = await forgotPassword(email)
             if (result.success) {
-                setAlert({ message: 'Mã xác thực đã được gửi lại!', type: 'success' })
+                showAlert('Mã xác thực đã được gửi lại!', 'success')
                 startCountdown()
                 setVerificationCode(['', '', '', '', '', ''])
             } else {
-                setAlert({ message: result.message, type: 'error' })
+                showAlert(result.message, 'error')
                 setErrors({ general: result.message })
             }
         } catch (error) {
-            setAlert({ message: 'Không thể gửi lại mã. Vui lòng thử lại.', type: 'error' })
+            showAlert('Không thể gửi lại mã. Vui lòng thử lại.', 'error')
             setErrors({ general: 'Không thể gửi lại mã. Vui lòng thử lại.' })
         } finally {
             setIsLoading(false)
@@ -232,10 +228,6 @@ export default function ForgotPasswordForm() {
                 )}
                 {renderStep()}
             </div>
-
-            {alert.type && (
-                <Alert message={alert.message} type={alert.type} duration={alert.duration} />
-            )}
 
             {currentStep !== 'success' && (
                 <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8">

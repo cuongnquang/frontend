@@ -1,6 +1,5 @@
 import { Specialty } from '@/types/types'
 import { Users, Star } from 'lucide-react'
-import { getSpecialtyIcon, getSpecialtyColor } from './icons/LucideIconMap'
 
 interface SpecialtyHeaderProps {
     specialtyData: Specialty
@@ -8,14 +7,19 @@ interface SpecialtyHeaderProps {
 }
 
 export default function SpecialtyHeader({ specialtyData, doctorCount }: SpecialtyHeaderProps) {
-    const Icon = getSpecialtyIcon(specialtyData.name)
-    const colorClasses = getSpecialtyColor(specialtyData.name)
-
     return (
         <div className="bg-gradient-to-br from-white to-blue-50 rounded-xl p-6 shadow-sm mb-6 border border-blue-100">
             <div className="flex items-start gap-5">
-                <div className={`w-20 h-20 ${colorClasses} rounded-2xl flex items-center justify-center shadow-md`}>
-                    <Icon className="w-10 h-10" />
+                <div className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-md overflow-hidden bg-gray-100">
+                    {specialtyData.image ? (
+                        <img 
+                            src={specialtyData.image} 
+                            alt={specialtyData.name}
+                            className="w-full h-full object-cover"
+                        />
+                    ) : (
+                        <span className="text-xs text-gray-500">N/A</span>
+                    )}
                 </div>
                 <div className="flex-1">
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">

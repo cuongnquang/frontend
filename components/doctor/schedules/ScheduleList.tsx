@@ -5,7 +5,7 @@ import { ScheduleCard } from "./ScheduleCard";
 interface ScheduleListProps {
   schedules: Array<{
     id: string;
-    doctorId: string;
+    doctor_id: string;
     doctor_name: string; 
     schedule_date: string;
     start_time: string;
@@ -23,15 +23,19 @@ export const ScheduleList = ({ schedules, onEdit, onDelete, onAddSchedule }: Sch
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
 
   const { weekStart, weekEnd, weekDays } = useMemo(() => {
-    // Helper: Get start of week (Monday)
+    // Helper: Get start of week (Monday) - using local time to avoid timezone issues
     const getWeekStart = (date: Date) => {
       const d = new Date(date);
       const day = d.getDay();
-      const diff = d.getDate() - day + (day === 0 ? -6 : 1); // day is 0 for Sunday
-      return new Date(d.setDate(diff));
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      d.setDate(diff);
+      // Reset time to midnight local time
+      d.setHours(0, 0, 0, 0);
+      return d;
     };
 
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     today.setDate(today.getDate() + currentWeekOffset * 7);
     const weekStart = getWeekStart(today);
     const weekEnd = new Date(weekStart);
@@ -48,10 +52,23 @@ export const ScheduleList = ({ schedules, onEdit, onDelete, onAddSchedule }: Sch
   }, [currentWeekOffset]);
 
   const { weekSchedules, groupedSchedules } = useMemo(() => {
-    // Filter schedules for current week
+    // Hàm chuyển Date sang YYYY-MM-DD format (local time, không UTC)
+    const dateToYYYYMMDD = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const weekStartStr = dateToYYYYMMDD(weekStart);
+    const weekEndStr = dateToYYYYMMDD(weekEnd);
+
+    console.log('📅 Week range:', weekStartStr, 'to', weekEndStr);
+    console.log('📅 Schedules dates:', schedules.map(s => s.schedule_date));
+
+    // Filter schedules for current week by comparing date strings
     const weekSchedules = schedules.filter(schedule => {
-      const scheduleDate = new Date(schedule.schedule_date);
-      return scheduleDate >= weekStart && scheduleDate <= weekEnd;
+      return schedule.schedule_date >= weekStartStr && schedule.schedule_date <= weekEndStr;
     });
 
     // Group by date
@@ -62,15 +79,23 @@ export const ScheduleList = ({ schedules, onEdit, onDelete, onAddSchedule }: Sch
       return acc;
     }, {} as Record<string, typeof schedules>);
 
+    console.log('📅 Grouped schedules:', Object.keys(groupedSchedules));
+
     return { weekSchedules, groupedSchedules };
   }, [schedules, weekStart, weekEnd]);
 
   const formatWeekRange = () => {
     const startDay = weekStart.getDate();
     const endDay = weekEnd.getDate();
-    const month = weekStart.toLocaleDateString('vi-VN', { month: 'long' });
+    const startMonth = weekStart.toLocaleDateString('vi-VN', { month: 'short' });
+    const endMonth = weekEnd.toLocaleDateString('vi-VN', { month: 'short' });
     const year = weekStart.getFullYear();
-    return `${startDay} - ${endDay} ${month}, ${year}`;
+    
+    if (startMonth === endMonth) {
+      return `${startDay} - ${endDay} ${startMonth} ${year}`;
+    } else {
+      return `${startDay} ${startMonth} - ${endDay} ${endMonth} ${year}`;
+    }
   };
 
   const formatDayHeader = (date: Date) => {
@@ -81,10 +106,18 @@ export const ScheduleList = ({ schedules, onEdit, onDelete, onAddSchedule }: Sch
 
   const isToday = (date: Date) => {
     const today = new Date();
-    return date.toDateString() === today.toDateString();
+    today.setHours(0, 0, 0, 0);
+    const compareDate = new Date(date);
+    compareDate.setHours(0, 0, 0, 0);
+    return compareDate.getTime() === today.getTime();
   };
 
-  const getDateKey = (date: Date) => date.toISOString().split('T')[0];
+  const getDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   // Phân loại ca sáng & ca chiều
   const isMorningShift = (time: string) => {
@@ -152,7 +185,7 @@ export const ScheduleList = ({ schedules, onEdit, onDelete, onAddSchedule }: Sch
             return (
               <div
                 key={index}
-                className="flex flex-col h-full border-gray-100"
+                className="flex flex-col border-gray-100 bg-gray-50 rounded-lg p-3"
               >
                 {/* Day Header */}
                 <div
@@ -174,51 +207,47 @@ export const ScheduleList = ({ schedules, onEdit, onDelete, onAddSchedule }: Sch
                 </div>
 
                 {/* Ca sáng */}
-                <div className="flex flex-col flex-1 min-h-[140px]">
-                  <div className="flex items-center justify-center mb-2 text-xs font-semibold text-amber-600">
+                <div className="h-64 flex flex-col mb-2">
+                  <div className="flex items-center justify-center mb-2 text-xs font-semibold text-amber-600 bg-amber-50 py-1.5 rounded">
                     <Sun className="h-3.5 w-3.5 mr-1" /> Ca sáng
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 overflow-y-auto space-y-2">
                     {morningSchedules.length > 0 ? (
-                      <div className="space-y-1.5">
-                        {morningSchedules.map(schedule => (
-                          <ScheduleCard
-                            key={schedule.id}
-                            schedule={schedule}
-                            onDelete={onDelete}
-                          />
-                        ))}
-                      </div>
+                      morningSchedules.map(schedule => (
+                        <ScheduleCard
+                          key={schedule.id}
+                          schedule={schedule}
+                          onDelete={onDelete}
+                        />
+                      ))
                     ) : (
-                      <div className="text-center text-gray-400 text-xs py-4">
-                        Không có lịch
+                      <div className="text-center text-gray-400 text-xs py-2">
+                        -
                       </div>
                     )}
                   </div>
                 </div>
 
                 {/* Đường ngăn cách giữa ca sáng & ca chiều */}
-                <div className="border-t border-dashed border-gray-200 mt-3 pt-3" />
+                <div className="border-t border-dashed border-gray-300 my-1" />
 
                 {/* Ca chiều */}
-                <div className="flex flex-col flex-1 min-h-[140px]">
-                  <div className="flex items-center justify-center mb-2 text-xs font-semibold text-indigo-600">
+                <div className="h-64 flex flex-col">
+                  <div className="flex items-center justify-center mb-2 text-xs font-semibold text-indigo-600 bg-indigo-50 py-1.5 rounded">
                     <Moon className="h-3.5 w-3.5 mr-1" /> Ca chiều
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 overflow-y-auto space-y-2">
                     {afternoonSchedules.length > 0 ? (
-                      <div className="space-y-1.5">
-                        {afternoonSchedules.map(schedule => (
-                          <ScheduleCard
-                            key={schedule.id}
-                            schedule={schedule}
-                            onDelete={onDelete}
-                          />
-                        ))}
-                      </div>
+                      afternoonSchedules.map(schedule => (
+                        <ScheduleCard
+                          key={schedule.id}
+                          schedule={schedule}
+                          onDelete={onDelete}
+                        />
+                      ))
                     ) : (
-                      <div className="text-center text-gray-400 text-xs py-4">
-                        Không có lịch
+                      <div className="text-center text-gray-400 text-xs py-2">
+                        -
                       </div>
                     )}
                   </div>

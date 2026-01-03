@@ -2,20 +2,20 @@ import React, { useMemo, useState, useEffect } from 'react';
 import DoctorCard from './DoctorCard'; // Import component con
 
 export interface Doctor {
-    id: string;
-    user_id: string;
-    specialty_name: string;
-    full_name: string;
-    title: string | null;
-    introduction: string | null;
-    avatar_url: string | null;
-    specializations: string | null;
-    work_experience: string | null;
-    achievements: string | null;
-    experience_years: number | null;
-    is_available: boolean;
-    created_at: string;
-    updated_at: string;
+  id: string;
+  user_id: string;
+  specialty_name: string;
+  full_name: string;
+  title: string | null;
+  introduction: string | null;
+  avatar_url: string | null;
+  specializations: string | null;
+  work_experience: string | null;
+  achievements: string | null;
+  experience_years: number | null;
+  is_available: boolean;
+  created_at: string;
+  updated_at: string;
 }
 interface DoctorListProps {
   doctors: Doctor[];

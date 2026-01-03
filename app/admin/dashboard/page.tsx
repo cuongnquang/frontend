@@ -1,102 +1,88 @@
 'use client'
 
-import { useState } from 'react'
-import { Doctor } from '@/components/admin/doctors/DoctorTypes'
-import { Patient } from '@/components/admin/patients/PatientTypes'
-import { DoctorForm } from '@/components/admin/doctors/form/DoctorForm'
-import { PatientForm } from '@/components/admin/patients/form/PatientForm'
+import { useEffect, useState } from 'react'
+import { Users, UserCheck, Calendar, TrendingUp } from 'lucide-react'
+import { useDoctor } from '@/contexts/DoctorContext'
+import { usePatient } from '@/contexts/PatientContext'
+import { useAppointment } from '@/contexts/AppointmentContext'
+import { useSpecialty } from '@/contexts/SpecialtyContext'
 import DashboardHeader from '@/components/admin/dashboard/DashboardHeader'
 import StatsGrid from '@/components/admin/dashboard/StatsGrid'
 import RecentActivities from '@/components/admin/dashboard/RecentActivities'
 import QuickActions from '@/components/admin/dashboard/QuickActions'
 import SystemStatus from '@/components/admin/dashboard/SystemStatus'
-import { mockDoctors, mockPatients } from './data'
 
 export default function AdminDashboard() {
-    const [isFormOpen, setIsFormOpen] = useState(false);
-    const [currentDoctor, setCurrentDoctor] = useState<Doctor | undefined>(undefined);
-    const [currentPatient, setCurrentPatient] = useState<Patient | undefined>(undefined);
-    const [formMode, setFormMode] = useState();
-    const [doctors, setDoctors] = useState(mockDoctors);
-    const [patients, setPatients] = useState(mockPatients);
+    const { doctors, loading: doctorsLoading, fetchDoctors } = useDoctor()
+    const { patients, loading: patientsLoading, fetchPatients } = usePatient()
+    const { appointments, loading: appointmentsLoading, fetchAppointments } = useAppointment()
+    const { specialties, loading: specialtiesLoading, fetchSpecialties } = useSpecialty()
 
-    const handleOpenDoctor = () => {
-        setCurrentDoctor(undefined);
-        setIsFormOpen(true);
-    };
+    const [isLoading, setIsLoading] = useState(true)
 
-    const handleCloseDoctor = () => {
-        setIsFormOpen(false);
-        setCurrentDoctor(undefined);
-    };
-
-    const handleOpenPatient = () => {
-        setCurrentPatient(undefined);
-        setIsFormOpen(true);
-    };
-
-    const handleClosePatient = () => {
-        setIsFormOpen(false);
-        setCurrentPatient(undefined);
-    };
-
-    const handleDoctorSubmit = (data: any) => {
-        console.log('Dữ liệu form đã gửi:', data);
-
-        if (formMode === 'create') {
-            const newDoctor = { ...data, id: Date.now() } as Doctor;
-            setDoctors(prev => [...prev, newDoctor]);
-            alert(`Đã thêm bác sĩ: ${data.name}`);
-        } else if (formMode === 'edit' && currentDoctor) {
-            setDoctors(prev => prev.map(d => d.id === currentDoctor.id ? { ...currentDoctor, ...data } : d));
-            alert(`Đã cập nhật bác sĩ: ${data.name}`);
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                await Promise.all([
+                    fetchDoctors(),
+                    fetchPatients(),
+                    fetchAppointments(),
+                    fetchSpecialties()
+                ])
+            } finally {
+                setIsLoading(false)
+            }
         }
+        loadData()
+    }, [fetchDoctors, fetchPatients, fetchAppointments, fetchSpecialties])
 
-        handleCloseDoctor();
-    };
-
-    const handlePatientSubmit = (data: any) => {
-        console.log('Dữ liệu form đã gửi:', data);
-
-        if (formMode === 'create') {
-            const newPatient = { ...data, id: Date.now() } as Patient;
-            setPatients(prev => [...prev, newPatient]);
-            alert(`Đã thêm bệnh nhân: ${data.name}`);
-        } else if (formMode === 'edit' && currentPatient) {
-            setPatients(prev => prev.map(p => p.id === currentPatient.id ? { ...currentPatient, ...data } : p));
-            alert(`Đã cập nhật bệnh nhân: ${data.name}`);
+    // Build stats array for display
+    const statsArray = [
+        {
+            name: 'Tổng số Bác sĩ',
+            value: doctors.length.toString(),
+            change: '+0%',
+            changeType: 'increase',
+            icon: UserCheck,
+            color: 'blue'
+        },
+        {
+            name: 'Tổng số Bệnh nhân',
+            value: patients.length.toString(),
+            change: '+0%',
+            changeType: 'increase',
+            icon: Users,
+            color: 'green'
+        },
+        {
+            name: 'Lịch hẹn',
+            value: appointments.length.toString(),
+            change: '+0%',
+            changeType: 'increase',
+            icon: Calendar,
+            color: 'yellow'
+        },
+        {
+            name: 'Chuyên khoa',
+            value: specialties.length.toString(),
+            change: '+0%',
+            changeType: 'increase',
+            icon: TrendingUp,
+            color: 'purple'
         }
-
-        handleClosePatient();
-    };
+    ]
 
     return (
-        <div>
+        <div className="space-y-6">
             <DashboardHeader />
-            <StatsGrid />
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <RecentActivities />
+            <StatsGrid stats={statsArray} isLoading={isLoading || appointmentsLoading} />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+                <RecentActivities appointments={appointments} doctors={doctors} patients={patients} />
                 <div className="space-y-6">
-                    <QuickActions handleOpenDoctor={handleOpenDoctor} handleOpenPatient={handleOpenPatient} />
+                    <QuickActions />
                     <SystemStatus />
                 </div>
             </div>
-            {isFormOpen && (
-                <DoctorForm
-                    doctor={currentDoctor}
-                    onClose={handleCloseDoctor}
-                    onSubmit={handleDoctorSubmit}
-                    mode='create'
-                />
-            )}
-            {isFormOpen && (
-                <PatientForm
-                    patient={currentPatient}
-                    onClose={handleClosePatient}
-                    onSubmit={handlePatientSubmit}
-                    mode='create'
-                />
-            )}
         </div>
     )
 }

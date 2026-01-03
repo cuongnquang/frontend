@@ -1,6 +1,7 @@
 // components/admin/doctors/form/DoctorForm.tsx
 'use client'
 import { useState, useEffect } from 'react'
+import Alert from '@/components/ui/Alert'
 import { X, Upload, User } from 'lucide-react'
 import { DoctorFormHeader } from './DoctorFormHeader'
 import { DoctorBasicInfo } from './DoctorBasicInfo'
@@ -42,6 +43,10 @@ export function DoctorForm({ doctor, onClose, onSubmit, mode }: DoctorFormProps)
     })
     const [avatarPreview, setAvatarPreview] = useState<string>('')
     const [uploading, setUploading] = useState(false)
+    const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | null }>({
+        message: '',
+        type: null
+    })
 
     useEffect(() => {
         if (doctor) {
@@ -71,13 +76,13 @@ export function DoctorForm({ doctor, onClose, onSubmit, mode }: DoctorFormProps)
 
         // Kiểm tra loại file
         if (!file.type.startsWith('image/')) {
-            alert('Vui lòng chọn file ảnh')
+            setAlert({ message: 'Vui lòng chọn file ảnh', type: 'error' })
             return
         }
 
         // Kiểm tra kích thước file (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
-            alert('Kích thước ảnh không được vượt quá 5MB')
+            setAlert({ message: 'Kích thước ảnh không được vượt quá 5MB', type: 'error' })
             return
         }
 
@@ -88,7 +93,7 @@ export function DoctorForm({ doctor, onClose, onSubmit, mode }: DoctorFormProps)
             setFormData(prev => ({ ...prev, avatar_url: base64 }))
         } catch (error) {
             console.error('Lỗi upload ảnh:', error)
-            alert('Có lỗi xảy ra khi upload ảnh')
+            setAlert({ message: 'Có lỗi xảy ra khi upload ảnh', type: 'error' })
         } finally {
             setUploading(false)
         }
@@ -195,6 +200,11 @@ export function DoctorForm({ doctor, onClose, onSubmit, mode }: DoctorFormProps)
                     />
                 </form>
             </div>
+
+            {/* Alert thông báo */}
+            {alert.type && (
+                <Alert message={alert.message} type={alert.type} duration={4000} />
+            )}
         </div>
     )
 }

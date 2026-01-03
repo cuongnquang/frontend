@@ -55,9 +55,9 @@ export default function PatientForm({
                 {/* Gender */}
                 <div className="md:col-span-1">
                     <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
-                        <User className="w-4 h-4 mr-2 text-blue-600" />Giới tính
+                        <User className="w-4 h-4 mr-2 text-blue-600" />Giới tính <span className="text-red-500 ml-1">*</span>
                     </label>
-                    <select value={patientData.gender} onChange={(e) => handlePatientDataChange('gender', e.target.value as Gender)} className="w-full px-4 py-3 text-black focus:outline-none border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                    <select value={patientData.gender} onChange={(e) => handlePatientDataChange('gender', e.target.value as Gender)} className="w-full px-4 py-3 text-black focus:outline-none border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white" required>
                         <option value={Gender.MALE}>Nam</option>
                         <option value={Gender.FEMALE}>Nữ</option>
                         <option value={Gender.OTHER}>Khác</option>
@@ -80,9 +80,9 @@ export default function PatientForm({
                 {/* Address */}
                 <div className="md:col-span-2">
                     <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
-                        <FileText className="w-4 h-4 mr-2 text-blue-600" />Địa chỉ
+                        <FileText className="w-4 h-4 mr-2 text-blue-600" />Địa chỉ <span className="text-red-500 ml-1">*</span>
                     </label>
-                    <input type="text" value={patientData.address || ''} onChange={(e) => handlePatientDataChange('address', e.target.value)} className="w-full px-4 py-3 border border-gray-300 text-black focus:outline-none rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Nhập địa chỉ (Tùy chọn)" />
+                    <input type="text" value={patientData.address || ''} onChange={(e) => handlePatientDataChange('address', e.target.value)} className="w-full px-4 py-3 border border-gray-300 text-black focus:outline-none rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Nhập địa chỉ" required />
                 </div>
                 {/* Symptoms (Full Width) */}
                 <div className="md:col-span-2">

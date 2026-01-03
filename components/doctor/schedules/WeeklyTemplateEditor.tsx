@@ -1,5 +1,6 @@
 import { Calendar, Clock, Save, X } from "lucide-react";
 import { useState } from "react";
+import Alert from "@/components/ui/Alert";
 
 interface WeeklyTemplateEditorProps {
   onCreateManySchedules: (schedules: Array<{ schedule_date: string; start_time: string; end_time: string }>) => void;
@@ -27,6 +28,10 @@ export const WeeklyTemplateEditor = ({ onCreateManySchedules, onClose }: WeeklyT
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<{ [day: string]: { [shift: string]: string[] } }>({});
   const [startDate, setStartDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | null }>({
+    message: '',
+    type: null
+  });
 
   const days = Object.keys(dayNames) as Array<keyof typeof dayNames>;
 
@@ -101,7 +106,7 @@ export const WeeklyTemplateEditor = ({ onCreateManySchedules, onClose }: WeeklyT
     const schedules: Array<{ schedule_date: string; start_time: string; end_time: string }> = [];
     
     if (!startDate) {
-      alert('Vui lòng chọn ngày bắt đầu');
+      setAlert({ message: 'Vui lòng chọn ngày bắt đầu', type: 'error' });
       return [];
     }
 
@@ -145,7 +150,7 @@ export const WeeklyTemplateEditor = ({ onCreateManySchedules, onClose }: WeeklyT
     const schedules = generateSchedules();
     
     if (schedules.length === 0) {
-      alert('Vui lòng chọn ít nhất một ngày, ca và khung giờ cụ thể');
+      setAlert({ message: 'Vui lòng chọn ít nhất một ngày, ca và khung giờ cụ thể', type: 'error' });
       return;
     }
 
@@ -321,6 +326,11 @@ export const WeeklyTemplateEditor = ({ onCreateManySchedules, onClose }: WeeklyT
           </button>
         </div>
       </div>
+
+      {/* Alert thông báo */}
+      {alert.type && (
+        <Alert message={alert.message} type={alert.type} duration={4000} />
+      )}
     </div>
   );
 };

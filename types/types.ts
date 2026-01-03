@@ -55,8 +55,8 @@ export interface Specialty {
   name: string;
   description?: string | null;
   image: string | null;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
   Doctors: Doctor[];
 }
 
@@ -84,7 +84,7 @@ export interface Doctor {
 }
 
 export interface DoctorSchedule {
-  schedule_id: string;
+  id: string;
   doctor_id: string;
   schedule_date: string;
   start_time: string;

@@ -16,12 +16,12 @@ export const QuickActionButton = ({ icon: Icon, label, color, onClick }: QuickAc
   };
   
   return (
-    <button 
+    <div 
       onClick={onClick}
-      className={`flex flex-col items-center p-4 rounded-xl transition-colors ${colors[color]}`}
+      className={`flex flex-col items-center p-4 rounded-xl transition-colors cursor-pointer ${colors[color]}`}
     >
       <Icon className="h-6 w-6 mb-2" />
-      <span className="text-xs font-medium">{label}</span>
-    </button>
+      <span className="text-xs font-medium text-center">{label}</span>
+    </div>
   );
 };

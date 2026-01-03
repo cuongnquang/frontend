@@ -32,6 +32,8 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
   const [hasMore, setHasMore] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
+  const [messageMenuOpen, setMessageMenuOpen] = useState<string | null>(null);
+  const [doctorAvatar, setDoctorAvatar] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const [isTyping, setIsTyping] = useState(false);
@@ -50,6 +52,14 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
       markAsRead(conversation.id);
     });
   }, [conversation.id, loadConversationMessages, markAsRead]);
+
+  // Fetch doctor avatar from conversation data directly
+  useEffect(() => {
+    const otherUser = getOtherParticipant();
+    if (otherUser?.Doctor?.avatar_url) {
+      setDoctorAvatar(otherUser.Doctor.avatar_url);
+    }
+  }, [conversation.id]);
 
   // stop typing when unmounting or when conversation changes
   useEffect(() => {
@@ -87,45 +97,99 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
     // Fallback for minimal chat objects from search results
     const otherId = (conversation as unknown as { otherParticipantId?: string })?.otherParticipantId;
     if (otherId) {
-      return { user_id: otherId, Doctor: { full_name: (conversation as unknown as { name?: string }).name || 'User' } };
+      return { 
+        user_id: otherId, 
+        Doctor: { 
+          full_name: (conversation as unknown as { name?: string }).name || 'User',
+          avatar_url: undefined
+        } 
+      };
     }
     return null;
   };
 
-  const getParticipantName = (participant: Record<string, unknown> | null) => {
+  const getParticipantName = (participant: any) => {
     if (!participant) {
       return 'Unknown';
     }
     // Correctly access nested full_name for either Doctor or Patient
-    const fullName = (participant.Doctor as { full_name: string })?.full_name || (participant.Patient as { full_name: string })?.full_name;
+    const fullName = participant.Doctor?.full_name || participant.Patient?.full_name || participant.full_name;
     return fullName || 'Unknown';
   };
 
   const handleSendMessage = async () => {
     if (!messageContent.trim()) return;
 
-    if (editingId) {
-      await editMessageAction(editingId, messageContent);
-      setEditingId(null);
-      setEditContent('');
-    } else {
-      await sendMessage(conversation.id, messageContent);
+    try {
+      const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('accessToken='))
+        ?.split('=')[1];
+
+      if (editingId) {
+        // Edit mode - call PUT API
+        const response = await fetch(`/api/chat/messages/${editingId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+          body: JSON.stringify({ content: messageContent }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to edit message');
+        }
+
+        setEditingId(null);
+        setEditContent('');
+      } else {
+        // Send new message
+        await sendMessage(conversation.id, messageContent);
+      }
+
+      // Ensure other users see that typing has stopped
+      stopTyping(conversation.id);
+      if (typingDebounceRef.current) clearTimeout(typingDebounceRef.current);
+
+      setMessageContent('');
+      setIsTyping(false);
+
+      // Immediately scroll to the bottom to reveal the sent message
+      scrollToBottom();
+    } catch (error) {
+      console.error('Error sending message:', error);
+      alert('Không thể gửi tin nhắn');
     }
-
-    // Ensure other users see that typing has stopped
-    stopTyping(conversation.id);
-    if (typingDebounceRef.current) clearTimeout(typingDebounceRef.current);
-
-    setMessageContent('');
-    setIsTyping(false);
-
-    // Immediately scroll to the bottom to reveal the sent message
-    scrollToBottom();
   };
 
   const handleDeleteMessage = async (messageId: string) => {
-    if (confirm('Are you sure you want to delete this message?')) {
-      await deleteMessageAction(messageId);
+    if (!confirm('Bạn có chắc chắn muốn xóa tin nhắn này?')) return;
+
+    try {
+      const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('accessToken='))
+        ?.split('=')[1];
+
+      const response = await fetch(`/api/chat/messages/${messageId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: JSON.stringify({ isDeleted: true }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete message');
+      }
+
+      // Tin nhắn sẽ được cập nhật từ backend
+      setMessageMenuOpen(null);
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      alert('Không thể xóa tin nhắn');
     }
   };
 
@@ -133,6 +197,7 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
     setEditingId(message.id);
     setEditContent(message.content);
     setMessageContent(message.content);
+    setMessageMenuOpen(null);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -181,13 +246,27 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
           >
             <ChevronLeft size={20} />
           </button>
-          <div>
-            <h3 className="font-semibold text-lg">
-              {getParticipantName(otherUser)}
-            </h3>
-            <p className="text-xs text-blue-100">
-              {isOnline ? '🟢 Online' : '⚪ Offline'}
-            </p>
+          <div className="flex items-center gap-3">
+            {/* Avatar */}
+            {doctorAvatar || otherUser?.Doctor?.avatar_url ? (
+              <img 
+                src={doctorAvatar || otherUser?.Doctor?.avatar_url || ''} 
+                alt="Doctor"
+                className="w-10 h-10 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-10 h-10 bg-white/30 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                {getParticipantName(otherUser).charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div>
+              <h3 className="font-semibold text-lg">
+                Bác sĩ
+              </h3>
+              <p className="text-xs text-blue-100">
+                {otherUser?.Doctor ? ` ${getParticipantName(otherUser)}` : getParticipantName(otherUser)}
+              </p>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -236,42 +315,59 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
             const outerClass = `flex ${isSender ? 'justify-end' : 'justify-start'} items-end`;
             const bubbleBase = 'max-w-[70%] group relative rounded-lg p-3';
             const bubbleVariant = isSender
-              ? 'bg-blue-600 text-white ml-4 mr-2 rounded-tr-lg rounded-bl-lg'
-              : 'bg-gray-100 text-gray-900 mr-4 ml-2 rounded-tl-lg rounded-br-lg';
+              ? 'bg-blue-500 text-white ml-4 mr-2 rounded-tr-lg rounded-bl-lg'
+              : 'bg-white text-gray-900 border border-gray-300 mr-4 ml-2 rounded-tl-lg rounded-br-lg';
 
             return (
               <div key={message.id} className={outerClass}>
+                {/* Message Actions Menu - 3 dấu chấm bên trái */}
+                {isSender && !message.isDeleted && (
+                  <div className="relative flex-shrink-0 mr-2">
+                    <button
+                      onClick={() => setMessageMenuOpen(messageMenuOpen === message.id ? null : message.id)}
+                      className="p-1.5 hover:bg-gray-200 rounded-full transition-colors"
+                    >
+                      <MoreVertical size={16} className="text-blue-400" />
+                    </button>
+                    
+                    {/* Dropdown Menu */}
+                    {messageMenuOpen === message.id && (
+                      <div className="absolute left-0 top-8 w-32 bg-white border border-gray-300 rounded-lg shadow-lg z-50">
+                        <button
+                          onClick={() => handleEditMessage(message)}
+                          className="w-full px-4 py-2 text-left text-sm hover:bg-blue-50 flex items-center gap-2 text-blue-600 border-b"
+                        >
+                          <Edit2 size={14} />
+                          Sửa
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMessage(message.id)}
+                          className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 flex items-center gap-2 text-red-600"
+                        >
+                          <Trash2 size={14} />
+                          Xóa
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Avatar cho tin nhắn của người khác */}
                 <div className={`${bubbleBase} ${bubbleVariant}`}>
-                  {!isSender && showSenderName && (
-                    <p className="text-xs font-semibold text-gray-600 mb-1">
-                      {senderName}
-                    </p>
-                  )}
-
                   {message.isDeleted ? (
-                    <p className="text-sm italic opacity-60">[Message deleted]</p>
+                    <p className="text-sm italic opacity-60">[Tin nhắn đã được thu hồi]</p>
                   ) : (
-                    <>
-                      <p className="text-sm break-words">{message.content}</p>
-                      {message.isEdited && (
-                        <p className="text-xs opacity-75 mt-1">(edited)</p>
-                      )}
-                    </>
+                    <p className="text-sm break-words">{message.content}</p>
                   )}
 
-                  {/* Message Actions */}
-                  {isSender && !message.isDeleted && (
-                    <div className="absolute -left-6 top-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                      {/* actions */}
-                    </div>
-                  )}
-
-                  <p className={`text-xs ${isSender ? 'text-blue-100' : 'text-gray-500'} mt-1 text-right`}> 
-                    {new Date(message.createdAt).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </p>
+                  <div className="flex items-center justify-between gap-2 mt-1">
+                    <p className={`text-xs ${isSender ? 'text-blue-100' : 'text-gray-500'}`}> 
+                      {new Date(message.createdAt).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
                 </div>
               </div>
             );
@@ -285,7 +381,7 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
               .filter(([uid, u]) => u.chatRoomId === conversation.id && u.isTyping)
               .map(([uid]) => {
                 const participantUser = conversation.participants?.find(p => p.user.user_id === uid)?.user || null;
-                return getParticipantName(participantUser as Record<string, unknown> | null);
+                return getParticipantName(participantUser);
               });
 
             if (typers.length === 0) return null;

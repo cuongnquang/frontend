@@ -1,7 +1,7 @@
 // app/admin/specialties/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import SpecialtyPageHeader from '@/components/admin/specialties/SpecialtyPageHeader';
 import SpecialtyForm from '@/components/admin/specialties/SpecialtyForm';
 import SpecialtyDetails from '@/components/admin/specialties/SpecialtyDetails';
@@ -30,6 +30,8 @@ export default function SpecialtyPage() {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingSpecialty, setEditingSpecialty] = useState<Specialty | null>(null);
     const [viewingSpecialty, setViewingSpecialty] = useState<Specialty | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(10);
     
     // THÊM STATE CHO CONFIRM DIALOG
     const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -52,6 +54,16 @@ export default function SpecialtyPage() {
             setAlert({ message: '', type: null });
         }, 5000);
     };
+
+    // Pagination calculations
+    const totalPages = Math.ceil(specialties.length / itemsPerPage)
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const paginatedSpecialties = specialties.slice(startIndex, startIndex + itemsPerPage)
+
+    // Reset to page 1 when specialties change
+    useMemo(() => {
+        setCurrentPage(1)
+    }, [specialties.length])
 
     const handleAddSpecialty = () => {
         setEditingSpecialty(null);
@@ -145,11 +157,49 @@ export default function SpecialtyPage() {
 
             {/* Bảng danh sách chuyên khoa */}
             <SpecialtyTable
-                specialties={specialties}
+                specialties={paginatedSpecialties}
                 onViewSpecialty={handleViewSpecialty}
                 onEditSpecialty={handleEditSpecialty}
                 onDeleteSpecialty={handleDeleteClick}
             />
+
+            {/* Pagination Controls */}
+            {specialties.length > itemsPerPage && (
+                <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow">
+                    <div className="text-sm text-gray-600">
+                        Hiển thị {startIndex + 1}-{Math.min(startIndex + itemsPerPage, specialties.length)} của {specialties.length} chuyên khoa
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                            className="px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        >
+                            Trước
+                        </button>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                            <button
+                                key={page}
+                                onClick={() => setCurrentPage(page)}
+                                className={`px-3 py-2 rounded ${
+                                    currentPage === page
+                                        ? 'bg-blue-600 text-white'
+                                        : 'border hover:bg-gray-50'
+                                }`}
+                            >
+                                {page}
+                            </button>
+                        ))}
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        >
+                            Sau
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Modal cho Thêm/Sửa */}
             {isFormOpen && (

@@ -20,8 +20,10 @@ export default function SchedulePage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchSchedules();
-  }, [fetchSchedules]);
+    if (user?.doctorId) {
+      fetchSchedules(user.doctorId);
+    }
+  }, [fetchSchedules, user?.doctorId]);
 
   const handleEditClick = (schedule: any) => {
     setEditingSchedule(schedule);

@@ -108,7 +108,5 @@ export default function DateSelector({ availableDates, selectedDate, onSelectDat
                 <div className="flex items-center text-black"><span className="w-3 h-3 rounded-full bg-white border border-gray-300 mr-1.5"></span>Có lịch</div>
             </div>
         </div>
-      </div>
-    </div>
-  );
+    )
 }

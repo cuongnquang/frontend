@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, AlertTriangle } from 'lucide-react'
-import Alert from '@/components/ui/Alert'
+import { useAlert } from '@/components/ui/AlertContainer'
 import PersonalInfoSection from './PersonalInfoSection'
 import AdditionalInfoSection from './AdditionalInfoSection'
 
@@ -19,7 +19,7 @@ interface ProfileFormState {
 
 export default function CompleteProfileForm() {
     const router = useRouter()
-    const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | null }>({ message: '', type: null })
+    const { showAlert } = useAlert()
     const [errors, setErrors] = useState<Record<keyof ProfileFormState, string>>({})
     const [isLoading, setIsLoading] = useState(false)
 

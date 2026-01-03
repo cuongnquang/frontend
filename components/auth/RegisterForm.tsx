@@ -4,22 +4,18 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Mail } from 'lucide-react'
-import Alert from '@/components/ui/Alert'
+import { useAlert } from '@/components/ui/AlertContainer'
 import InputField from '@/components/ui/InputField'
 import PasswordField from '@/components/ui/PasswordField'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function RegisterForm() {
+    const { showAlert } = useAlert()
     const router = useRouter()
     const { register, loading, user } = useAuth()
     
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-    const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | null; duration?: number }>({ 
-        message: '', 
-        type: null,
-        duration: 2000
-    })
     const [errors, setErrors] = useState<Record<string, string>>({})
 
     const [form, setForm] = useState({
@@ -41,7 +37,6 @@ export default function RegisterForm() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setErrors({})
-        setAlert({ message: '', type: null })
         
         const newErrors: Record<string, string> = {}
 
@@ -80,14 +75,11 @@ export default function RegisterForm() {
                 // Redirect to login immediately with success message
                 router.push(`/auth/login?message=${encodeURIComponent(result.message)}&type=success`)
             } else {
-                setAlert({ 
-                    message: result.message, 
-                    type: 'error'
-                })
+                showAlert(result.message, 'error');
             }
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Đăng ký thất bại'
-            setAlert({ message: errorMessage, type: 'error' })
+            showAlert(errorMessage, 'error');
         }
     }
 
@@ -200,11 +192,6 @@ export default function RegisterForm() {
                     </Link>
                 </p>
             </div>
-
-            {/* Alert */}
-            {alert.type && (
-                <Alert message={alert.message} type={alert.type} duration={2000} />
-            )}
         </div>
     )
 }

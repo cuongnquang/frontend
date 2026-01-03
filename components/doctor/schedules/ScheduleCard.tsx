@@ -8,6 +8,7 @@ interface ScheduleCardProps {
     end_time: string;
     is_available: boolean;
     createdAt: string;
+    updatedAt: string;
   };
   onDelete: (id: string) => void;
 }

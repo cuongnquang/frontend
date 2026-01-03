@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from "react";
-import { Info, User, Calendar, Phone, X } from "lucide-react";
+import { Info, User, Calendar, Phone, X, MoreVertical, Trash2, Edit2 } from "lucide-react";
 import { ChatHeader } from "./ChatHeader";
 import { MessageInput } from "./MessageInput";
 import { MessageBubble } from "./MessageBubble";
@@ -11,12 +11,16 @@ interface ChatWindowProps {
   messages: Message[];
   onSendMessage: (content: string) => void;
   currentUserId: string;
+  onEditMessage?: (messageId: string, content: string) => void;
+  onDeleteMessage?: (messageId: string) => void;
 }
 
-export default function ChatWindow({ conversation, messages, onSendMessage, currentUserId }: ChatWindowProps) {
+export default function ChatWindow({ conversation, messages, onSendMessage, currentUserId, onEditMessage, onDeleteMessage }: ChatWindowProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showInfo, setShowInfo] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -36,8 +40,47 @@ export default function ChatWindow({ conversation, messages, onSendMessage, curr
 
   const handleSend = () => {
     if (input.trim()) {
-      onSendMessage(input.trim());
+      if (editingId && onEditMessage) {
+        onEditMessage(editingId, input.trim());
+        setEditingId(null);
+        setEditContent('');
+      } else {
+        onSendMessage(input.trim());
+      }
       setInput('');
+    }
+  };
+
+  const handleEdit = (msg: Message) => {
+    setEditingId(msg.id);
+    setEditContent(msg.content);
+    setInput(msg.content);
+  };
+
+  const handleDelete = async (msgId: string) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa tin nhắn này?')) return;
+    
+    try {
+      const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('accessToken='))
+        ?.split('=')[1];
+
+      const response = await fetch(`/api/chat/messages/${msgId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: JSON.stringify({ isDeleted: true }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete message');
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      alert('Không thể xóa tin nhắn');
     }
   };
 
@@ -46,7 +89,7 @@ export default function ChatWindow({ conversation, messages, onSendMessage, curr
   const patientInfo = otherParticipant?.Patient;
   const doctorInfo = otherParticipant?.Doctor;
   const displayName = patientInfo?.full_name || doctorInfo?.full_name || conversation.name;
-  const displayAvatar = doctorInfo?.avatar_url || conversation.avatar;
+  const displayAvatar = otherParticipant?.Doctor?.avatar_url || doctorInfo?.avatar_url || conversation.avatar;
 
   return (
     <div className="flex-1 flex flex-col">
@@ -61,7 +104,9 @@ export default function ChatWindow({ conversation, messages, onSendMessage, curr
             {messages.map((msg, index) => {
               const senderId = msg.senderId || (msg as any).sender_id || (msg.sender as any)?.user_id || (msg.sender as any)?.id;
               const isMine = Boolean(senderId && currentUserId && String(senderId) === String(currentUserId));
-              const senderAvatar = (msg.sender as any)?.avatar_url || (msg.sender as any)?.Doctor?.avatar_url || (msg.sender as any)?.Patient?.avatar_url || displayAvatar;
+              const senderAvatar = isMine 
+                ? undefined 
+                : ((msg.sender as any)?.avatar_url || (msg.sender as any)?.Doctor?.avatar_url || (msg.sender as any)?.Patient?.avatar_url || displayAvatar);
 
               return (
                 <MessageBubble 
@@ -69,6 +114,8 @@ export default function ChatWindow({ conversation, messages, onSendMessage, curr
                   msg={msg} 
                   avatar={!isMine ? senderAvatar : undefined}
                   isMine={isMine}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
                 />
               );
             })}
@@ -76,11 +123,28 @@ export default function ChatWindow({ conversation, messages, onSendMessage, curr
           </div>
 
           {/* Input */}
-          <MessageInput
-            messageText={input}
-            onTextChange={setInput}
-            onSend={handleSend}
-          />
+          <div className="p-4 border-t border-gray-200 bg-white">
+            {editingId && (
+              <div className="mb-2 p-2 bg-blue-50 rounded flex items-center justify-between">
+                <p className="text-sm text-blue-900">Đang sửa tin nhắn...</p>
+                <button
+                  onClick={() => {
+                    setEditingId(null);
+                    setEditContent('');
+                    setInput('');
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-800"
+                >
+                  Hủy
+                </button>
+              </div>
+            )}
+            <MessageInput
+              messageText={input}
+              onTextChange={setInput}
+              onSend={handleSend}
+            />
+          </div>
         </div>
 
         {/* Patient Info Sidebar */}

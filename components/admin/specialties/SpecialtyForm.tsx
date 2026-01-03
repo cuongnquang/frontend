@@ -1,6 +1,7 @@
 // components/admin/specialties/SpecialtyForm.tsx
 
 import React, { useState, useEffect, useRef } from "react";
+import Alert from "@/components/ui/Alert";
 import { Microscope, FileText, Upload, X, Save, Edit, Image } from "lucide-react";
 import { Specialty } from "@/contexts/SpecialtyContext";
 
@@ -43,6 +44,10 @@ export default function SpecialtyForm({
   const [formData, setFormData] = useState<SpecialtyFormData>(initialFormData);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [isDragActive, setIsDragActive] = useState(false);
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | null }>({
+    message: '',
+    type: null
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -68,7 +73,7 @@ export default function SpecialtyForm({
 
   const processFile = async (file: File) => {
     if (!file.type.startsWith("image/")) {
-      alert("Vui lòng chỉ chọn tệp ảnh.");
+      setAlert({ message: "Vui lòng chỉ chọn tệp ảnh.", type: "error" });
       return;
     }
 
@@ -119,7 +124,7 @@ export default function SpecialtyForm({
     e.preventDefault();
 
     if (!formData.name.trim()) {
-      alert("Vui lòng nhập tên chuyên khoa.");
+      setAlert({ message: "Vui lòng nhập tên chuyên khoa.", type: "error" });
       return;
     }
 
@@ -275,6 +280,11 @@ export default function SpecialtyForm({
           </button>
         </div>
       </form>
+
+      {/* Alert thông báo */}
+      {alert.type && (
+        <Alert message={alert.message} type={alert.type} duration={4000} />
+      )}
     </div>
   );
 }

@@ -3,18 +3,30 @@
 import React, { useState, useEffect } from 'react';
 import { useMessage, Conversation, Message } from '@/contexts/MessageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, MessageCircle } from 'lucide-react';
+import { Search, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import DoctorListForChat from './DoctorListForChat';
 
 interface ConversationListProps {
   onSelectConversation: (conversation: Conversation) => void;
 }
 
+interface BookedDoctor {
+  id: string;
+  user_id: string;
+  full_name: string;
+  avatar_url?: string;
+  specialty_name?: string;
+  title?: string;
+}
+
 export default function ConversationList({ onSelectConversation }: ConversationListProps) {
-  const { conversations, loadConversations, searchConversations, unreadCounts, selectedConversation } = useMessage();
+  const { conversations, loadConversations, createConversation, searchConversations, unreadCounts, selectedConversation } = useMessage();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredConversations, setFilteredConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showDoctorList, setShowDoctorList] = useState(false);
+  const [creatingConversation, setCreatingConversation] = useState(false);
 
   useEffect(() => {
     loadConversations();
@@ -77,6 +89,36 @@ export default function ConversationList({ onSelectConversation }: ConversationL
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const handleSelectDoctor = async (doctor: BookedDoctor) => {
+    try {
+      setCreatingConversation(true);
+      // Use find-or-create API
+      const res = await fetch('/api/chat/conversation/find-or-create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          recipientId: doctor.user_id,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to create conversation');
+      
+      const data = await res.json();
+      // Handle response: could be direct object or wrapped in data property
+      const conversation = data.data || data;
+      
+      // Select the conversation
+      onSelectConversation(conversation);
+      setShowDoctorList(false);
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+    } finally {
+      setCreatingConversation(false);
+    }
+  };
+
   return (
     <div className="w-full h-full flex flex-col bg-white">
       {/* Header */}
@@ -94,6 +136,27 @@ export default function ConversationList({ onSelectConversation }: ConversationL
             className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
+      </div>
+
+      {/* Doctor List Section */}
+      <div className="border-b bg-gray-50">
+        <button
+          onClick={() => setShowDoctorList(!showDoctorList)}
+          className="w-full p-4 flex items-center justify-between hover:bg-gray-100 transition-colors"
+        >
+          <h3 className="text-sm font-semibold text-gray-700">Bác sĩ đã đặt lịch</h3>
+          {showDoctorList ? (
+            <ChevronUp size={18} className="text-gray-400" />
+          ) : (
+            <ChevronDown size={18} className="text-gray-400" />
+          )}
+        </button>
+        
+        {showDoctorList && (
+          <div className="max-h-64 overflow-y-auto border-t">
+            <DoctorListForChat onSelectDoctor={handleSelectDoctor} />
+          </div>
+        )}
       </div>
 
       {/* Conversations List */}
@@ -117,37 +180,49 @@ export default function ConversationList({ onSelectConversation }: ConversationL
               <button
                 key={conversation.id}
                 onClick={() => onSelectConversation(conversation)}
-                className={`w-full p-4 border-b hover:bg-gray-50 transition-colors flex items-start gap-3 ${
+                className={`w-full p-3 border-b hover:bg-gray-50 transition-colors flex items-start gap-3 ${
                   isSelected ? 'bg-blue-50' : ''
                 }`}
               >
-                {/* Avatar */}
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
-                  {getParticipantName(otherUser)?.[0]?.toUpperCase()}
+                {/* Avatar - use actual avatar_url from participants */}
+                <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+                  {otherUser?.Doctor?.avatar_url ? (
+                    <img 
+                      src={otherUser.Doctor.avatar_url} 
+                      alt="Doctor"
+                      className="w-12 h-12 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                      {getParticipantName(otherUser)?.[0]?.toUpperCase()}
+                    </div>
+                  )}
+                  {otherUser?.Doctor && (otherUser.Doctor as any)?.Specialty?.name && (
+                    <span className="text-xs text-blue-600 font-semibold text-center leading-tight max-w-[60px]">
+                      {(otherUser.Doctor as any).Specialty.name}
+                    </span>
+                  )}
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex-1">
                       <h3 className="font-semibold text-sm truncate">
-                        {getParticipantName(otherUser)}
+                        {otherUser?.role === 'doctor' ? `Bác sĩ ${getParticipantName(otherUser)}` : getParticipantName(otherUser)}
                       </h3>
-                      <div className="ml-auto text-xs text-gray-400">
+                    </div>
+                    <div className="text-right flex flex-col items-end gap-1 flex-shrink-0">
+                      <div className="text-xs text-gray-400">
                         {getLastMessageTime(conversation)}
                       </div>
                       {unreadCount > 0 && (
-                        <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full flex-shrink-0">
+                        <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
                           {unreadCount}
                         </span>
                       )}
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 truncate mt-1">
-                    {otherUser?.role === 'doctor' && otherUser.Doctor?.title
-                      ? `${otherUser.Doctor.title}`
-                      : otherUser?.role}
-                  </p>
                   <p className="text-xs text-gray-600 truncate mt-1">
                     {getLastMessage(conversation)}
                   </p>

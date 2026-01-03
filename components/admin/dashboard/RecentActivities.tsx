@@ -3,35 +3,37 @@
 import { Calendar, UserCheck, Activity } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
-const recentActivities = [
+interface RecentActivitiesProps {
+    appointments?: any[]
+    doctors?: any[]
+    patients?: any[]
+}
+
+const defaultActivities = [
     {
         id: 1,
         type: 'appointment',
-        message: 'Bệnh nhân Nguyễn Văn A đã đặt lịch khám',
-        time: '5 phút trước',
+        message: 'Chưa có hoạt động gần đây',
+        time: 'Hiện tại',
         icon: Calendar,
         color: 'text-blue-600 bg-blue-100'
-    },
-    {
-        id: 2,
-        type: 'doctor',
-        message: 'BS. Trần Thị B đã cập nhật lịch làm việc',
-        time: '15 phút trước',
-        icon: UserCheck,
-        color: 'text-green-600 bg-green-100'
-    },
-    {
-        id: 3,
-        type: 'system',
-        message: 'Hệ thống đã sao lưu dữ liệu thành công',
-        time: '30 phút trước',
-        icon: Activity,
-        color: 'text-purple-600 bg-purple-100'
     }
 ]
 
-export default function RecentActivities() {
+export default function RecentActivities({ appointments, doctors, patients }: RecentActivitiesProps) {
     const route = useRouter()
+
+    // Tạo hoạt động từ appointments gần đây
+    const recentActivities = appointments && appointments.length > 0
+        ? appointments.slice(0, 3).map((apt: any, i: number) => ({
+            id: i + 1,
+            type: 'appointment',
+            message: `Lịch khám: ${apt.patient_name} - ${apt.doctor_name}`,
+            time: 'Gần đây',
+            icon: Calendar,
+            color: 'text-blue-600 bg-blue-100'
+        }))
+        : defaultActivities
 
     const hanldeViewActivities = () => {
         route.push('/admin/dashboard/activities')
@@ -45,7 +47,7 @@ export default function RecentActivities() {
                 </div>
                 <div className="p-6">
                     <div className="space-y-4">
-                        {recentActivities.map((activity) => {
+                        {recentActivities.map((activity: any) => {
                             const IconComponent = activity.icon
                             return (
                                 <div key={activity.id} className="flex items-start">

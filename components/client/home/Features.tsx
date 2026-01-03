@@ -28,8 +28,8 @@ export default function Features() {
                 setLoading(true)
                 // Gọi API đồng thời để lấy dữ liệu bác sĩ và chuyên khoa
                 const [doctorsRes, specialtiesRes] = await Promise.all([
-                    apiClient<Doctor[]>('/api/doctors?perpage=4', { skipRedirect: true, skipRefresh: true }),
-                    apiClient<Specialty[]>('/api/specialties?type=all', { skipRedirect: true, skipRefresh: true })
+                    apiClient<Doctor[]>('/api/doctors', { skipRedirect: true, skipRefresh: true }),
+                    apiClient<Specialty[]>('/api/specialties', { skipRedirect: true, skipRefresh: true })
 
                 ])
 
@@ -43,7 +43,10 @@ export default function Features() {
                   }
 
                   if (specialtiesRes.status && specialtiesRes.data) {
-                    setPopularSpecialties(Array.isArray(specialtiesRes.data) ? specialtiesRes.data : [])
+                    const specialtieData = Array.isArray(specialtiesRes.data)
+                        ? specialtiesRes.data
+                        : (specialtiesRes.data as any)?.data || [];
+                    setPopularSpecialties(specialtieData.slice(0, 8))
                   } else {
                     setPopularSpecialties([])
                   }
@@ -61,7 +64,7 @@ export default function Features() {
 
     const goAllDoctors = () => router.push('/client/doctors')
     const goAllSpecialties = () => router.push('/client/specialties')
-    const handleViewSpecialty = (id: string) => router.push(`/client/specialties/${id}`)
+    const handleViewSpecialty = (specialtyName: string) => router.push(`/client/specialties?specialty=${encodeURIComponent(specialtyName)}`)
 
     return (
         <>
@@ -114,7 +117,7 @@ export default function Features() {
                         {popularSpecialties.map((specialty) => (
                             <div
                                 key={specialty.id}
-                                onClick={() => handleViewSpecialty(specialty.id)}
+                                onClick={() => handleViewSpecialty(specialty.name)}
                             >
                                 <SpecialtyCard
                                     id={specialty.id}
@@ -122,7 +125,6 @@ export default function Features() {
                                     description={specialty.description || 'Chuyên khoa chăm sóc sức khỏe toàn diện'}
                                     image_url={specialty.image ?? undefined}
                                     color="bg-gradient-to-br from-blue-50 to-blue-100 text-blue-600"
-
                                 />
                             </div>
                         ))}

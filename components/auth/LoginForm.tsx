@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Mail } from 'lucide-react'
-import Alert from '@/components/ui/Alert'
+import { useAlert } from '@/components/ui/AlertContainer'
 import InputField from '../ui/InputField'
 import PasswordField from '../ui/PasswordField'
 import { useAuth } from '@/contexts/AuthContext'
 import { getRedirectPathByRole } from "@/utils/redirectByRole";
 
 export default function LoginPage() {
+    const { showAlert } = useAlert()
     const router = useRouter()
     const searchParams = useSearchParams()
     const { login, loading, user } = useAuth()
@@ -19,11 +20,6 @@ export default function LoginPage() {
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
-    const [alert, setAlert] = useState<{ message: string, type: 'success' | 'error' | null, duration?: number }>({ 
-        message: '', 
-        type: null,
-        duration: 3000
-    })
 
     // Check for message from query params (from register page)
     useEffect(() => {
@@ -31,14 +27,14 @@ export default function LoginPage() {
         const type = searchParams.get('type') as 'success' | 'error' | null
         
         if (message && type) {
-            setAlert({ message: decodeURIComponent(message), type, duration: type === 'success' ? 12000 : 3000 })
+            showAlert(decodeURIComponent(message), type, type === 'success' ? 12000 : 3000)
             
             const params = new URLSearchParams(searchParams.toString())
             params.delete('message')
             params.delete('type')
             router.replace(`/auth/login?${params.toString()}`, { scroll: false })
         }
-    }, [searchParams, router])
+    }, [searchParams, router, showAlert])
 
     useEffect(() => {
         if (user) {
@@ -51,7 +47,6 @@ export default function LoginPage() {
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
         setErrors({})
-        setAlert({ message: '', type: null })
 
         // Client-side validation
         const newErrors: Record<string, string> = {}
@@ -67,13 +62,10 @@ export default function LoginPage() {
         try {
             const result = await login(email, password)
             if (!result.success) {
-                setAlert({
-                    message: result.message,
-                    type: "error"
-                })
+                showAlert(result.message, "error")
             }
         } catch (error: any) {
-            setAlert({ message: "Đăng nhập thất bại", type: "error" })
+            showAlert("Đăng nhập thất bại", "error")
         }
     }
 
@@ -142,10 +134,6 @@ export default function LoginPage() {
                     </Link>
                 </form>
             </div>
-
-            {alert.type && (
-                <Alert message={alert.message} type={alert.type} duration={5000} />
-            )}
         </div>
     )
 }

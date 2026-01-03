@@ -1,7 +1,17 @@
 import { AppointmentRow } from "./AppointmentRow";
 import { Calendar } from "lucide-react";
+import { Appointment } from "@/contexts/AppointmentContext";
 
-export const AppointmentList = ({ appointments, onConfirm, onCancel, onViewDetails }) => (
+interface AppointmentListProps {
+  appointments: Appointment[];
+  onConfirm: (id: string) => Promise<void>;
+  onCancel: (id: string) => Promise<void>;
+  onComplete: (id: string) => Promise<void>;
+  onViewDetails: (appointment: Appointment) => void;
+  isLoading: boolean;
+}
+
+export const AppointmentList = ({ appointments, onConfirm, onCancel, onComplete, onViewDetails, isLoading }: AppointmentListProps) => (
   <div className="divide-y divide-gray-200">
     {appointments.length === 0 ? (
       <div className="p-12 text-center">
@@ -9,13 +19,14 @@ export const AppointmentList = ({ appointments, onConfirm, onCancel, onViewDetai
         <p className="text-gray-500">Không tìm thấy lịch hẹn nào</p>
       </div>
     ) : (
-      appointments.map((appt) => (
+      appointments.map((appt: Appointment) => (
         <AppointmentRow 
           key={appt.id} 
           appointment={appt}
           onConfirm={onConfirm}
           onCancel={onCancel}
           onViewDetails={onViewDetails}
+          isLoading={isLoading}
         />
       ))
     )}

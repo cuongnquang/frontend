@@ -5,6 +5,7 @@
 
     export interface Schedule {
         id: string;
+        doctor_id: string;
         doctor_name: string;
         schedule_date: string;
         start_time: string;
@@ -27,7 +28,7 @@
         selectedSchedule: Schedule | null;
         loading: boolean;
         error: string | null;
-        fetchSchedules: () => Promise<void>;
+        fetchSchedules: (doctorId?: string) => Promise<void>;
         fetchScheduleById: (id: string) => Promise<void>;
         createSchedule: (data: CreateScheduleData) => Promise<{ success: boolean; message: string }>;
         createManySchedules: (data: CreateManySchedulesData) => Promise<{ success: boolean; message: string }>;
@@ -42,11 +43,16 @@
         const [loading, setLoading] = useState(false);
         const [error, setError] = useState<string | null>(null);
 
-        const fetchSchedules = useCallback(async () => {
+        const fetchSchedules = useCallback(async (doctorId?: string) => {
             setLoading(true);
             setError(null);
             try {
-              const res = await apiClient<Schedule[]>(`/api/schedules`);
+              const params = new URLSearchParams();
+              if (doctorId) {
+                params.set('doctor_id', doctorId);
+              }
+              const url = `/api/schedules${params.toString() ? '?' + params.toString() : ''}`;
+              const res = await apiClient<Schedule[]>(url);
               if (res.status && res.data) {
                 setSchedules(res.data);
               } else {

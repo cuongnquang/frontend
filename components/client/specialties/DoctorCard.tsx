@@ -18,9 +18,6 @@ export default function DoctorCard({ doctor }: DoctorCardProps) {
                         alt={doctor.full_name}
                         className="relative w-24 h-24 rounded-full object-cover ring-2 ring-white shadow-md"
                     />
-                    {doctor.is_available && (
-                        <div className="absolute bottom-1 right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
-                    )}
                 </div>
 
                 {/* Content */}
@@ -29,11 +26,6 @@ export default function DoctorCard({ doctor }: DoctorCardProps) {
                         <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
                             {doctor.full_name}
                         </h3>
-                        {doctor.is_available && (
-                            <span className="px-2.5 py-1 bg-green-50 text-green-700 text-xs font-semibold rounded-full border border-green-200">
-                                Có lịch
-                            </span>
-                        )}
                     </div>
 
                     <div className="inline-flex items-center px-2.5 py-1 bg-blue-50 rounded-full mb-3">

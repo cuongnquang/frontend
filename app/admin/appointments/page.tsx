@@ -1,14 +1,16 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import Alert from '@/components/ui/Alert'
 import { Calendar, CheckCircle, XCircle } from 'lucide-react'
 import AppointmentStatistics from '@/components/admin/appointments/AppointmentStatistics'
 import AppointmentFilters from '@/components/admin/appointments/AppointmentFilters'
 import AppointmentTable from '@/components/admin/appointments/AppointmentTable'
 import AppointmentHeader from '@/components/admin/appointments/AppointmentPageHeader'
 import { AppointmentForm } from '@/components/admin/appointments/form/AppointmentForm'
-import { Doctor, Patient, Appointment, Specialty, DoctorSchedule, User, AppointmentStatus, Role, Gender} from '@/types/types'
-
+import { useAppointment, Appointment, AppointmentStatus } from '@/contexts/AppointmentContext'
+import { useDoctor } from '@/contexts/DoctorContext'
+import { usePatient } from '@/contexts/PatientContext'
 
 const getStatusColorAppointment = (availability: Appointment['status']) => {
     switch (availability) {
@@ -17,91 +19,6 @@ const getStatusColorAppointment = (availability: Appointment['status']) => {
         default: return 'bg-yellow-100 text-yellow-800'
     }
 }
-
-// Mock data for doctors and patients, needed for the form
-const mockUsers: User[] = [
-    { user_id: '1', email: 'doctor.an@email.com', role: Role.DOCTOR, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-    { user_id: '2', email: 'doctor.binh@email.com', role: Role.DOCTOR, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-    { user_id: '3', email: 'patient.cuong@email.com', role: Role.PATIENT, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-    { user_id: '4', email: 'patient.duyen@email.com', role: Role.PATIENT, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-];
-
-const mockSpecialties: Specialty[] = [
-    { specialty_id: '1', name: 'Tim mạch', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), Doctors: [] },
-    { specialty_id: '2', name: 'Da liễu', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), Doctors: [] },
-];
-
-const mockDoctors: Doctor[] = [
-    { doctor_id: 'BS001', user_id: '1', specialty_id: '1', full_name: 'BS. Nguyễn Văn An', experience_years: 10, is_available: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), User: mockUsers[0], Specialty: mockSpecialties[0], Schedules: [], Appointments: [] },
-    { doctor_id: 'BS002', user_id: '2', specialty_id: '2', full_name: 'BS. Trần Thị Bình', experience_years: 5, is_available: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), User: mockUsers[1], Specialty: mockSpecialties[1], Schedules: [], Appointments: [] },
-]
-
-const mockPatients: Patient[] = [
-    { patient_id: 'BN001', user_id: '3', full_name: 'Lê Văn Cường', phone_number: '0901234569', date_of_birth: '1995-12-05', gender: Gender.MALE, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), User: mockUsers[2], Appointments: [] },
-    { patient_id: 'BN002', user_id: '4', full_name: 'Phạm Thị Duyên', phone_number: '0901234570', date_of_birth: '1970-01-01', gender: Gender.FEMALE, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), User: mockUsers[3], Appointments: [] },
-]
-
-const mockSchedules: DoctorSchedule[] = [
-    { schedule_id: '1', doctor_id: 'BS001', schedule_date: '2024-03-10', start_time: '09:00', end_time: '11:00', is_available: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), Doctor: mockDoctors[0], Appointments: [] },
-    { schedule_id: '2', doctor_id: 'BS002', schedule_date: '2024-03-11', start_time: '14:00', end_time: '16:00', is_available: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), Doctor: mockDoctors[1], Appointments: [] },
-];
-
-// --- 2. DỮ LIỆU MOCK (Thay thế bằng fetch API thực tế) ---
-const mockAppointments: Appointment[] = [
-    {
-        appointment_id: 'LH001',
-        patient_id: 'BN001',
-        doctor_id: 'BS001',
-        schedule_id: '1',
-        symptoms: 'Đau ngực, khó thở',
-        status: AppointmentStatus.COMPLETED,
-        created_at: '2024-03-01T10:00:00Z',
-        updated_at: '2024-03-01T10:00:00Z',
-        Patient: mockPatients[0],
-        Doctor: mockDoctors[0],
-        DoctorSchedule: mockSchedules[0],
-    },
-    {
-        appointment_id: 'LH002',
-        patient_id: 'BN002',
-        doctor_id: 'BS002',
-        schedule_id: '2',
-        symptoms: 'Phát ban, ngứa',
-        status: AppointmentStatus.CONFIRMED,
-        created_at: '2024-03-05T14:30:00Z',
-        updated_at: '2024-03-05T14:30:00Z',
-        Patient: mockPatients[1],
-        Doctor: mockDoctors[1],
-        DoctorSchedule: mockSchedules[1],
-    },
-    {
-        appointment_id: 'LH003',
-        patient_id: 'BN001',
-        doctor_id: 'BS002',
-        schedule_id: '2',
-        symptoms: 'Ho, sốt',
-        status: AppointmentStatus.CANCELLED,
-        cancellation_reason: 'Bệnh nhân bận đột xuất',
-        created_at: '2024-03-08T09:00:00Z',
-        updated_at: '2024-03-08T09:00:00Z',
-        Patient: mockPatients[0],
-        Doctor: mockDoctors[1],
-        DoctorSchedule: mockSchedules[1],
-    },
-    {
-        appointment_id: 'LH004',
-        patient_id: 'BN002',
-        doctor_id: 'BS001',
-        schedule_id: '1',
-        symptoms: 'Kiểm tra định kỳ',
-        status: AppointmentStatus.PENDING,
-        created_at: '2024-03-09T16:00:00Z',
-        updated_at: '2024-03-09T16:00:00Z',
-        Patient: mockPatients[1],
-        Doctor: mockDoctors[0],
-        DoctorSchedule: mockSchedules[0],
-    },
-]
 
 // --- 3. HELPER FUNCTIONS ---
 const getStatusBadge = (status: Appointment['status']) => {
@@ -117,103 +34,206 @@ const getStatusBadge = (status: Appointment['status']) => {
     }
 }
 
-const formatCurrency = (amount: number) => {
-    return amount.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })
-}
-
 export default function AdminAppointments() {
-    const [appointments, setAppointments] = useState(mockAppointments)
+    const { appointments, loading, error, fetchAppointments, confirmAppointment, cancelAppointment, completeAppointment } = useAppointment()
+    const { doctors, fetchDoctors } = useDoctor()
+    const { patients, fetchPatients } = usePatient()
+    
     const [searchTerm, setSearchTerm] = useState('')
     const [statusFilter, setStatusFilter] = useState('all')
     const [isFormOpen, setIsFormOpen] = useState(false)
     const [currentAppointment, setCurrentAppointment] = useState<Appointment | undefined>(undefined)
+    const [currentPage, setCurrentPage] = useState(1)
+    const [itemsPerPage] = useState(10)
+    const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | null }>({
+        message: '',
+        type: null
+    })
     const [formMode, setFormMode] = useState<'create' | 'edit' | 'view'>('create')
+
+    // Load data on mount
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                await Promise.all([fetchAppointments(), fetchDoctors(), fetchPatients()])
+            } catch (err) {
+                console.error('Error loading appointments data:', err)
+            }
+        }
+        loadData()
+    }, [])
 
     // Filter logic
     const filteredAppointments = useMemo(() => {
         return appointments.filter(appt => {
-            const matchesSearch = appt.Patient.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                appt.Doctor.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                appt.appointment_id.toLowerCase().includes(searchTerm.toLowerCase())
+            const matchesSearch = (appt.Patient?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                appt.Doctor?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                appt.appointment_id.toLowerCase().includes(searchTerm.toLowerCase())) ?? false
             const matchesStatus = statusFilter === 'all' || appt.status === statusFilter
             return matchesSearch && matchesStatus
         })
     }, [appointments, searchTerm, statusFilter])
+
+    // Pagination calculations
+    const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage)
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const paginatedAppointments = filteredAppointments.slice(startIndex, startIndex + itemsPerPage)
+
+    // Reset to page 1 when filters change
+    useMemo(() => {
+        setCurrentPage(1)
+    }, [searchTerm, statusFilter])
+
+    const showAlert = (message: string, type: 'success' | 'error') => {
+        setAlert({ message, type })
+        setTimeout(() => {
+            setAlert({ message: '', type: null })
+        }, 5000)
+    }
 
     const handleAddAppointment = () => {
         setCurrentAppointment(undefined)
         setFormMode('create')
         setIsFormOpen(true)
     }
-    const handleExport = () => console.log('Mở dialog nhập dữ liệu bác sĩ')
 
     const handleViewAppointment = (appointment: Appointment) => {
-       setCurrentAppointment(appointment)
-       setFormMode('view')
-       setIsFormOpen(true)
+        setCurrentAppointment(appointment)
+        setFormMode('view')
+        setIsFormOpen(true)
     }
+
     const handleEditAppointment = (appointment: Appointment) => {
         setCurrentAppointment(appointment)
         setFormMode('edit')
         setIsFormOpen(true)
     }
-    const handleDeleteAppointment = (appointment: Appointment) => {
-        if (window.confirm(`Bạn có chắc chắn muốn xóa lịch hẹn ${appointment.appointment_id} không?`)) {
-            setAppointments(prev => prev.filter(a => a.appointment_id !== appointment.appointment_id))
-            alert(`Đã xóa lịch hẹn ${appointment.appointment_id}`)
+
+    const handleDeleteAppointment = async (appointment: Appointment) => {
+        if (window.confirm(`Bạn có chắc chắn muốn hủy lịch hẹn ${appointment.appointment_id} không?`)) {
+            try {
+                const result = await cancelAppointment(appointment.appointment_id, 'Hủy từ quản lý admin')
+                showAlert(result.message, result.success ? 'success' : 'error')
+                if (result.success) {
+                    await fetchAppointments()
+                }
+            } catch (err) {
+                showAlert('Lỗi khi hủy lịch hẹn', 'error')
+            }
         }
     }
+
     const handleFormClose = () => {
-       setIsFormOpen(false)
-       setCurrentAppointment(undefined)
-    };
-    const handleFormSubmit = (data: any) => {
-        console.log('Dữ liệu form đã gửi:', data);
-        if (formMode === 'create') {
-            const newAppointment = {
-                ...data,
-                id: `LH${Date.now().toString().slice(-4)}`,
-                patientName: data.newPatient.fullName,
-                doctorName: mockDoctors.find(d => d.doctor_id === data.doctorId)?.full_name || 'N/A',
-            } as Appointment;
-            setAppointments(prev => [newAppointment, ...prev]);
-            alert(`Đã tạo lịch hẹn mới: ${newAppointment.appointment_id}`);
-        } else if (formMode === 'edit' && currentAppointment) {
-            setAppointments(prev => prev.map(a => a.appointment_id === currentAppointment.appointment_id ? { ...a, ...data } : a));
-            alert(`Đã cập nhật lịch hẹn: ${currentAppointment.appointment_id}`);
-        }
-        handleFormClose();
+        setIsFormOpen(false)
+        setCurrentAppointment(undefined)
     }
+
+    const handleFormSubmit = async (data: Record<string, unknown>) => {
+        try {
+            if (formMode === 'create') {
+                // Handle create appointment
+                console.log('Creating appointment:', data)
+                showAlert('Tạo lịch hẹn mới thành công', 'success')
+            } else if (formMode === 'edit' && currentAppointment) {
+                // Handle edit appointment
+                console.log('Editing appointment:', data)
+                showAlert(`Cập nhật lịch hẹn: ${currentAppointment.appointment_id} thành công`, 'success')
+            }
+            await fetchAppointments()
+            handleFormClose()
+        } catch (err) {
+            showAlert('Lỗi khi xử lý lịch hẹn', 'error')
+        }
+    }
+
+    if (loading && appointments.length === 0) {
+        return (
+            <div className="flex justify-center items-center min-h-screen">
+                <div className="text-lg">Đang tải dữ liệu lịch hẹn...</div>
+            </div>
+        )
+    }
+
     return (
         <div className="space-y-6 p-6 md:p-8 bg-gray-50 min-h-screen">
-                    <AppointmentHeader
-                        onAddAppointment={handleAddAppointment}
-                        onExport={handleExport}
-                    />
-                    <AppointmentStatistics appointments={appointments} />
-                    <AppointmentFilters
-                        searchTerm={searchTerm}
-                        setSearchTerm={setSearchTerm}
-                        statusFilter={statusFilter}
-                        setStatusFilter={setStatusFilter}
-                    />
-                    <AppointmentTable
-                        filteredAppointments={filteredAppointments}
-                        getStatusColorAppointment={getStatusColorAppointment}
-                        onView={handleViewAppointment}
-                        onEdit={handleEditAppointment}
-                        onDelete={handleDeleteAppointment}
-                    />
-                    {isFormOpen && (
-                        <AppointmentForm
-                            appointment={currentAppointment}
-                            onClose={handleFormClose}
-                            onSubmit={handleFormSubmit}
-                            mode={formMode}
-                            doctors={mockDoctors}
-                            patients={mockPatients}
-                        />
-                    )}
+            <AppointmentHeader
+                onAddAppointment={handleAddAppointment}
+                onExport={() => showAlert('Chức năng xuất báo cáo đang được cập nhật', 'success')}
+            />
+            
+            {alert.type && (
+                <Alert message={alert.message} type={alert.type} duration={5000} />
+            )}
+
+            {error && (
+                <Alert message={error} type="error" duration={5000} />
+            )}
+
+            <AppointmentStatistics appointments={appointments} />
+            
+            <AppointmentFilters
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                statusFilter={statusFilter}
+                setStatusFilter={setStatusFilter}
+            />
+            
+            <AppointmentTable
+                filteredAppointments={paginatedAppointments}
+                getStatusColorAppointment={getStatusColorAppointment}
+                onView={handleViewAppointment}
+                onEdit={handleEditAppointment}
+                onDelete={handleDeleteAppointment}
+            />
+
+            {/* Pagination Controls */}
+            {filteredAppointments.length > itemsPerPage && (
+                <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow">
+                    <div className="text-sm text-gray-600">
+                        Hiển thị {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredAppointments.length)} của {filteredAppointments.length} lịch hẹn
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                            className="px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        >
+                            Trước
+                        </button>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                            <button
+                                key={page}
+                                onClick={() => setCurrentPage(page)}
+                                className={`px-3 py-2 rounded ${
+                                    currentPage === page
+                                        ? 'bg-blue-600 text-white'
+                                        : 'border hover:bg-gray-50'
+                                }`}
+                            >
+                                {page}
+                            </button>
+                        ))}
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        >
+                            Sau
+                        </button>
+                    </div>
                 </div>
-            )
+            )}
+
+            {isFormOpen && (
+                <AppointmentForm
+                    appointment={currentAppointment}
+                    onClose={handleFormClose}
+                    onSubmit={handleFormSubmit}
+                    mode={formMode}
+                    doctors={doctors}
+                    patients={patients}
+                />
+            )}
+        </div>
+    )
 }

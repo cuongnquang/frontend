@@ -16,13 +16,15 @@ export default function AdminDoctors() {
     const [searchTerm, setSearchTerm] = useState('')
     const [statusFilter, setStatusFilter] = useState('all')
     const [specializationFilter, setSpecializationFilter] = useState('all')
+    const [currentPage, setCurrentPage] = useState(1)
+    const [itemsPerPage] = useState(10)
     const [isFormOpen, setIsFormOpen] = useState(false);
-    const [currentDoctor, setCurrentDoctor] = useState<any>(undefined);
+    const [currentDoctor, setCurrentDoctor] = useState<Doctor | undefined>(undefined);
     const [formMode, setFormMode] = useState<'create' | 'view'>('create');
     const [showExportModal, setShowExportModal] = useState(false)
     const [selectedReport, setSelectedReport] = useState<{
         type: 'doctors' | 'patients' | 'appointments' | 'revenue'
-        data: any[]
+        data: Doctor[]
         title: string
     } | null>(null)
     const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | null }>({
@@ -56,6 +58,16 @@ export default function AdminDoctors() {
         })
     }, [doctors, searchTerm, statusFilter, specializationFilter])
 
+    // Pagination logic
+    const totalPages = Math.ceil(filteredDoctors.length / itemsPerPage)
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const paginatedDoctors = filteredDoctors.slice(startIndex, startIndex + itemsPerPage)
+
+    // Reset to first page when filter changes
+    useMemo(() => {
+        setCurrentPage(1)
+    }, [searchTerm, statusFilter, specializationFilter])
+
     const handleAddDoctor = () => {
         setCurrentDoctor(undefined);
         setFormMode('create');
@@ -86,12 +98,14 @@ export default function AdminDoctors() {
                 specialty_name: data.specialty_name,
                 full_name: data.full_name,
                 title: data.title || '',
-                introduction: data.introduction || '',
-                avatar_url: data.avatar_url || '',
-                specializations: data.specializations || '',
-                work_experience: data.work_experience || '',
-                achievements: data.achievements || '',
                 experience_years: data.experience_years || 0,
+                specializations: data.specializations || '',
+                position: data.position || '',
+                workplace: data.workplace || '',
+                clinic_address: data.clinic_address || '',
+                introduction: data.introduction || '',
+                achievements: data.achievements || '',
+                avatar_url: data.avatar_url || '',
                 is_available: false // Mặc định là false
             });
 
@@ -183,9 +197,47 @@ export default function AdminDoctors() {
             />
             
             <DoctorTable
-                filteredDoctors={filteredDoctors}
+                filteredDoctors={paginatedDoctors}
                 onViewDoctor={handleViewDoctor}
             />
+
+            {/* Pagination Controls */}
+            {filteredDoctors.length > itemsPerPage && (
+                <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow">
+                    <div className="text-sm text-gray-600">
+                        Hiển thị {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredDoctors.length)} của {filteredDoctors.length} bác sĩ
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                            className="px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        >
+                            Trước
+                        </button>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                            <button
+                                key={page}
+                                onClick={() => setCurrentPage(page)}
+                                className={`px-3 py-2 rounded ${
+                                    currentPage === page
+                                        ? 'bg-blue-600 text-white'
+                                        : 'border hover:bg-gray-50'
+                                }`}
+                            >
+                                {page}
+                            </button>
+                        ))}
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        >
+                            Sau
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {isFormOpen && (
                 <DoctorForm

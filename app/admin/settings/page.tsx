@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Alert from '@/components/ui/Alert'
 import {
   Settings,
   Bell,
@@ -29,6 +30,10 @@ export default function AdminSettingsPage() {
   const [activeTab, setActiveTab] = useState('account')
   const [isSaving, setIsSaving] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | null }>({
+    message: '',
+    type: null
+  })
 
   // State for all settings
   const [settings, setSettings] = useState({
@@ -130,13 +135,13 @@ export default function AdminSettingsPage() {
     await new Promise(resolve => setTimeout(resolve, 1500))
     setIsSaving(false)
     setHasChanges(false)
-    alert('Đã lưu cài đặt thành công!')
+    setAlert({ message: 'Đã lưu cài đặt thành công!', type: 'success' })
   }
 
   const handleReset = () => {
     if (confirm('Bạn có chắc muốn khôi phục cài đặt mặc định cho tab này?')) {
       // Reset logic would go here, potentially fetching defaults
-      alert('Đã khôi phục cài đặt mặc định.')
+      setAlert({ message: 'Đã khôi phục cài đặt mặc định.', type: 'success' })
     }
   }
 
@@ -190,6 +195,11 @@ export default function AdminSettingsPage() {
       <div className="bg-white rounded-xl shadow-sm">
         {renderActiveTab()}
       </div>
+
+      {/* Alert thông báo */}
+      {alert.type && (
+        <Alert message={alert.message} type={alert.type} duration={5000} />
+      )}
     </div>
   )
 }

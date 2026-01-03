@@ -9,8 +9,8 @@ export interface Specialty {
     name: string;
     description?: string | null;
     image: string | null;
-    created_at: string;
-    updated_at: string;
+    createdAt: string;
+    updatedAt: string;
   }
 
 export type CreateSpecialtyData = {
@@ -41,18 +41,6 @@ export function SpecialtyProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const normalizeSpecialties = (raw: any[]): Specialty[] => {
-        // Chuẩn hóa dữ liệu trả về từ API về đúng shape frontend dùng
-        return (raw || []).map((item: any) => ({
-            id: item.specialty_id ?? item.id ?? item.specialtyId ?? '',
-            name: item.name ?? '',
-            description: item.description ?? null,
-            image: item.image_url ?? item.image ?? null,
-            created_at: item.created_at ?? item.createdAt ?? '',
-            updated_at: item.updated_at ?? item.updatedAt ?? '',
-            Doctors: item.Doctors ?? item.doctors ?? [],
-        }));
-    };
 
     const fetchSpecialties = useCallback(async () => {
         setLoading(true);
@@ -61,8 +49,8 @@ export function SpecialtyProvider({ children }: { children: ReactNode }) {
             const res = await apiClient<Specialty[]>('/api/specialties');
 
             if (res.status && res.data) {
-                const raw = Array.isArray(res.data) ? res.data : (res.data as any)?.data || [];
-                setSpecialties(normalizeSpecialties(raw));
+                const specialtiesData = Array.isArray(res.data) ? res.data : (res.data as any)?.data || [];
+                setSpecialties(specialtiesData);
             } else {
                 setError(res.message || "Không thể tải danh sách chuyên khoa.");
             }

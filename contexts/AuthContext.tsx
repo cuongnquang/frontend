@@ -8,12 +8,15 @@ import { getRedirectPathByRole } from "@/utils/redirectByRole";
 
 interface User {
     user_id: string;
+    doctorId?: string;
+    patientId?: string;
     email: string;
     full_name?: string;
     role: string;
     isActive?: boolean;
     createdAt?: string;
     updatedAt?: string;
+   
 }
 
 interface AuthContextType {

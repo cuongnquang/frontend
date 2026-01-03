@@ -25,9 +25,13 @@ export default function DoctorDetailPage() {
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSchedule, setSelectedSchedule] = useState<DoctorSchedule | null>(null);
-  const [reviewsData, setReviewsData] = useState<Review[] | null>(null);
+  const [reviewsData, setReviewsData] = useState<Doctor[] | null>(null);
   const [localLoading, setLocalLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | null }>({
+    message: '',
+    type: null
+  });
   const [allSchedules, setAllSchedules] = useState<DoctorSchedule[]>([]);
   const [schedulesForSelectedDate, setSchedulesForSelectedDate] = useState<DoctorSchedule[]>([]);
 
@@ -53,16 +57,27 @@ export default function DoctorDetailPage() {
         // Thực thi song song các lệnh gọi API
         const [_, schedulesRes, reviewsRes] = await Promise.all([
           fetchDoctorById(id),
-          apiClient<DoctorSchedule[]>(`/api/schedules`),
-          apiClient<Review[]>(`/api/reviews/doctor/${id}`)
+          apiClient<DoctorSchedule[]>(`/api/schedules?doctor_id=${id}`),
+          apiClient<Doctor[]>(`/api/doctors/${id}`)
         ]);
 
         // Xử lý kết quả
+        console.log('📅 Schedules Response:', schedulesRes);
         if (schedulesRes.status && schedulesRes.data) {
-          const transformedSchedules = (schedulesRes.data as DoctorSchedule[]).map(s => ({ ...s, schedule_id: s.schedule_id }));
-          const filteredSchedules = transformedSchedules.filter(s => s.doctor_id === id);
-          setAllSchedules(filteredSchedules);
+          const schedulesList = schedulesRes.data as DoctorSchedule[];
+          console.log('📅 Raw schedules from API:', JSON.stringify(schedulesList.slice(0, 2), null, 2)); // Log 2 schedules đầu tiên
+          
+          // Đảm bảo schedule_id tồn tại
+          const transformedSchedules = schedulesList.map(s => {
+            if (!s.schedule_id) {
+              console.warn('⚠️ Schedule missing schedule_id:', s);
+            }
+            return { ...s };
+          });
+          console.log('✅ Schedules loaded:', transformedSchedules.length, 'items');
+          setAllSchedules(transformedSchedules);
         } else {
+          console.error('❌ Schedules error:', schedulesRes.message);
           setLocalError(schedulesRes.message || 'Không thể tải lịch khám.');
         }
         setReviewsData(reviewsRes.data || []);
@@ -89,6 +104,7 @@ export default function DoctorDetailPage() {
 
   /**
    * ✅ Tối ưu: Lọc các khung giờ từ dữ liệu đã có, không cần gọi API
+   * Chỉ hiển thị lịch khám còn trống (is_available = true)
    */
   const handleSelectDate = React.useCallback((date: Date) => {
     if (selectedDate?.getTime() === date.getTime()) {
@@ -99,22 +115,41 @@ export default function DoctorDetailPage() {
     } else {
       setSelectedDate(date);
       const dateString = toYYYYMMDD(date);
-      const schedulesForDate = allSchedules.filter(s => s.schedule_date.startsWith(dateString));
+      // Lọc các lịch khám cho ngày được chọn và chỉ hiển thị lịch còn trống
+      const schedulesForDate = allSchedules.filter(
+        s => s.schedule_date.startsWith(dateString) && s.is_available === true
+      );
       setSchedulesForSelectedDate(schedulesForDate);
       setSelectedSchedule(null); // Reset lựa chọn khung giờ khi đổi ngày
     }
   }, [selectedDate, allSchedules]);
   const handleSelectSchedule = (schedule: DoctorSchedule) => {
     console.log('🕐 Selected schedule:', schedule);
+    console.log('🕐 Schedule ID:', schedule.schedule_id);
+    console.log('🕐 Full schedule object:', JSON.stringify(schedule, null, 2));
     setSelectedSchedule(schedule);
   };
 
   const handleBookingSubmit = () => {
     if (!doctor) return;
     if (selectedSchedule) {
-      router.push(`/client/appointments?doctorId=${doctor.id}&scheduleId=${selectedSchedule.schedule_id}`);
+      console.log('📝 Submitting with selectedSchedule:', selectedSchedule);
+      
+      // Sử dụng schedule_id, nếu không có thì dùng id
+      const scheduleIdToUse = selectedSchedule.schedule_id || (selectedSchedule as any).id;
+      console.log('📝 Schedule ID to use:', scheduleIdToUse);
+      
+      if (!scheduleIdToUse) {
+        console.error('❌ No schedule ID found in object:', selectedSchedule);
+        setAlert({ message: 'Lỗi: Không có ID lịch khám. Vui lòng thử lại.', type: 'error' });
+        return;
+      }
+      
+      const appointmentUrl = `/client/appointments?doctorId=${doctor.id}&scheduleId=${scheduleIdToUse}`;
+      console.log('📝 Navigating to:', appointmentUrl);
+      router.push(appointmentUrl);
     } else {
-      alert('Vui lòng chọn một khung giờ khám bệnh.');
+      setAlert({ message: 'Vui lòng chọn một khung giờ khám bệnh.', type: 'error' });
     }
   };
 
@@ -133,24 +168,6 @@ export default function DoctorDetailPage() {
             <span>Danh sách bác sĩ</span>
             <span className="text-gray-300">/</span>
             <span className="font-medium text-gray-900">{doctor?.full_name ?? '...'}</span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {doctor?.User?.email && (
-              <a 
-                href={`mailto:${doctor.User.email}`} 
-                className="px-3 py-1.5 bg-green-600 text-white rounded-md text-sm hover:bg-green-700"
-              >
-                Liên hệ
-              </a>
-            )}
-
-            <button 
-              onClick={() => window.print()} 
-              className="px-3 py-1.5 border rounded-md text-sm"
-            >
-              In trang
-            </button>
           </div>
         </div>
 
@@ -186,6 +203,11 @@ export default function DoctorDetailPage() {
           </div>
         )}
       </main>
+
+      {/* Alert thông báo */}
+      {alert.type && (
+        <Alert message={alert.message} type={alert.type} duration={4000} />
+      )}
 
       <Footer />
     </div>

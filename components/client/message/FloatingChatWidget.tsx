@@ -84,11 +84,11 @@ export default function FloatingChatWidget() {
             unread: 0, // This should come from context later
             lastTime: lastMessage?.createdAt || room.updatedAt,
             avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${displayName}`,
-            type: (otherParticipant.user.role as 'doctor' | 'patient' | 'admin') || 'patient',
-            specialty: profile?.title || 'Chuyên khoa',
-            status: 'offline' as const, // This should come from context later
+            type: (otherParticipant.user.role as 'doctor' | 'patient' | 'admin' | 'ai') || 'patient',
+            specialty: (profile as any)?.title || 'Chuyên khoa',
+            status: ('offline' as const),
             color: 'from-purple-500 to-purple-600'
-          };
+          } as Chat;
         })
         .filter((c): c is Chat => c !== null);
       setChatList([aiBotChat, ...conversationsData]);
@@ -129,16 +129,17 @@ export default function FloatingChatWidget() {
 
     setIsSearching(true);
     searchTimeoutRef.current = setTimeout(async () => {
-      const res = await apiClient<Doctor>(`/api/doctors?search=${query}`);
-      if (res.status && res.data?.data) {
-        const doctorChats: Chat[] = res.data.data.map((doc: Doctor) => ({
+      const res = await apiClient<any>(`/api/doctors?search=${query}`);
+      if (res.status && res.data) {
+        const data = Array.isArray(res.data) ? res.data : res.data.data || [];
+        const doctorChats: Chat[] = (data as Doctor[]).map((doc: Doctor) => ({
           id: doc.user_id,
           otherParticipantId: doc.user_id,
-          type: 'doctor',
+          type: 'doctor' as const,
           name: doc.full_name || 'Bác sĩ không tên',
           avatar: doc.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${doc.full_name}`,
-          specialty: doc.specialty_name|| 'Chuyên khoa',
-          status: 'online',
+          specialty: (doc as any).specialty_name || 'Chuyên khoa',
+          status: 'online' as const,
           lastMessage: 'Bắt đầu cuộc trò chuyện...',
           lastTime: '',
           unread: 0,

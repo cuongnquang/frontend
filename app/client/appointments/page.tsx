@@ -40,6 +40,7 @@ function AppointmentFlow() {
     const [patientData, setPatientData] = useState<Patient | null>(null)
     const [symptoms, setSymptoms] = useState('')
     const [notes, setNotes] = useState('')
+    const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
     const [doctor, setDoctor] = useState<Doctor | null>(null);
     // const [availableDates, setAvailableDates] = useState<string[]>([]); // Sẽ được thay thế bằng useMemo
@@ -54,7 +55,7 @@ function AppointmentFlow() {
         const doctorRes = apiClient<Doctor>(`/api/doctors/${doctorId}`);
         // Thay vì chỉ lấy ngày, ta lấy tất cả lịch khám có sẵn
         const allSchedulesRes = apiClient<DoctorSchedule[]>(
-            `/api/schedules?doctor_id=${doctorId}&is_available=true&sort=schedule_date,asc,start_time,asc`
+            `/api/schedules?doctor_id=${doctorId}`
         );
         const patientRes = apiClient<Patient>('/api/patients/me');
 
@@ -123,7 +124,7 @@ function AppointmentFlow() {
                  // chúng ta sẽ tìm và chọn lịch khám tương ứng trong danh sách đã tải.
                  if (scheduleId) {
                      // Tìm lịch khám tương ứng trong danh sách vừa tải về.
-                     const scheduleToSelect = fetchedSchedules.find(s => s.schedule_id === scheduleId);
+                     const scheduleToSelect = fetchedSchedules.find(s => s.id === scheduleId);
                      if (scheduleToSelect) {
                          handleSelectSchedule(scheduleToSelect, true, fetchedSchedules); // Chọn lịch và ngày tương ứng
                      }
@@ -188,9 +189,6 @@ function AppointmentFlow() {
         setIsSubmitting(true);
         setSubmitError(null);
 
-        // KIỂM TRA DỮ LIỆU TRƯỚC KHI GỬI
-        console.log('Kiểm tra selectedSchedule trước khi gửi:', selectedSchedule);
-
         try {
             const appointmentData = {
                 doctor_id: doctor.id, // patient_id sẽ được backend tự động lấy từ token
@@ -206,8 +204,12 @@ function AppointmentFlow() {
             });
 
             if (response.status && response.data) {
-                alert('Đặt lịch thành công! Chúng tôi sẽ liên hệ với bạn sớm.');
-                router.push('/');
+                setSubmitError(null);
+                setSuccessMessage('Đặt lịch thành công! Chúng tôi sẽ liên hệ với bạn sớm.');
+                setTimeout(() => {
+                    router.push('/');
+                }, 1500);
+                return;
             } else {
                 throw new Error(response.message || "Đặt lịch thất bại. Vui lòng thử lại.");
             }
@@ -220,12 +222,22 @@ function AppointmentFlow() {
 
     // --- Điều kiện chuyển bước ---
     const canProceedStep1 = selectedSchedule !== null
-    const canProceedStep2 = !!patientData?.full_name && !!patientData?.phone_number && !!patientData?.date_of_birth && !!symptoms
+    const canProceedStep2 = !!patientData?.full_name && 
+                            !!patientData?.phone_number && 
+                            !!patientData?.date_of_birth && 
+                            !!patientData?.gender && 
+                            !!patientData?.address && 
+                            !!symptoms
 
     return (
         <div>
             <Header/>
         <div className="min-h-screen bg-gray-50">
+            {/* Success Alert */}
+            {successMessage && (
+                <Alert message={successMessage} type="success" duration={3000} onClose={() => setSuccessMessage(null)} />
+            )}
+            
             {/* Header Banner */}
             <div className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white py-12">
                 <div className="container mx-auto px-4">

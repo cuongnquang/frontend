@@ -1,8 +1,10 @@
 import { User, Mail, Phone, MapPin, Calendar, CreditCard, Edit3, X, CheckCircle, Save, Eye, EyeOff, Camera } from 'lucide-react'
 import { useState, Dispatch, SetStateAction, useEffect } from 'react'
+import { vietnamProvinces, Province, District, Ward } from '@/lib/vietnam-address-data'
+import { vietnamEthnicities } from '@/lib/vietnam-ethnicities'
 
 interface UserProfile {
-    id: number
+    id: string
     fullName: string
     email: string
     phone: string
@@ -14,6 +16,10 @@ interface UserProfile {
     emailVerified: boolean
     phoneVerified: boolean
     insuranceNumber?: string
+    identityNumber?: string | null
+    ethnicity?: string
+    referralCode?: string
+    occupation?: string
     emergencyContact?: {
         name: string
         phone: string
@@ -32,20 +38,113 @@ export default function ProfileDetails({ userProfile, setUserProfile, isLoading,
     const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState(userProfile)
     const [isUpdating, setIsUpdating] = useState(false);
+    
+    // Address selection state
+    const [selectedProvince, setSelectedProvince] = useState<string>('')
+    const [selectedDistrict, setSelectedDistrict] = useState<string>('')
+    const [selectedWard, setSelectedWard] = useState<string>('')
+    const [customEthnicity, setCustomEthnicity] = useState(false)
+    const [ethnicityInput, setEthnicityInput] = useState('')
 
     useEffect(() => {
         setEditForm(userProfile);
+        if (userProfile.ethnicity && !vietnamEthnicities.includes(userProfile.ethnicity)) {
+            setCustomEthnicity(true);
+            setEthnicityInput(userProfile.ethnicity);
+        } else {
+            setCustomEthnicity(false);
+        }
     }, [userProfile]);
 
-    useEffect(() => {
-        if (!userProfile.birthDate || !userProfile.address) {
-            setIsEditing(true);
+    const parseAddress = (address: string) => {
+        // Try to parse address format: "Phường/Xóm, Quận/Huyện/Xã, Tỉnh/TP"
+        const parts = address.split(',').map(s => s.trim());
+        if (parts.length >= 3) {
+            const wardName = parts[0];
+            const districtName = parts[1];
+            const provinceName = parts[2];
+            
+            // Find matching province
+            const province = vietnamProvinces.find(p => p.name === provinceName);
+            if (province) {
+                setSelectedProvince(province.code);
+                const district = province.districts.find(d => d.name === districtName);
+                if (district) {
+                    setSelectedDistrict(district.code);
+                    const ward = district.wards.find(w => w.name === wardName);
+                    if (ward) {
+                        setSelectedWard(ward.code);
+                    }
+                }
+            }
         }
-    }, [userProfile.birthDate, userProfile.address]);
+    }
+
+    const validateForm = (): string | null => {
+        if (!editForm.fullName || editForm.fullName.trim() === '') {
+            return 'Vui lòng nhập họ và tên';
+        }
+        if (!editForm.phone || editForm.phone.trim() === '') {
+            return 'Vui lòng nhập số điện thoại';
+        }
+        if (!editForm.address || editForm.address.trim() === '') {
+            return 'Vui lòng nhập địa chỉ';
+        }
+        if (!editForm.gender) {
+            return 'Vui lòng chọn giới tính';
+        }
+        if (!editForm.birthDate || editForm.birthDate.trim() === '') {
+            return 'Vui lòng nhập ngày sinh';
+        }
+        return null;
+    }
+
+    // Handle address selection
+    const handleProvinceChange = (provinceCode: string) => {
+        setSelectedProvince(provinceCode);
+        setSelectedDistrict('');
+        setSelectedWard('');
+        // Clear address when province changes
+        setEditForm(prev => ({ ...prev, address: '' }));
+    }
+
+    const handleDistrictChange = (districtCode: string) => {
+        setSelectedDistrict(districtCode);
+        setSelectedWard('');
+        // Clear address when district changes (will be updated when ward is selected)
+        if (!districtCode) {
+            setEditForm(prev => ({ ...prev, address: '' }));
+        }
+    }
+
+    const handleWardChange = (wardCode: string) => {
+        setSelectedWard(wardCode);
+    }
+
+    // Auto-update address when all three selections are made
+    useEffect(() => {
+        if (isEditing && selectedProvince && selectedDistrict && selectedWard) {
+            const province = vietnamProvinces.find(p => p.code === selectedProvince);
+            const district = province?.districts.find(d => d.code === selectedDistrict);
+            const ward = district?.wards.find(w => w.code === selectedWard);
+            
+            if (province && district && ward) {
+                const fullAddress = `${ward.name}, ${district.name}, ${province.name}`;
+                setEditForm(prev => ({ ...prev, address: fullAddress }));
+            }
+        }
+    }, [selectedProvince, selectedDistrict, selectedWard, isEditing]);
 
     const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault()
         if (isUpdating) return;
+
+        // Validate required fields
+        const validationError = validateForm();
+        if (validationError) {
+            alert(validationError);
+            return;
+        }
 
         setIsUpdating(true);
         const success = await onUpdateProfile(editForm);
@@ -56,6 +155,11 @@ export default function ProfileDetails({ userProfile, setUserProfile, isLoading,
         }
     }
 
+    const selectedProvinceData = vietnamProvinces.find(p => p.code === selectedProvince);
+    const selectedDistrictData = selectedProvinceData?.districts.find(d => d.code === selectedDistrict);
+    const availableDistricts = selectedProvinceData?.districts || [];
+    const availableWards = selectedDistrictData?.wards || [];
+
     return (
         <div className="bg-white text-black rounded-xl shadow-sm">
             <div className="p-6 border-b border-gray-200">
@@ -65,8 +169,24 @@ export default function ProfileDetails({ userProfile, setUserProfile, isLoading,
                     </h1>
                     <button
                         onClick={() => {
-                            setIsEditing(!isEditing)
-                            if (!isEditing) setEditForm(userProfile)
+                            if (isEditing) {
+                                // Cancel editing - reset form
+                                setIsEditing(false);
+                                setEditForm(userProfile);
+                                setSelectedProvince('');
+                                setSelectedDistrict('');
+                                setSelectedWard('');
+                                setCustomEthnicity(false);
+                                setEthnicityInput('');
+                            } else {
+                                // Start editing
+                                setIsEditing(true);
+                                setEditForm(userProfile);
+                                // Try to parse existing address
+                                if (userProfile.address) {
+                                    parseAddress(userProfile.address);
+                                }
+                            }
                         }}
                         className={`flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${isEditing
                             ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -135,18 +255,13 @@ export default function ProfileDetails({ userProfile, setUserProfile, isLoading,
                                     value={editForm.phone}
                                     onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
                                     disabled={!isEditing}
-                                    className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isEditing ? 'border-gray-300' : 'bg-gray-50 border-gray-200'}`}
+                                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isEditing ? 'border-gray-300' : 'bg-gray-50 border-gray-200'}`}
                                 />
-                                {!userProfile.phoneVerified && (
-                                    <button type="button" className="absolute right-3 top-3 text-xs text-blue-600 hover:text-blue-700">
-                                        Xác thực
-                                    </button>
-                                )}
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Ngày sinh</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Ngày sinh <span className="text-red-500">*</span></label>
                             <input
                                 type="date"
                                 value={editForm.birthDate}
@@ -157,7 +272,7 @@ export default function ProfileDetails({ userProfile, setUserProfile, isLoading,
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Giới tính</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Giới tính <span className="text-red-500">*</span></label>
                             <select
                                 value={editForm.gender}
                                 onChange={(e) => setEditForm({ ...editForm, gender: e.target.value as any })}
@@ -184,65 +299,136 @@ export default function ProfileDetails({ userProfile, setUserProfile, isLoading,
                                 />
                             </div>
                         </div>
-                    </div>
 
-                    <div className="mt-6">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Địa chỉ</label>
-                        <div className="relative">
-                            <MapPin className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                            <textarea
-                                value={editForm.address}
-                                onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                                disabled={!isEditing}
-                                rows={3}
-                                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isEditing ? 'border-gray-300' : 'bg-gray-50 border-gray-200'}`}
-                            />
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Số CMND/CCCD</label>
+                            <div className="relative">
+                                <CreditCard className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                                <input
+                                    type="text"
+                                    value={editForm.identityNumber || ''}
+                                    onChange={(e) => setEditForm({ ...editForm, identityNumber: e.target.value || null })}
+                                    disabled={!isEditing}
+                                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isEditing ? 'border-gray-300' : 'bg-gray-50 border-gray-200'}`}
+                                    placeholder="Nhập số CMND/CCCD"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Dân tộc</label>
+                            <div className="space-y-2">
+                                <select
+                                    value={customEthnicity ? 'custom' : (editForm.ethnicity || '')}
+                                    onChange={(e) => {
+                                        if (e.target.value === 'custom') {
+                                            setCustomEthnicity(true);
+                                            setEthnicityInput(editForm.ethnicity || '');
+                                        } else {
+                                            setCustomEthnicity(false);
+                                            setEditForm({ ...editForm, ethnicity: e.target.value });
+                                        }
+                                    }}
+                                    disabled={!isEditing}
+                                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isEditing ? 'border-gray-300' : 'bg-gray-50 border-gray-200'}`}
+                                >
+                                    <option value="">-- Chọn dân tộc --</option>
+                                    {vietnamEthnicities.map((ethnicity) => (
+                                        <option key={ethnicity} value={ethnicity}>
+                                            {ethnicity}
+                                        </option>
+                                    ))}
+                                    <option value="custom">Khác (Nhập tay)</option>
+                                </select>
+                                {customEthnicity && (
+                                    <input
+                                        type="text"
+                                        value={ethnicityInput}
+                                        onChange={(e) => {
+                                            setEthnicityInput(e.target.value);
+                                            setEditForm({ ...editForm, ethnicity: e.target.value });
+                                        }}
+                                        disabled={!isEditing}
+                                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isEditing ? 'border-gray-300' : 'bg-gray-50 border-gray-200'}`}
+                                        placeholder="Nhập dân tộc"
+                                    />
+                                )}
+                            </div>
                         </div>
                     </div>
 
                     <div className="mt-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Liên hệ khẩn cấp</h3>
-                        <div className="grid md:grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Họ tên</label>
-                                <input
-                                    type="text"
-                                    value={editForm.emergencyContact?.name || ''}
-                                    onChange={(e) => setEditForm({
-                                        ...editForm,
-                                        emergencyContact: { ...editForm.emergencyContact!, name: e.target.value }
-                                    })}
-                                    disabled={!isEditing}
-                                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isEditing ? 'border-gray-300' : 'bg-gray-50 border-gray-200'}`}
-                                />
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Địa chỉ <span className="text-red-500">*</span></label>
+                        {!isEditing ? (
+                            // Display mode: show address as text
+                            <div className="relative">
+                                <MapPin className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                                <div className="w-full pl-10 pr-4 py-3 border rounded-lg bg-gray-50 border-gray-200 text-gray-700">
+                                    {editForm.address || 'Chưa có địa chỉ'}
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Số điện thoại</label>
-                                <input
-                                    type="tel"
-                                    value={editForm.emergencyContact?.phone || ''}
-                                    onChange={(e) => setEditForm({
-                                        ...editForm,
-                                        emergencyContact: { ...editForm.emergencyContact!, phone: e.target.value }
-                                    })}
-                                    disabled={!isEditing}
-                                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isEditing ? 'border-gray-300' : 'bg-gray-50 border-gray-200'}`}
-                                />
+                        ) : (
+                            // Edit mode: show dropdown selectors
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">Tỉnh/Thành phố</label>
+                                        <select
+                                            value={selectedProvince}
+                                            onChange={(e) => handleProvinceChange(e.target.value)}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        >
+                                            <option value="">-- Chọn Tỉnh/TP --</option>
+                                            {vietnamProvinces.map((province) => (
+                                                <option key={province.code} value={province.code}>
+                                                    {province.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">Quận/Huyện/Xã</label>
+                                        <select
+                                            value={selectedDistrict}
+                                            onChange={(e) => handleDistrictChange(e.target.value)}
+                                            disabled={!selectedProvince}
+                                            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${selectedProvince ? 'border-gray-300' : 'bg-gray-50 border-gray-200'}`}
+                                        >
+                                            <option value="">-- Chọn Quận/Huyện/Xã --</option>
+                                            {availableDistricts.map((district) => (
+                                                <option key={district.code} value={district.code}>
+                                                    {district.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">Phường/Xóm</label>
+                                        <select
+                                            value={selectedWard}
+                                            onChange={(e) => handleWardChange(e.target.value)}
+                                            disabled={!selectedDistrict}
+                                            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${selectedDistrict ? 'border-gray-300' : 'bg-gray-50 border-gray-200'}`}
+                                        >
+                                            <option value="">-- Chọn Phường/Xóm --</option>
+                                            {availableWards.map((ward) => (
+                                                <option key={ward.code} value={ward.code}>
+                                                    {ward.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                {editForm.address && (
+                                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                        <p className="text-sm text-gray-700">
+                                            <MapPin className="inline w-4 h-4 mr-1" />
+                                            <strong>Địa chỉ đã chọn:</strong> {editForm.address}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Mối quan hệ</label>
-                                <input
-                                    type="text"
-                                    value={editForm.emergencyContact?.relationship || ''}
-                                    onChange={(e) => setEditForm({
-                                        ...editForm,
-                                        emergencyContact: { ...editForm.emergencyContact!, relationship: e.target.value }
-                                    })}
-                                    disabled={!isEditing}
-                                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isEditing ? 'border-gray-300' : 'bg-gray-50 border-gray-200'}`}
-                                />
-                            </div>
-                        </div>
+                        )}
                     </div>
 
                     {isEditing && (

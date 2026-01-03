@@ -1,5 +1,6 @@
 import { Save, X, Clock, Calendar } from "lucide-react";
 import { useState } from "react";
+import Alert from "@/components/ui/Alert";
 
 interface ScheduleFormProps {
   editingSchedule?: any;
@@ -7,41 +8,40 @@ interface ScheduleFormProps {
   onClose: () => void;
 }
 
-const FormInput = ({ label, icon: Icon, ...props }: { label: string; icon?: any; [key: string]: any }) => (
+const FormInput = ({ label, icon: Icon, ...props }: { label: string; icon?: any;[key: string]: any }) => (
   <div>
     <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
       {Icon && <Icon className="h-4 w-4 mr-2 text-gray-500" />}
       {label}
     </label>
-    <input 
-      {...props} 
-      className="block w-full h-10 p-3 text-black rounded-lg border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+    <input
+      {...props}
+      className="block w-full h-10 p-3 text-black rounded-lg border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
     />
   </div>
 );
 
-const TimeSlotButton = ({ 
-  time, 
-  selected, 
-  onClick, 
-  disabled = false 
-}: { 
-  time: string; 
-  selected: boolean; 
-  onClick: () => void; 
+const TimeSlotButton = ({
+  time,
+  selected,
+  onClick,
+  disabled = false
+}: {
+  time: string;
+  selected: boolean;
+  onClick: () => void;
   disabled?: boolean;
 }) => (
   <button
     type="button"
     onClick={onClick}
     disabled={disabled}
-    className={`px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
-      selected 
-        ? 'bg-blue-600 text-white border-blue-600' 
-        : disabled 
-        ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-    }`}
+    className={`px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${selected
+        ? 'bg-blue-600 text-white border-blue-600'
+        : disabled
+          ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+      }`}
   >
     {time}
   </button>
@@ -51,6 +51,10 @@ export const ScheduleForm = ({ editingSchedule, onSubmit, onClose }: ScheduleFor
   const [selectedDate, setSelectedDate] = useState(editingSchedule?.schedule_date || '');
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | null }>({
+    message: '',
+    type: null
+  });
 
   // Các khung giờ có sẵn theo backend service
   const timeSlots = [
@@ -59,8 +63,8 @@ export const ScheduleForm = ({ editingSchedule, onSubmit, onClose }: ScheduleFor
   ];
 
   const handleTimeSlotToggle = (time: string) => {
-    setSelectedTimeSlots(prev => 
-      prev.includes(time) 
+    setSelectedTimeSlots(prev =>
+      prev.includes(time)
         ? prev.filter(t => t !== time)
         : [...prev, time]
     );
@@ -68,14 +72,14 @@ export const ScheduleForm = ({ editingSchedule, onSubmit, onClose }: ScheduleFor
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedDate || selectedTimeSlots.length === 0) {
-      alert('Vui lòng chọn đầy đủ ngày và ít nhất một khung giờ khám');
+      setAlert({ message: 'Vui lòng chọn đầy đủ ngày và ít nhất một khung giờ khám', type: 'error' });
       return;
     }
 
     setIsSubmitting(true);
-    
+
     try {
       const schedules = selectedTimeSlots.map(timeSlot => {
         // Tính toán giờ kết thúc (30 phút sau giờ bắt đầu)
@@ -89,7 +93,7 @@ export const ScheduleForm = ({ editingSchedule, onSubmit, onClose }: ScheduleFor
           start_time: timeSlot,
           end_time: endTimeString
         };
-        
+
         return schedule;
       });
 
@@ -113,23 +117,23 @@ export const ScheduleForm = ({ editingSchedule, onSubmit, onClose }: ScheduleFor
           <Calendar className="h-5 w-5 mr-2 text-blue-600" />
           {editingSchedule ? 'Chỉnh sửa lịch' : 'Thêm lịch mới'}
         </h2>
-        <button 
-          onClick={onClose} 
+        <button
+          onClick={onClose}
           className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
         >
           <X className="h-5 w-5 text-gray-500" />
         </button>
       </div>
-      
+
       <form onSubmit={handleSubmit} className="p-6 space-y-6">
-        <FormInput 
-          label="Ngày làm việc" 
-          type="date" 
+        <FormInput
+          label="Ngày làm việc"
+          type="date"
           icon={Calendar}
           value={selectedDate}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedDate(e.target.value)}
           min={getMinDate()}
-          required 
+          required
         />
 
         <div>
@@ -137,7 +141,7 @@ export const ScheduleForm = ({ editingSchedule, onSubmit, onClose }: ScheduleFor
             <Clock className="h-4 w-4 mr-2 text-gray-500" />
             Chọn khung giờ khám (có thể chọn nhiều slot, mỗi slot 30 phút)
           </label>
-          
+
           <div className="space-y-4">
             {timeSlots.map((shift) => (
               <div key={shift.label}>
@@ -182,8 +186,8 @@ export const ScheduleForm = ({ editingSchedule, onSubmit, onClose }: ScheduleFor
         )}
 
         <div className="pt-4 border-t border-gray-200">
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={isSubmitting || !selectedDate || selectedTimeSlots.length === 0}
             className="w-full flex justify-center items-center rounded-lg bg-blue-600 py-2.5 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
           >
@@ -201,6 +205,11 @@ export const ScheduleForm = ({ editingSchedule, onSubmit, onClose }: ScheduleFor
           </button>
         </div>
       </form>
+
+      {/* Alert thông báo */}
+      {alert.type && (
+        <Alert message={alert.message} type={alert.type} duration={4000} />
+      )}
     </div>
   );
 };

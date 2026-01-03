@@ -1,100 +1,42 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useMessage } from '@/contexts/MessageContext';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { ConversationList } from '@/components/doctor/messages/ConversationList';
-import ChatWindow from '@/components/doctor/messages/ChatWindow';
-import { EmptyChat } from '@/components/doctor/messages/EmptyChat';
+import { Conversation } from '@/contexts/MessageContext';
+import { DoctorConversationList } from '@/components/doctor/messages/DoctorConversationList';
+import { DoctorChatWindow } from '@/components/doctor/messages/DoctorChatWindow';
+import { MessageSquare } from 'lucide-react';
 
 export default function DoctorMessagesPage() {
-  const { 
-    conversations, 
-    messages, 
-    selectedConversation, 
-    selectConversation, 
-    createConversation, 
-    sendMessage, 
-    getAvailableRecipients 
-  } = useMessage();
   const { user } = useAuth();
-  
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [allRecipients, setAllRecipients] = useState<any[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
 
-  useEffect(() => {
-    getAvailableRecipients().then(data => setAllRecipients(data));
-  }, [getAvailableRecipients]);
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    setIsSearching(true);
-    
-    if (!query.trim()) {
-      setSearchResults([]);
-      setIsSearching(false);
-      return;
-    }
-
-    const results = allRecipients.filter(r => {
-       const name = r.Doctor?.full_name || r.Patient?.full_name || '';
-       return name.toLowerCase().includes(query.toLowerCase());
-    }).map(r => ({
-       user_id: r.user_id,
-       full_name: r.Doctor?.full_name || r.Patient?.full_name,
-       avatar_url: r.Doctor?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${r.user_id}`,
-       specialty: { name: r.Doctor?.title || r.role }
-    }));
-
-    setSearchResults(results);
-    setIsSearching(false);
-  };
-
-  const handleCreateConversation = async (recipientId: string) => {
-     try {
-       await createConversation(recipientId);
-       setSearchQuery('');
-       setSearchResults([]);
-     } catch (e) {
-       console.error(e);
-     }
-  };
+  if (!user) {
+    return <div className="p-8 text-center text-gray-500">Loading...</div>;
+  }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-hidden">
-      <div className="grid grid-cols-1 lg:grid-cols-3 h-full max-w-screen-2xl mx-auto">
-        <div className="lg:col-span-1 border-r border-slate-200 bg-white flex flex-col h-full shadow-sm z-10">
-          <ConversationList 
-            conversations={conversations}
-            activeConversationId={selectedConversation?.id || null}
-            onConversationSelect={(id) => {
-                const conv = conversations.find(c => c.id === id);
-                selectConversation(conv || null);
-            }}
-            searchQuery={searchQuery}
-            onSearch={handleSearch}
-            searchResults={searchResults}
-            isSearching={isSearching}
-            onCreateConversation={handleCreateConversation}
-          />
-        </div>
-        
-        <div className="lg:col-span-2 flex flex-col h-full bg-white/50 backdrop-blur-sm">
-          {selectedConversation ? (
-            <ChatWindow 
-              conversation={selectedConversation}
-              messages={[...(messages.get(selectedConversation.id) || [])]}
-              onSendMessage={(content) => sendMessage(selectedConversation.id, content)}
-              currentUserId={user?.user_id || ''}
-            />
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <EmptyChat />
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
+      {/* Conversation List */}
+      <div className="md:col-span-1 bg-white rounded-lg shadow">
+        <DoctorConversationList onSelectConversation={setSelectedConversation} selectedId={selectedConversation?.id} />
+      </div>
+
+      {/* Chat Window */}
+      <div className="md:col-span-2">
+        {selectedConversation ? (
+          <div className="bg-white rounded-lg shadow">
+            <DoctorChatWindow conversation={selectedConversation} onBack={() => setSelectedConversation(null)} />
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow h-[600px] flex items-center justify-center">
+            <div className="text-center">
+              <MessageSquare size={48} className="mx-auto mb-4 text-gray-300" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Chọn cuộc trò chuyện</h3>
+              <p className="text-gray-500">Chọn một bệnh nhân để bắt đầu trò chuyện</p>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,15 +1,18 @@
 "use client"
-import { useState, useMemo } from "react";
-import { Doctor } from "@/types/types";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import SpecialtySidebar from "@/components/client/specialties/SpecialtySidebar"
 import SpecialtyMainContent from "@/components/client/specialties/SpecialtyMainContent"
 import Header from "@/components/layout/Header"
 import LoadingSpinner from "@/components/ui/LoadingSpinner"
 import Footer from "@/components/layout/Footer"
-import { useSpecialty } from "@/contexts/SpecialtyContext"
-import { useDoctor } from "@/contexts/DoctorContext"
+import { useSpecialty, Specialty as ContextSpecialty } from "@/contexts/SpecialtyContext"
+import { useDoctor, Doctor as ContextDoctor } from "@/contexts/DoctorContext"
 
 export default function SpecialtiesPage() {
+    const searchParams = useSearchParams()
+    const specialtyFromQuery = searchParams.get('specialty')
+    
     // FIX: selectedSpecialty now holds the NAME of the specialty, or null for "All"
     const [selectedSpecialty, setSelectedSpecialty] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<'overview' | 'doctors'>('overview')
@@ -17,6 +20,14 @@ export default function SpecialtiesPage() {
 
     const { specialties, loading: specialtiesLoading, error: specialtiesError } = useSpecialty()
     const { doctors, loading: doctorsLoading, error: doctorsError } = useDoctor()
+
+    // Set selectedSpecialty từ query parameter khi component mount
+    useEffect(() => {
+        if (specialtyFromQuery) {
+            setSelectedSpecialty(decodeURIComponent(specialtyFromQuery))
+            setActiveTab('overview')
+        }
+    }, [specialtyFromQuery])
 
     const doctorCountsByName = useMemo(() => {
         const counts = new Map<string, number>();
@@ -40,7 +51,7 @@ export default function SpecialtiesPage() {
     const filteredDoctors = useMemo(() => {
         if (!Array.isArray(doctors)) return [];
 
-        return doctors.filter((d) => {
+        return doctors.filter((d: ContextDoctor) => {
             // FIX: Filter directly by specialty name.
             const matchesSpecialty = !selectedSpecialty || d.specialty_name === selectedSpecialty;
             const matchesSearch = !searchQuery || d.full_name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -71,7 +82,7 @@ export default function SpecialtiesPage() {
                     <div className="lg:w-1/3">
                     {/* Sidebar */}
                     <SpecialtySidebar
-                        Specialties={specialties || []}
+                        Specialties={specialties as any}
                         doctorCounts={doctorCountsByName}
                         selectedSpecialty={selectedSpecialty}
                         setSelectedSpecialty={handleSelectSpecialty}
@@ -94,8 +105,8 @@ export default function SpecialtiesPage() {
 
                         {!isLoading && !error && (
                             <SpecialtyMainContent
-                                Specialties={specialties || []}
-                                filteredDoctors={filteredDoctors}
+                                Specialties={specialties as any}
+                                filteredDoctors={filteredDoctors as any}
                                 selectedSpecialty={selectedSpecialty}
                                 setSelectedSpecialty={handleSelectSpecialty}
                                 activeTab={activeTab}

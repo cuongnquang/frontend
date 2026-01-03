@@ -58,11 +58,6 @@ export default function DoctorCard({ doctor, onBook, onSelect }: DoctorCardProps
             alt={doctor.full_name}
             className="w-20 h-20 rounded-full object-cover ring-2 ring-blue-500 bg-gray-100 mb-2"
           />
-          {doctor.is_available && (
-            <span className="text-xs font-semibold text-green-700">
-              🟢 Online
-            </span>
-          )}
         </div>
 
         <div className="flex-1">
