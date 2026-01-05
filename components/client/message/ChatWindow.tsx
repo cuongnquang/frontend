@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useMessage, Conversation, Message } from '@/contexts/MessageContext';
+import { useMessage, Conversation } from '@/contexts/MessageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Send, MoreVertical, Trash2, Edit2, ChevronLeft, Minimize2 } from 'lucide-react';
+import { Send, MoreVertical, Trash2, Edit2, ChevronLeft, Phone, Video, Info, Image as ImageIcon, Smile } from 'lucide-react';
 
 interface ChatWindowProps {
   conversation: Conversation;
   onBack: () => void;
-  onClose: () => void;
+  onClose?: () => void;
 }
 
 export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
@@ -17,13 +17,13 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
     loadConversationMessages, 
     sendMessage, 
     markAsRead, 
-    deleteMessage: deleteMessageAction,
-    editMessage: editMessageAction,
+    deleteMessage: deleteMessageAction, 
     typingUsers,
-    onlineUsers,
     startTyping,
-    stopTyping
+    stopTyping,
+    socket,
   } = useMessage();
+
   const { user } = useAuth();
   const [messageContent, setMessageContent] = useState('');
   const [loading, setLoading] = useState(true);
@@ -31,437 +31,291 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editContent, setEditContent] = useState('');
   const [messageMenuOpen, setMessageMenuOpen] = useState<string | null>(null);
-  const [doctorAvatar, setDoctorAvatar] = useState<string | null>(null);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageContainerRef = useRef<HTMLDivElement>(null);
-  const [isTyping, setIsTyping] = useState(false);
-  const typingDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  const conversationMessages = messages.get(String(conversation.id)) || [];
 
-  // Load messages on conversation change
+  // 1. Load API
   useEffect(() => {
-    // Reset state for new conversation
-    setCurrentPage(1);
-    setHasMore(true);
+    if(!conversation.id) return;
     setLoading(true);
-
+    setCurrentPage(1);
     loadConversationMessages(conversation.id, 1).then((result) => {
       setHasMore(result.hasMore);
       setLoading(false);
       markAsRead(conversation.id);
+      setTimeout(scrollToBottom, 100);
     });
   }, [conversation.id, loadConversationMessages, markAsRead]);
 
-  // Fetch doctor avatar from conversation data directly
+  // 2. Socket
   useEffect(() => {
-    const otherUser = getOtherParticipant();
-    if (otherUser?.Doctor?.avatar_url) {
-      setDoctorAvatar(otherUser.Doctor.avatar_url);
+  if (!socket || !conversation.id) return;
+
+  const roomId = String(conversation.id);
+
+  // Đợi socket connect trước khi join
+  const joinRoom = () => {
+    if (!socket.connected) {
+      console.log("⏳ Waiting for socket to connect...");
+      socket.once('connect', () => {
+        console.log("🔌 Socket connected, joining room:", roomId);
+        socket.emit('join_room', { chatRoomId: roomId });
+      });
+    } else {
+      console.log("✅ Socket already connected, joining room:", roomId);
+      socket.emit('join_room', { chatRoomId: roomId });
     }
-  }, [conversation.id]);
-
-  // stop typing when unmounting or when conversation changes
-  useEffect(() => {
-    return () => {
-      stopTyping(conversation.id);
-      if (typingDebounceRef.current) clearTimeout(typingDebounceRef.current);
-    };
-  }, [conversation.id, stopTyping]);
-
-  // Auto-scroll to bottom on new messages (and after sending)
-  const prevCountRef = useRef<number>(0);
-
-  const conversationMessages = messages.get(conversation.id) || [];
-
-  useEffect(() => {
-    const prev = prevCountRef.current;
-    const curr = conversationMessages.length;
-
-    // Only auto-scroll if we're on the first page (not paginating older messages)
-    // or if we've just added a message (curr > prev)
-    if (currentPage === 1 && !loading && curr >= prev) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }
-
-    prevCountRef.current = curr;
-  }, [conversationMessages.length, currentPage, loading]);
-
-  // Ensure scroll to bottom immediately after send for better UX
-  const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-
-  const getOtherParticipant = () => {
-    if (conversation?.participants?.length > 0) {
-      return conversation.participants.find(p => p.user.Doctor?.full_name !== user?.full_name)?.user;
-    }
-    // Fallback for minimal chat objects from search results
-    const otherId = (conversation as unknown as { otherParticipantId?: string })?.otherParticipantId;
-    if (otherId) {
-      return { 
-        user_id: otherId, 
-        Doctor: { 
-          full_name: (conversation as unknown as { name?: string }).name || 'User',
-          avatar_url: undefined
-        } 
-      };
-    }
-    return null;
   };
 
-  const getParticipantName = (participant: any) => {
-    if (!participant) {
-      return 'Unknown';
+  joinRoom();
+
+  // Lắng nghe event join thành công (nếu backend emit)
+  const handleJoinSuccess = (data: any) => {
+    console.log("✅ Joined room successfully:", data);
+  };
+
+  socket.on('join_room', handleJoinSuccess);
+
+  return () => {
+    socket.off('join_room', handleJoinSuccess);
+    socket.emit('leave_room', { chatRoomId: roomId });
+  };
+}, [conversation.id, socket]);
+  // 3. Scroll
+  useEffect(() => {
+    if (!loading && conversationMessages.length > 0) {
+        scrollToBottom();
+        markAsRead(conversation.id);
     }
-    // Correctly access nested full_name for either Doctor or Patient
-    const fullName = participant.Doctor?.full_name || participant.Patient?.full_name || participant.full_name;
-    return fullName || 'Unknown';
+  }, [conversationMessages.length, loading, conversation.id, markAsRead]);
+
+  const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+  const handleScroll = async () => {
+    const container = messageContainerRef.current;
+    if (container && container.scrollTop === 0 && !loadingMore && hasMore) {
+      setLoadingMore(true);
+      const nextPage = currentPage + 1;
+      const oldScrollHeight = container.scrollHeight;
+      const result = await loadConversationMessages(conversation.id, nextPage);
+      setHasMore(result.hasMore);
+      setCurrentPage(nextPage);
+      requestAnimationFrame(() => {
+        if (messageContainerRef.current) {
+          messageContainerRef.current.scrollTop = messageContainerRef.current.scrollHeight - oldScrollHeight;
+        }
+      });
+      setLoadingMore(false);
+    }
   };
 
   const handleSendMessage = async () => {
     if (!messageContent.trim()) return;
-
     try {
-      const token = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('accessToken='))
-        ?.split('=')[1];
-
       if (editingId) {
-        // Edit mode - call PUT API
-        const response = await fetch(`/api/chat/messages/${editingId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token && { Authorization: `Bearer ${token}` }),
-          },
-          body: JSON.stringify({ content: messageContent }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to edit message');
-        }
-
-        setEditingId(null);
-        setEditContent('');
+         const token = document.cookie.split('; ').find(row => row.startsWith('accessToken='))?.split('=')[1];
+         await fetch(`/api/chat/messages/${editingId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ content: messageContent }),
+         });
+         setEditingId(null);
       } else {
-        // Send new message
         await sendMessage(conversation.id, messageContent);
       }
-
-      // Ensure other users see that typing has stopped
       stopTyping(conversation.id);
-      if (typingDebounceRef.current) clearTimeout(typingDebounceRef.current);
-
       setMessageContent('');
-      setIsTyping(false);
-
-      // Immediately scroll to the bottom to reveal the sent message
-      scrollToBottom();
+      setTimeout(scrollToBottom, 50);
     } catch (error) {
-      console.error('Error sending message:', error);
-      alert('Không thể gửi tin nhắn');
+      console.error('Error sending:', error);
     }
   };
 
-  const handleDeleteMessage = async (messageId: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa tin nhắn này?')) return;
-
-    try {
-      const token = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('accessToken='))
-        ?.split('=')[1];
-
-      const response = await fetch(`/api/chat/messages/${messageId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-        body: JSON.stringify({ isDeleted: true }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete message');
-      }
-
-      // Tin nhắn sẽ được cập nhật từ backend
-      setMessageMenuOpen(null);
-    } catch (error) {
-      console.error('Error deleting message:', error);
-      alert('Không thể xóa tin nhắn');
+  const handleDeleteMessage = async (msgId: string) => {
+    if(confirm("Xóa tin nhắn này?")) {
+        await deleteMessageAction(msgId);
+        setMessageMenuOpen(null);
     }
   };
 
-  const handleEditMessage = (message: Message) => {
-    setEditingId(message.id);
-    setEditContent(message.content);
-    setMessageContent(message.content);
-    setMessageMenuOpen(null);
+  const getOtherParticipant = () => {
+    return conversation.participants?.find((p) => String(p.user.user_id) !== String(user?.user_id || (user as any)?.id))?.user;
   };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  const handleScroll = async () => {
-    const container = messageContainerRef.current;
-    if (container) {
-      // Check if scrolled to the top
-      if (container.scrollTop === 0 && !loadingMore && hasMore) {
-        setLoadingMore(true);
-        const nextPage = currentPage + 1;
-        
-        // Giữ vị trí cuộn hiện tại để tránh bị nhảy
-        const oldScrollHeight = container.scrollHeight;
-
-        const result = await loadConversationMessages(conversation.id, nextPage);
-        
-        setHasMore(result.hasMore);
-        setCurrentPage(nextPage);
-        
-        // Sau khi tin nhắn mới được thêm vào, khôi phục vị trí cuộn
-        requestAnimationFrame(() => {
-          container.scrollTop = container.scrollHeight - oldScrollHeight;
-        });
-
-        setLoadingMore(false);
-      }
-    }
-  };
+  
+  const getParticipantName = (p: any) => p?.Doctor?.full_name || p?.Patient?.full_name || 'Người dùng';
   const otherUser = getOtherParticipant();
-  const isOnline = otherUser ? onlineUsers.has(otherUser.user_id) : false;
+  const avatarUrl = otherUser?.Doctor?.avatar_url;
 
   return (
-    <div className="w-full h-[600px] flex flex-col bg-white">
-      {/* Header */}
-      <div className="p-4 border-b bg-linear-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={onBack}
-            className="p-1.5 hover:bg-white/20 rounded-full transition-colors"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <div className="flex items-center gap-3">
-            {/* Avatar */}
-            {doctorAvatar || otherUser?.Doctor?.avatar_url ? (
-              <img 
-                src={doctorAvatar || otherUser?.Doctor?.avatar_url || ''} 
-                alt="Doctor"
-                className="w-10 h-10 rounded-full object-cover"
-              />
-            ) : (
-              <div className="w-10 h-10 bg-white/30 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                {getParticipantName(otherUser).charAt(0).toUpperCase()}
-              </div>
-            )}
-            <div>
-              <h3 className="font-semibold text-lg">
-                Bác sĩ
-              </h3>
-              <p className="text-xs text-blue-100">
-                {otherUser?.Doctor ? ` ${getParticipantName(otherUser)}` : getParticipantName(otherUser)}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-1">
-          <button className="p-1.5 hover:bg-white/20 rounded-full transition-colors">
-            <MoreVertical size={20} />
-          </button>
-        </div>
+    <div className="flex flex-col h-full bg-gray-50/50">
+      
+      {/* 1. HEADER */}
+      <div className="px-4 py-3 bg-white border-b border-gray-200 flex justify-between items-center shadow-sm sticky top-0 z-20">
+         <div className="flex items-center gap-3">
+             {/* --- NÚT TRỞ VỀ (Đã sửa: Luôn hiển thị) --- */}
+             <button 
+                onClick={onBack} 
+                className="p-2 -ml-2 mr-1 hover:bg-gray-100 rounded-full text-gray-600 transition-colors"
+                title="Quay lại"
+             >
+                <ChevronLeft size={24} />
+             </button>
+             
+             <div className="relative">
+                {avatarUrl ? (
+                    <img src={avatarUrl} className="w-10 h-10 rounded-full object-cover border border-gray-100 shadow-sm" alt="Avatar"/> 
+                ) : (
+                    <div className="w-10 h-10 bg-gradient-to-tr from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                        {getParticipantName(otherUser).charAt(0).toUpperCase()}
+                    </div>
+                )}
+                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+             </div>
+
+             <div>
+                <h3 className="font-bold text-gray-800 text-[15px] leading-tight">
+                    {otherUser?.Doctor ? 'BS. ' : ''}{getParticipantName(otherUser)}
+                </h3>
+                <p className="text-xs text-green-600 font-medium mt-0.5">Đang hoạt động</p>
+             </div>
+         </div>
+
+         <div className="flex items-center gap-1 text-blue-600">
+            <button className="p-2 hover:bg-blue-50 rounded-full transition-colors"><Phone size={20} /></button>
+            <button className="p-2 hover:bg-blue-50 rounded-full transition-colors"><Video size={20} /></button>
+            <button className="p-2 hover:bg-blue-50 rounded-full transition-colors"><Info size={20} /></button>
+         </div>
       </div>
 
-      {/* Messages */}
+      {/* 2. MESSAGES LIST */}
       <div 
-        ref={messageContainerRef}
-        onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 space-y-4"
+        ref={messageContainerRef} 
+        onScroll={handleScroll} 
+        className={`overflow-y-auto p-4 space-y-2 bg-[#F0F2F5] scroll-smooth custom-scrollbar ${user?.role === 'doctor' ? 'flex-1' : 'h-[450px]'}`}
       >
-        {loadingMore && <div className="text-center text-gray-500 text-sm">Loading more...</div>}
+        {loadingMore && <div className="text-center py-2"><div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full mx-auto"></div></div>}
+        
         {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500">Loading messages...</p>
-          </div>
+            <div className="flex h-full items-center justify-center">
+                <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+            </div>
         ) : conversationMessages.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500">No messages yet. Start the conversation!</p>
-          </div>
+            <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-60">
+                <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+                    <img src={avatarUrl} className="w-full h-full rounded-full opacity-50 grayscale object-cover" />
+                </div>
+                <p>Hãy bắt đầu cuộc trò chuyện!</p>
+            </div>
         ) : (
-          conversationMessages.map((message, idx) => {
-            // Robust sender detection: prefer message.senderId, fall back to nested sender.user_id
-            const msg = message as any;
-            const senderId = msg.senderId || msg.sender_id || (msg.sender?.user_id) || (msg.sender?.id);
-            const messageSenderId = String(senderId || '');
-            const currentUserId = String(user?.user_id || (user as any)?.id || '');
-            const isSender = messageSenderId === currentUserId;
-            let senderName = 'Unknown';
-            if (message.sender) {
-              const senderObj = message.sender as { Doctor?: { full_name?: string }; Patient?: { full_name?: string }; full_name?: string };
-              senderName = senderObj.Doctor?.full_name || senderObj.Patient?.full_name || senderObj.full_name || senderName;
-            } else if (messageSenderId && !isSender) {
-              const p = conversation.participants?.find((pp) => String(pp.user.user_id) === messageSenderId)?.user as { Doctor?: { full_name?: string }; Patient?: { full_name?: string }; full_name?: string } | undefined;
-              senderName = p ? (p.Doctor?.full_name || p.Patient?.full_name || p.full_name || senderName) : senderName;
-            }
-            const prev = conversationMessages[idx - 1];
-            const prevSenderId = prev ? String(prev.senderId || (prev.sender?.user_id) || '') : null;
-            const showSenderName = !isSender && (!prev || prevSenderId !== messageSenderId);
+            conversationMessages.map((msg: any, index) => {
+                const isSender = String(msg.senderId || msg.sender_id || msg.sender?.user_id) === String(user?.user_id || (user as any)?.id);
+                const isSequence = index > 0 && conversationMessages[index-1]?.senderId === msg.senderId;
 
-            // layout helpers
-            const outerClass = `flex ${isSender ? 'justify-end' : 'justify-start'} items-end`;
-            const bubbleBase = 'max-w-[70%] group relative rounded-lg p-3';
-            const bubbleVariant = isSender
-              ? 'bg-blue-500 text-white ml-4 mr-2 rounded-tr-lg rounded-bl-lg'
-              : 'bg-white text-gray-900 border border-gray-300 mr-4 ml-2 rounded-tl-lg rounded-br-lg';
+                return (
+                    <div key={msg.id} className={`flex w-full ${isSender ? 'justify-end' : 'justify-start'} group animate-in fade-in zoom-in-95 duration-200`}>
+                       
+                       {!isSender && (
+                           <div className={`w-8 h-8 mr-2 flex-shrink-0 flex items-end ${isSequence ? 'invisible' : ''}`}>
+                               {avatarUrl ? (
+                                   <img src={avatarUrl} className="w-8 h-8 rounded-full object-cover border border-gray-200" />
+                               ) : (
+                                   <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-[10px] text-white font-bold">
+                                       {getParticipantName(otherUser).charAt(0)}
+                                   </div>
+                               )}
+                           </div>
+                       )}
 
-            return (
-              <div key={message.id} className={outerClass}>
-                {/* Message Actions Menu - 3 dấu chấm bên trái */}
-                {isSender && !message.isDeleted && (
-                  <div className="relative flex-shrink-0 mr-2">
-                    <button
-                      onClick={() => setMessageMenuOpen(messageMenuOpen === message.id ? null : message.id)}
-                      className="p-1.5 hover:bg-gray-200 rounded-full transition-colors"
-                    >
-                      <MoreVertical size={16} className="text-blue-400" />
-                    </button>
-                    
-                    {/* Dropdown Menu */}
-                    {messageMenuOpen === message.id && (
-                      <div className="absolute left-0 top-8 w-32 bg-white border border-gray-300 rounded-lg shadow-lg z-50">
-                        <button
-                          onClick={() => handleEditMessage(message)}
-                          className="w-full px-4 py-2 text-left text-sm hover:bg-blue-50 flex items-center gap-2 text-blue-600 border-b"
-                        >
-                          <Edit2 size={14} />
-                          Sửa
-                        </button>
-                        <button
-                          onClick={() => handleDeleteMessage(message.id)}
-                          className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 flex items-center gap-2 text-red-600"
-                        >
-                          <Trash2 size={14} />
-                          Xóa
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {/* Avatar cho tin nhắn của người khác */}
-                <div className={`${bubbleBase} ${bubbleVariant}`}>
-                  {message.isDeleted ? (
-                    <p className="text-sm italic opacity-60">[Tin nhắn đã được thu hồi]</p>
-                  ) : (
-                    <p className="text-sm break-words">{message.content}</p>
-                  )}
+                       <div className={`relative max-w-[70%] md:max-w-[60%]`}>
+                          {isSender && !msg.isDeleted && (
+                              <div className="absolute top-1/2 -translate-y-1/2 -left-8 opacity-0 group-hover:opacity-100 transition-opacity px-1">
+                                  <button onClick={() => setMessageMenuOpen(messageMenuOpen === msg.id ? null : msg.id)} className="p-1 hover:bg-gray-200 rounded-full text-gray-500">
+                                      <MoreVertical size={14} />
+                                  </button>
+                                  {messageMenuOpen === msg.id && (
+                                      <div className="absolute right-0 bottom-full mb-1 w-24 bg-white shadow-xl border rounded-lg overflow-hidden z-30">
+                                          <button onClick={() => { setEditingId(msg.id); setMessageContent(msg.content); setMessageMenuOpen(null); }} className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 text-blue-600 flex gap-2 items-center"><Edit2 size={12}/> Sửa</button>
+                                          <button onClick={() => handleDeleteMessage(msg.id)} className="w-full text-left px-3 py-2 text-xs hover:bg-red-50 text-red-600 flex gap-2 items-center"><Trash2 size={12}/> Xóa</button>
+                                      </div>
+                                  )}
+                              </div>
+                          )}
 
-                  <div className="flex items-center justify-between gap-2 mt-1">
-                    <p className={`text-xs ${isSender ? 'text-blue-100' : 'text-gray-500'}`}> 
-                      {new Date(message.createdAt).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            );
-          })
+                          <div className={`
+                              px-4 py-2 text-[15px] leading-relaxed break-words shadow-sm
+                              ${isSender 
+                                  ? 'bg-blue-600 text-white rounded-2xl rounded-tr-sm' 
+                                  : 'bg-white text-gray-800 border border-gray-200 rounded-2xl rounded-tl-sm'}
+                              ${msg.isDeleted ? 'opacity-70 italic border-dashed border-gray-400 bg-gray-100 text-gray-500' : ''}
+                          `}>
+                              {msg.isDeleted ? 'Tin nhắn đã thu hồi' : msg.content}
+                          </div>
+
+                          <div className={`text-[10px] mt-1 px-1 opacity-70 ${isSender ? 'text-right text-gray-500' : 'text-left text-gray-500'}`}>
+                              {new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                              {msg.isEdited && <span className="ml-1 italic">(đã sửa)</span>}
+                          </div>
+                       </div>
+                    </div>
+                )
+            })
         )}
-
-        {/* Typing Indicator */}
-        {
-          (() => {
-            const typers = Array.from(typingUsers.entries())
-              .filter(([uid, u]) => u.chatRoomId === conversation.id && u.isTyping)
-              .map(([uid]) => {
-                const participantUser = conversation.participants?.find(p => p.user.user_id === uid)?.user || null;
-                return getParticipantName(participantUser);
-              });
-
-            if (typers.length === 0) return null;
-
-            const label = `${typers.slice(0, 2).join(', ')}${typers.length > 2 ? ` and ${typers.length - 2} more` : ''} ${typers.length > 1 ? 'are' : 'is'} typing...`;
-
-            return (
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <div className="space-x-1">
-                  <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
-                  <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></span>
-                  <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></span>
+        
+        {Array.from(typingUsers.values()).some(t => t.chatRoomId === conversation.id && t.isTyping) && (
+            <div className="flex items-center gap-2 ml-10">
+                <div className="bg-gray-200 px-3 py-2 rounded-full rounded-tl-none flex gap-1 items-center">
+                    <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"></span>
+                    <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-100"></span>
+                    <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-200"></span>
                 </div>
-                {label}
-              </div>
-            );
-          })()
-        }
+                <span className="text-xs text-gray-400">Đang nhập...</span>
+            </div>
+        )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="p-4 border-t">
-        {editingId && (
-          <div className="mb-2 p-2 bg-blue-50 rounded flex items-center justify-between">
-            <p className="text-sm text-blue-900">Editing message...</p>
-            <button
-              onClick={() => {
-                setEditingId(null);
-                setEditContent('');
-                setMessageContent('');
-              }}
-              className="text-xs text-blue-600 hover:text-blue-800"
+      {/* 3. INPUT AREA */}
+      <div className="p-3 bg-white border-t border-gray-200 sticky bottom-0 z-20">
+         {editingId && (
+             <div className="flex justify-between items-center bg-blue-50 px-3 py-1.5 mb-2 rounded text-xs text-blue-700 border border-blue-100">
+                 <span>Đang chỉnh sửa tin nhắn...</span>
+                 <button onClick={() => {setEditingId(null); setMessageContent('')}} className="font-bold hover:underline">Hủy</button>
+             </div>
+         )}
+         <div className="flex items-end gap-2">
+            <div className="flex gap-1 pb-2 text-blue-600">
+                <button className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ImageIcon size={20}/></button>
+                <button className="p-2 hover:bg-gray-100 rounded-full transition-colors"><Smile size={20}/></button>
+            </div>
+
+            <div className="flex-1 bg-gray-100 rounded-3xl flex items-center px-4 py-2 border border-transparent focus-within:border-blue-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                <textarea 
+                    className="flex-1 bg-transparent border-none focus:ring-0 outline-none max-h-32 min-h-[24px] resize-none text-sm text-gray-800 placeholder-gray-500 py-1 scrollbar-hide"
+                    placeholder="Nhập tin nhắn..."
+                    value={messageContent}
+                    rows={1}
+                    onChange={e => {
+                        setMessageContent(e.target.value);
+                        if(e.target.value) startTyping(conversation.id);
+                        else stopTyping(conversation.id);
+                    }}
+                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSendMessage())}
+                />
+            </div>
+            
+            <button 
+                onClick={handleSendMessage} 
+                disabled={!messageContent.trim()}
+                className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all shadow-sm flex-shrink-0"
             >
-              Cancel
+                <Send size={18} className={messageContent.trim() ? "ml-0.5" : ""} />
             </button>
-          </div>
-        )}
-        <div className="flex gap-2">
-          <textarea
-            value={messageContent}
-            onChange={(e) => {
-              const val = e.target.value;
-              setMessageContent(val);
-              setIsTyping(val.length > 0);
-
-              // Auto resize
-              try {
-                const ta = e.target as HTMLTextAreaElement;
-                ta.style.height = 'auto';
-                ta.style.height = Math.min(160, ta.scrollHeight) + 'px';
-              } catch {}
-
-              if (val.trim()) {
-                startTyping(conversation.id);
-                if (typingDebounceRef.current) clearTimeout(typingDebounceRef.current);
-                typingDebounceRef.current = setTimeout(() => {
-                  stopTyping(conversation.id);
-                  setIsTyping(false);
-                }, 2000);
-              } else {
-                stopTyping(conversation.id);
-                if (typingDebounceRef.current) clearTimeout(typingDebounceRef.current);
-                setIsTyping(false);
-              }
-            }}
-            onKeyPress={handleKeyPress}
-            placeholder="Type a message..."
-            rows={1}
-            className="flex-1 p-3 border border-gray-200 rounded-lg resize-none text-black outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <button
-            onClick={handleSendMessage}
-            disabled={!messageContent.trim()}
-            className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <Send size={20} />
-          </button>
-        </div>
+         </div>
       </div>
     </div>
   );

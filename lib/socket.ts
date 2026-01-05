@@ -1,7 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 
 // Provide a factory so callers can create a token-authenticated socket and control connect/disconnect.
-const DEFAULT_URL = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'http://localhost:3001';
+const DEFAULT_URL = process.env.NEXT_PUBLIC_WEBSOCKET_URL;
 const DEFAULT_PATH = '/api/socket.io/';
 
 export function createSocket(token?: string, url = DEFAULT_URL, path = DEFAULT_PATH): Socket {
