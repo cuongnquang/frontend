@@ -1,9 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
 import { Socket } from 'socket.io-client';
 import { createSocket } from '@/lib/socket';
 
+// --- HELPER: Lấy Token ---
 function getAccessToken(): string | undefined {
   if (typeof document === 'undefined') return undefined;
   const value = `; ${document.cookie}`;
@@ -14,6 +15,7 @@ function getAccessToken(): string | undefined {
   return undefined;
 }
 
+// --- TYPES ---
 export interface Message {
   id: string;
   chatRoomId: string;
@@ -26,38 +28,19 @@ export interface Message {
   sender: {
     user_id: string;
     role: 'patient' | 'doctor' | 'admin';
-    Doctor?: {
-      full_name: string;
-      avatar_url?: string;
-    };
-    Patient?: {
-      full_name: string;
-    };
+    Doctor?: { full_name: string; avatar_url?: string; };
+    Patient?: { full_name: string; };
   };
 }
 
 export interface ChatParticipant {
   userId: string;
   chatRoomId: string;
-  lastReadMessageId?: string;
-  lastReadAt?: string;
-  createdAt: string;
-  updatedAt: string;
   user: {
     user_id: string;
     role: 'patient' | 'doctor' | 'admin';
-    Doctor?: {
-      doctor_id: string;
-      full_name: string;
-      avatar_url?: string;
-      Specialty?: {
-        name: string;
-      };
-    };
-    Patient?: {
-      patient_id: string;
-      full_name: string;
-    };
+    Doctor?: { full_name: string; avatar_url?: string; };
+    Patient?: { full_name: string; };
   };
 }
 
@@ -68,9 +51,8 @@ export interface Conversation {
   updatedAt: string;
   lastMessageAt?: string;
   participants: ChatParticipant[];
-  messages?: Message[];
-  unreadCount?: number;
   lastMessage?: Message;
+  unreadCount?: number;
 } 
 
 interface MessageContextType {
@@ -83,7 +65,6 @@ interface MessageContextType {
   isConnected: boolean;
   socket: Socket | null;
 
-  // Actions
   loadConversations: (limit?: number, offset?: number) => Promise<Conversation[] | undefined>;
   loadConversationMessages: (roomId: string, page?: number, pageSize?: number) => Promise<{ messages: Message[]; hasMore: boolean }>;
   sendMessage: (roomId: string, content: string) => Promise<void>;
@@ -96,6 +77,7 @@ interface MessageContextType {
   stopTyping: (chatRoomId: string) => void;
 }
 
+// --- STATE & REDUCER ---
 const MessageContext = createContext<MessageContextType | undefined>(undefined);
 
 interface State {
@@ -140,34 +122,63 @@ function messageReducer(state: State, action: Action): State {
   switch (action.type) {
     case 'SET_CONVERSATIONS':
       return { ...state, conversations: action.payload };
+
     case 'ADD_CONVERSATION': {
       const exists = state.conversations.some((c) => c.id === action.payload.id);
       if (exists) return state;
       return { ...state, conversations: [action.payload, ...state.conversations] };
     }
+
     case 'SET_MESSAGES': {
+      // payload.roomId cần đảm bảo là string
+      const rid = String(action.payload.roomId);
       const newMessages = new Map(state.messages);
-      newMessages.set(action.payload.roomId, action.payload.messages);
+      newMessages.set(rid, action.payload.messages);
       return { ...state, messages: newMessages };
     }
+
     case 'PREPEND_MESSAGES': {
-      const existing = state.messages.get(action.payload.roomId) || [];
+      const rid = String(action.payload.roomId);
+      const existing = state.messages.get(rid) || [];
+      // Lọc trùng lặp khi load thêm trang cũ
+      const incoming = action.payload.messages.filter(
+         newMsg => !existing.some(exMsg => exMsg.id === newMsg.id)
+      );
       const newMessages = new Map(state.messages);
-      newMessages.set(action.payload.roomId, [...action.payload.messages, ...existing]);
+      newMessages.set(rid, [...incoming, ...existing]);
       return { ...state, messages: newMessages };
     }
+
+    // --- CASE QUAN TRỌNG NHẤT: NHẬN TIN NHẮN SOCKET ---
     case 'ADD_MESSAGE': {
-      const roomId = action.payload.chatRoomId;
-      const messages = state.messages.get(roomId) || [];
-      const newMessages = new Map(state.messages);
-      newMessages.set(roomId, [...messages, action.payload]);
-      const newConversations = state.conversations.map((c) =>
-        c.id === roomId ? { ...c, lastMessage: action.payload, lastMessageAt: action.payload.createdAt } : c
-      );
-      return { ...state, messages: newMessages, conversations: newConversations };
+      const msg = action.payload;
+      
+      // XỬ LÝ ĐA DẠNG KEY ID (Đây là lý do chính khiến tin nhắn không hiện)
+      const rawId = msg.chatRoomId || 
+                    (msg as any).chat_room_id || 
+                    (msg as any).conversationId || 
+                    (msg as any).room_id;
+
+      const roomId = rawId ? String(rawId) : null;
+
+      if (!roomId) {
+        console.error("❌ Socket nhận tin nhưng thiếu RoomID:", msg);
+        return state;
+      }
+      
+      // ... (Code xử lý thêm vào map giữ nguyên như cũ)
+      const currentMessages = state.messages.get(roomId) || [];
+      if (currentMessages.some(m => m.id === msg.id)) return state;
+
+      const newMessagesMap = new Map(state.messages);
+      newMessagesMap.set(roomId, [...currentMessages, msg]);
+      
+      return { ...state, messages: newMessagesMap };
     }
+
     case 'UPDATE_MESSAGE': {
-      const roomId = action.payload.chatRoomId;
+      const rawId = action.payload.chatRoomId || (action.payload as any).conversationId;
+      const roomId = String(rawId);
       const messages = state.messages.get(roomId) || [];
       const newMessages = new Map(state.messages);
       newMessages.set(
@@ -176,28 +187,41 @@ function messageReducer(state: State, action: Action): State {
       );
       return { ...state, messages: newMessages };
     }
+
     case 'DELETE_MESSAGE': {
+      // Khi xóa, socket trả về messageId, ta phải duyệt map để tìm và xóa
       const newMessages = new Map(state.messages);
+      let changed = false;
+
+      // Duyệt qua từng phòng chat để tìm tin nhắn cần xóa (hoặc đánh dấu đã xóa)
       for (const [roomId, msgs] of newMessages.entries()) {
-        const filtered = msgs.filter((m) => m.id !== action.payload);
-        if (filtered.length < msgs.length) {
-          newMessages.set(roomId, filtered);
+        const targetIndex = msgs.findIndex(m => m.id === action.payload);
+        if (targetIndex !== -1) {
+            const updatedMsgs = [...msgs];
+            // Cách 1: Xóa hẳn
+            // updatedMsgs.splice(targetIndex, 1);
+            // Cách 2: Đánh dấu đã xóa (Recommended)
+            updatedMsgs[targetIndex] = { ...updatedMsgs[targetIndex], isDeleted: true };
+            
+            newMessages.set(roomId, updatedMsgs);
+            changed = true;
         }
       }
-      return { ...state, messages: newMessages };
+      return changed ? { ...state, messages: newMessages } : state;
     }
+
     case 'SET_UNREAD_COUNTS':
       return { ...state, unreadCounts: action.payload };
+
     case 'ADD_ONLINE_USER':
-      return {
-        ...state,
-        onlineUsers: new Set([...state.onlineUsers, action.payload]),
-      };
+      return { ...state, onlineUsers: new Set([...state.onlineUsers, action.payload]) };
+
     case 'REMOVE_ONLINE_USER': {
       const newSet = new Set(state.onlineUsers);
       newSet.delete(action.payload);
       return { ...state, onlineUsers: newSet };
     }
+
     case 'SET_TYPING': {
       const newTyping = new Map(state.typingUsers);
       if (action.payload.isTyping) {
@@ -210,6 +234,7 @@ function messageReducer(state: State, action: Action): State {
       }
       return { ...state, typingUsers: newTyping };
     }
+
     case 'SELECT_CONVERSATION':
       return { ...state, selectedConversation: action.payload };
     case 'SET_CONNECTED':
@@ -223,22 +248,20 @@ function messageReducer(state: State, action: Action): State {
 
 type UserRef = { user_id: string; role: string; full_name?: string } | null;
 
-
+// --- PROVIDER COMPONENT ---
 export function MessageProvider({ children, initialUser }: { children: React.ReactNode; initialUser?: UserRef }) {
   const user = initialUser as UserRef;
   const [state, dispatch] = useReducer(messageReducer, initialState);
 
+  // 1. Load Messages API
   const loadConversationMessages = useCallback(async (roomId: string, page = 1, pageSize = 20) => {
     try {
       const token = getAccessToken();
       if (!token) return { messages: [], hasMore: false };
-
       const response = await fetch(`/api/chat/messages/${roomId}?page=${page}&pageSize=${pageSize}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
       const data = await response.json();
       const messages = data.data?.messages || data.messages || [];
 
@@ -247,167 +270,162 @@ export function MessageProvider({ children, initialUser }: { children: React.Rea
       } else {
         dispatch({ type: 'PREPEND_MESSAGES', payload: { roomId, messages } });
       }
-
       return { messages, hasMore: page < (data.data?.totalPages || 1) };
     } catch (error) {
-      console.error('Error loading conversation messages:', error);
+      console.error('Error loading msgs:', error);
       return { messages: [], hasMore: false };
     }
   }, []);
 
-  const selectConversation = useCallback((conversation: Conversation | null) => {
-    dispatch({ type: 'SELECT_CONVERSATION', payload: conversation });
-  }, []);
+  // 2. Socket Initialization (NẰM TRONG COMPONENT, KHÔNG PHẢI REDUCER)
+  useEffect(() => {
+    if (!user?.user_id || typeof window === 'undefined') return;
 
-  const createConversation = useCallback(
-    async (recipientId: string) => {
-      try {
-        const token = getAccessToken();
-        if (!token) throw new Error('No access token');
+    // Khởi tạo socket
+    const socket = createSocket();
 
-        const response = await fetch('/api/chat/conversations/find-or-create', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ recipientId }),
-        });
+    // Các hàm xử lý sự kiện
+    const handleConnect = () => {
+        console.log("✅ Socket Connected");
+        dispatch({ type: 'SET_CONNECTED', payload: true });
+        socket.emit('user_online', { userId: user.user_id });
+    };
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const handleDisconnect = () => {
+        console.log("❌ Socket Disconnected");
+        dispatch({ type: 'SET_CONNECTED', payload: false });
+    };
 
-        const data = await response.json();
-        const conversation = data.data || data;
-
-        dispatch({ type: 'ADD_CONVERSATION', payload: conversation });
-        selectConversation(conversation);
-        return conversation;
-      } catch (error) {
-        console.error('Error creating conversation:', error);
-        return undefined;
-      }
-    },
-    [selectConversation]
-  );
-
-  const loadConversations = useCallback(async (limit = 50, offset = 0) => {
-    try {
-      const token = getAccessToken();
-      if (!token) return undefined;
-
-      const response = await fetch(`/api/chat/conversations?limit=${limit}&offset=${offset}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-      const data = await response.json();
-      const conversations = data.data || data;
-
-      if (Array.isArray(conversations)) {
-        dispatch({ type: 'SET_CONVERSATIONS', payload: conversations });
-
-        const unreadCounts = new Map<string, number>();
-        conversations.forEach((conv) => {
-          if (conv.unreadCount !== undefined) {
-            unreadCounts.set(conv.id, conv.unreadCount);
-          }
-        });
-        dispatch({ type: 'SET_UNREAD_COUNTS', payload: unreadCounts });
-
-        return conversations;
-      }
-      return undefined;
-    } catch (error) {
-      console.error('Error loading conversations:', error);
-      return undefined;
+    const handleReceiveMessage = (message: Message) => {
+    console.log("📩 RECEIVED MESSAGE:", message);
+    console.log("📍 ChatRoomId:", message.chatRoomId);
+    console.log("🗺️ Current messages map keys:", Array.from(state.messages.keys()));
+    
+    // Đảm bảo chatRoomId là string
+    const roomId = String(message.chatRoomId);
+    
+    // Kiểm tra xem message đã tồn tại chưa
+    const currentMessages = state.messages.get(roomId) || [];
+    const exists = currentMessages.some(m => m.id === message.id);
+    
+    if (exists) {
+      console.log("⚠️ Message already exists, skipping");
+      return;
     }
+    
+    console.log("✅ Adding message to state");
+    dispatch({ type: 'ADD_MESSAGE', payload: { ...message, chatRoomId: roomId } });
+  };
+
+    const handleUpdateMessage = (message: Message) => dispatch({ type: 'UPDATE_MESSAGE', payload: message });
+    const handleDeleteMessage = (data: { messageId: string }) => dispatch({ type: 'DELETE_MESSAGE', payload: data.messageId });
+    const handleUserOnline = (data: { userId: string }) => dispatch({ type: 'ADD_ONLINE_USER', payload: data.userId });
+    const handleUserOffline = (data: { userId: string }) => dispatch({ type: 'REMOVE_ONLINE_USER', payload: data.userId });
+    const handleTyping = (data: { userId: string; chatRoomId: string; isTyping: boolean }) => dispatch({ type: 'SET_TYPING', payload: data });
+
+    // Đăng ký sự kiện
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+    socket.on('receive_message', handleReceiveMessage);
+    socket.on('message_updated', handleUpdateMessage);
+    socket.on('message_deleted', handleDeleteMessage);
+    socket.on('user_online', handleUserOnline);
+    socket.on('user_offline', handleUserOffline);
+    socket.on('typing', handleTyping);
+
+    // Lưu socket vào state
+    dispatch({ type: 'SET_SOCKET', payload: socket });
+
+    // Cleanup khi component unmount
+    return () => {
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
+      socket.off('receive_message', handleReceiveMessage);
+      socket.off('message_updated', handleUpdateMessage);
+      socket.off('message_deleted', handleDeleteMessage);
+      socket.off('user_online', handleUserOnline);
+      socket.off('user_offline', handleUserOffline);
+      socket.off('typing', handleTyping);
+      socket.disconnect();
+    };
+  }, [user?.user_id]);
+
+  // 3. API Actions
+  const loadConversations = useCallback(async (limit = 50, offset = 0) => {
+    const token = getAccessToken();
+    if (!token) return undefined;
+    try {
+        const res = await fetch(`/api/chat/conversations?limit=${limit}&offset=${offset}`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(res.statusText);
+        const data = await res.json();
+        const convs = data.data || data;
+        if (Array.isArray(convs)) {
+            dispatch({ type: 'SET_CONVERSATIONS', payload: convs });
+            const unread = new Map();
+            convs.forEach(c => c.unreadCount && unread.set(c.id, c.unreadCount));
+            dispatch({ type: 'SET_UNREAD_COUNTS', payload: unread });
+            return convs;
+        }
+    } catch (e) { console.error(e); }
   }, []);
 
-  const sendMessage = useCallback(
-    async (roomId: string, content: string) => {
-      try {
-        const token = getAccessToken();
-        if (!token) throw new Error('No access token');
-
-        const response = await fetch('/api/chat/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ chatRoomId: roomId, content }),
+  const sendMessage = useCallback(async (roomId: string, content: string) => {
+    const token = getAccessToken();
+    if (!token) return;
+    try {
+        const res = await fetch('/api/chat/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ chatRoomId: roomId, content }),
         });
+        if (!res.ok) throw new Error(res.statusText);
+        const data = await res.json();
+        const msg = data.data || data;
+        // Backend sẽ emit socket, nhưng ta add luôn vào state để UI phản hồi nhanh
+        dispatch({ type: 'ADD_MESSAGE', payload: msg });
+    } catch (e) { console.error(e); }
+  }, []);
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-        const data = await response.json();
-        const message = data.data || data;
-        dispatch({ type: 'ADD_MESSAGE', payload: message });
-      } catch (error) {
-        console.error('Error sending message:', error);
-      }
-    },
-    []
-  );
+  const selectConversation = useCallback((c: Conversation | null) => dispatch({ type: 'SELECT_CONVERSATION', payload: c }), []);
+  
+  const createConversation = useCallback(async (recipientId: string) => {
+    const token = getAccessToken();
+    if (!token) return undefined;
+    try {
+        const res = await fetch('/api/chat/conversations/find-or-create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ recipientId }),
+        });
+        const data = await res.json();
+        const conv = data.data || data;
+        dispatch({ type: 'ADD_CONVERSATION', payload: conv });
+        selectConversation(conv);
+        return conv;
+    } catch (e) { console.error(e); return undefined; }
+  }, [selectConversation]);
 
   const markAsRead = useCallback(async (roomId: string) => {
-    try {
-      const token = getAccessToken();
-      if (!token) return;
+     const token = getAccessToken();
+     if(token) fetch(`/api/chat/conversations/${roomId}/read`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+  }, []);
 
-      await fetch(`/api/chat/conversations/${roomId}/read`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    } catch (error) {
-      console.error('Error marking as read:', error);
+  const deleteMessage = useCallback(async (id: string) => {
+    const token = getAccessToken();
+    if(token) {
+        await fetch(`/api/chat/messages/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ isDeleted: true }) });
+        dispatch({ type: 'DELETE_MESSAGE', payload: id });
     }
   }, []);
 
-  const deleteMessage = useCallback(async (messageId: string) => {
-    try {
-      const token = getAccessToken();
-      if (!token) return;
-
-      const response = await fetch(`/api/chat/messages/${messageId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ isDeleted: true }),
-      });
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-      dispatch({ type: 'DELETE_MESSAGE', payload: messageId });
-    } catch (error) {
-      console.error('Error deleting message:', error);
-    }
-  }, []);
-
-  const editMessage = useCallback(async (messageId: string, content: string) => {
-    try {
-      const token = getAccessToken();
-      if (!token) return;
-
-      const response = await fetch(`/api/chat/messages/${messageId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ content }),
-      });
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-      const data = await response.json();
-      const message = data.data || data;
-      dispatch({ type: 'UPDATE_MESSAGE', payload: message });
-    } catch (error) {
-      console.error('Error editing message:', error);
+  const editMessage = useCallback(async (id: string, content: string) => {
+    const token = getAccessToken();
+    if(token) {
+        const res = await fetch(`/api/chat/messages/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ content }) });
+        const data = await res.json();
+        dispatch({ type: 'UPDATE_MESSAGE', payload: data.data || data });
     }
   }, []);
 
@@ -423,61 +441,8 @@ export function MessageProvider({ children, initialUser }: { children: React.Rea
     state.socket.emit('typing', { chatRoomId, isTyping: false });
   }, [user?.user_id, state.socket]);
 
-  // Initialize socket connection
-  useEffect(() => {
-    if (!user?.user_id || typeof window === 'undefined') return;
-
-    const socket = createSocket();
-
-    socket.on('connect', () => {
-      dispatch({ type: 'SET_CONNECTED', payload: true });
-      socket.emit('user_online', { userId: user.user_id });
-    });
-
-    socket.on('disconnect', () => {
-      dispatch({ type: 'SET_CONNECTED', payload: false });
-    });
-
-    socket.on('receive_message', (message: Message) => {
-      dispatch({ type: 'ADD_MESSAGE', payload: message });
-    });
-
-    socket.on('message_updated', (message: Message) => {
-      dispatch({ type: 'UPDATE_MESSAGE', payload: message });
-    });
-
-    socket.on('message_deleted', (data: { messageId: string }) => {
-      dispatch({ type: 'DELETE_MESSAGE', payload: data.messageId });
-    });
-
-    socket.on('user_online', (data: { userId: string }) => {
-      dispatch({ type: 'ADD_ONLINE_USER', payload: data.userId });
-    });
-
-    socket.on('user_offline', (data: { userId: string }) => {
-      dispatch({ type: 'REMOVE_ONLINE_USER', payload: data.userId });
-    });
-
-    socket.on('typing', (data: { userId: string; chatRoomId: string; isTyping: boolean }) => {
-      dispatch({ type: 'SET_TYPING', payload: { userId: data.userId, chatRoomId: data.chatRoomId, isTyping: data.isTyping } });
-    });
-
-    dispatch({ type: 'SET_SOCKET', payload: socket });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [user?.user_id]);
-
   const value: MessageContextType = {
-    conversations: state.conversations,
-    messages: state.messages,
-    unreadCounts: state.unreadCounts,
-    onlineUsers: state.onlineUsers,
-    typingUsers: state.typingUsers,
-    selectedConversation: state.selectedConversation,
-    isConnected: state.isConnected,
-    socket: state.socket,
+    ...state,
     loadConversations,
     loadConversationMessages,
     sendMessage,
