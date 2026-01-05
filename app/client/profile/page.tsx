@@ -20,6 +20,7 @@ import { PatientAppointment } from '@/hooks/usePatientAppointments';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePatient, UpdatePatientData } from '@/contexts/PatientContext';
 import { apiClient } from '@/lib/api';
+import { useAlert } from '@/components/ui/AlertContainer';
 
 interface UserProfile {
     id: string
@@ -59,6 +60,7 @@ export default function ProfilePage() {
     const searchParams = useSearchParams();
     const { user, logout, refreshUser } = useAuth();
     const { selectedPatient, fetchPatientById, patchPatient } = usePatient();
+    const { showAlert } = useAlert();
     const [activeTab, setActiveTab] = useState<'profile' | 'appointments' | 'records' | 'settings'>('profile')
     const [showDeleteModal, setShowDeleteModal] = useState(false)
     const [showCancelModal, setShowCancelModal] = useState<string | number | null>(null)
@@ -341,20 +343,21 @@ export default function ProfilePage() {
         setIsLoading(true)
         try {
             const idStr = String(appointmentId)
-            const res = await apiClient(`/api/appointments/${idStr}/cancel`, {
-                method: 'PATCH'
+            const idNum = parseInt(idStr, 10)
+            const res = await apiClient(`/api/appointments/${idStr}/actions/cancel`, {
+                method: 'POST'
             });
             if (res.status) {
                 setAppointments(prev =>
                     prev.map(apt =>
-                        apt.id === idStr ? { ...apt, status: 'cancelled' } : apt
+                        apt.id === idNum ? { ...apt, status: 'cancelled' } : apt
                     )
                 )
                 setShowCancelModal(null)
-                alert('Đã hủy lịch hẹn thành công!')
+                showAlert('Đã hủy lịch hẹn thành công!', 'success')
             } else { throw new Error(res.message || 'Hủy lịch hẹn thất bại'); }
         } catch (error) {
-            alert('Có lỗi xảy ra. Vui lòng thử lại.')
+            showAlert('Có lỗi xảy ra. Vui lòng thử lại.', 'error')
         } finally {
             setIsLoading(false)
         }

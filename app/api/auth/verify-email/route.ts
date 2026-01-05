@@ -1,11 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: NextRequest, context: { params: Promise<{ token: string }> }) {
-  
-  const { token } = await context.params;
-
+export async function POST(req: NextRequest) {
   try {
-    const backendRes = await fetch(`${process.env.BACKEND_API_URL}/v1/auth/verify-email/${token}`);
+    const body = await req.json();
+
+    // Kiểm tra OTP
+    if (!body.otp) {
+      return NextResponse.json(
+        { message: "Mã OTP không được để trống." },
+        { status: 400 }
+      );
+    }
+
+    const backendRes = await fetch(`${process.env.BACKEND_API_URL}/v1/auth/verify-email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        otp: body.otp,
+      }),
+    });
 
     if (!backendRes.ok) {
       const errorData = await backendRes.json().catch(() => ({

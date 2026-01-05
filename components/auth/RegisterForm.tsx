@@ -72,8 +72,8 @@ export default function RegisterForm() {
             const result = await register(form.email, form.password, form.confirmPassword)
             
             if (result.success) {
-                // Redirect to login immediately with success message
-                router.push(`/auth/login?message=${encodeURIComponent(result.message)}&type=success`)
+                // Redirect to OTP verification page
+                router.push(`/auth/verify-email`)
             } else {
                 showAlert(result.message, 'error');
             }

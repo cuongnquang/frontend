@@ -11,6 +11,7 @@
         start_time: string;
         end_time: string;
         is_available: boolean;
+        is_deleted?: boolean;
         createdAt: string;
         updatedAt: string;
     }
@@ -54,7 +55,9 @@
               const url = `/api/schedules${params.toString() ? '?' + params.toString() : ''}`;
               const res = await apiClient<Schedule[]>(url);
               if (res.status && res.data) {
-                setSchedules(res.data);
+                // Filter out deleted schedules
+                const activeSchedules = res.data.filter(schedule => !schedule.is_deleted);
+                setSchedules(activeSchedules);
               } else {
                 setError(res.message || "Không thể tải danh sách lịch làm việc.");
               }
@@ -135,7 +138,11 @@
                     return { success: false, message: res.message || "Xóa lịch thất bại." };
                 }
 
-                await fetchSchedules();
+                // Remove the schedule from local state immediately (soft delete)
+                setSchedules(prevSchedules => 
+                    prevSchedules.filter(schedule => schedule.id !== id)
+                );
+                
                 return { success: true, message: res.message || "Xóa lịch thành công!" };
             } catch (err) {
                 setError("Đã có lỗi không mong muốn xảy ra.");

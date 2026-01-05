@@ -145,3 +145,31 @@ export interface Review {
   date: string;
   verified: boolean;
 }
+
+export interface DoctorReview {
+  review_id: string;
+  doctor_id: string;
+  patient_id: string;
+  rating_score: number;
+  title?: string;
+  content: string;
+  is_verified: boolean;
+  is_deleted?: boolean;
+  helpful_count: number;
+  created_at: string;
+  updated_at: string;
+  doctor_reply?: string;
+  reply_at?: string;
+  Patient?: Patient;
+  Doctor?: Doctor;
+}
+
+export interface RatingStats {
+  averageRating: number;
+  totalRatings: number;
+  distribution: {
+    stars: number;
+    count: number;
+    percentage: number;
+  }[];
+}

@@ -119,6 +119,31 @@ export const ScheduleList = ({ schedules, onEdit, onDelete, onAddSchedule }: Sch
     return `${year}-${month}-${day}`;
   };
 
+  const isPastDate = (dateString: string): boolean => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const [year, month, day] = dateString.split('-').map(Number);
+    const scheduleDate = new Date(year, month - 1, day);
+    scheduleDate.setHours(0, 0, 0, 0);
+    
+    return scheduleDate < today;
+  };
+
+  const canDeleteSchedule = (schedule: any): { can: boolean; reason?: string } => {
+    // Không thể xóa nếu lịch ở quá khứ
+    if (isPastDate(schedule.schedule_date)) {
+      return { can: false, reason: 'Không thể xóa lịch trong quá khứ' };
+    }
+    
+    // Chỉ có thể xóa nếu trống (is_available = true)
+    if (!schedule.is_available) {
+      return { can: false, reason: 'Lịch này đã được đặt, không thể xóa' };
+    }
+    
+    return { can: true };
+  };
+
   // Phân loại ca sáng & ca chiều
   const isMorningShift = (time: string) => {
     const [h, m] = time.split(':').map(Number);
@@ -213,13 +238,18 @@ export const ScheduleList = ({ schedules, onEdit, onDelete, onAddSchedule }: Sch
                   </div>
                   <div className="flex-1 overflow-y-auto space-y-2">
                     {morningSchedules.length > 0 ? (
-                      morningSchedules.map(schedule => (
-                        <ScheduleCard
-                          key={schedule.id}
-                          schedule={schedule}
-                          onDelete={onDelete}
-                        />
-                      ))
+                      morningSchedules.map(schedule => {
+                        const deletePolicy = canDeleteSchedule(schedule);
+                        return (
+                          <ScheduleCard
+                            key={schedule.id}
+                            schedule={schedule}
+                            onDelete={onDelete}
+                            canDelete={deletePolicy.can}
+                            deleteReason={deletePolicy.reason}
+                          />
+                        );
+                      })
                     ) : (
                       <div className="text-center text-gray-400 text-xs py-2">
                         -
@@ -238,13 +268,18 @@ export const ScheduleList = ({ schedules, onEdit, onDelete, onAddSchedule }: Sch
                   </div>
                   <div className="flex-1 overflow-y-auto space-y-2">
                     {afternoonSchedules.length > 0 ? (
-                      afternoonSchedules.map(schedule => (
-                        <ScheduleCard
-                          key={schedule.id}
-                          schedule={schedule}
-                          onDelete={onDelete}
-                        />
-                      ))
+                      afternoonSchedules.map(schedule => {
+                        const deletePolicy = canDeleteSchedule(schedule);
+                        return (
+                          <ScheduleCard
+                            key={schedule.id}
+                            schedule={schedule}
+                            onDelete={onDelete}
+                            canDelete={deletePolicy.can}
+                            deleteReason={deletePolicy.reason}
+                          />
+                        );
+                      })
                     ) : (
                       <div className="text-center text-gray-400 text-xs py-2">
                         -

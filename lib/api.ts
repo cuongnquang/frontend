@@ -130,10 +130,23 @@ export async function apiClient<T = any>(
             return { status: true, code: res.status, data: {} as T };
         }
         const data = await res.json();
+        // Handle response from forwardRequest (API proxy)
+        // forwardRequest trả về data trực tiếp từ backend, không wrap trong { data: ... }
+        // Nếu data có status: false, đó là lỗi
+        if (data.status === false) {
+            return {
+                status: false,
+                code: res.status,
+                message: data.message || "Yêu cầu thất bại",
+                error: data.error || data,
+            };
+        }
+        // Backend response format: { status: true, data: {...}, message: "..." }
+        // hoặc data trực tiếp từ forwardRequest
         return {
             status: true,
             code: res.status,
-            data: data.data,
+            data: data.data !== undefined ? data.data : data, // Support both formats
             message: data.message,
         };
     } catch (jsonError) {

@@ -1,4 +1,4 @@
-import { Clock, Trash2, CheckCircle, XCircle } from "lucide-react";
+import { Clock, Trash2, CheckCircle, XCircle, Lock } from "lucide-react";
 
 interface ScheduleCardProps {
   schedule: {
@@ -11,18 +11,29 @@ interface ScheduleCardProps {
     updatedAt: string;
   };
   onDelete: (id: string) => void;
+  canDelete: boolean;
+  deleteReason?: string;
 }
 
-export const ScheduleCard = ({ schedule, onDelete }: ScheduleCardProps) => {
+export const ScheduleCard = ({ schedule, onDelete, canDelete, deleteReason }: ScheduleCardProps) => {
   return (
     <div className="group relative bg-white border border-gray-200 rounded-lg p-2 hover:border-blue-300 hover:shadow-md transition-all duration-200">
       {/* Delete Button */}
       <button 
-        onClick={() => onDelete(schedule.id)} 
-        className="absolute top-1 right-1 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-all opacity-0 group-hover:opacity-100"
-        title="Xóa lịch"
+        onClick={() => canDelete && onDelete(schedule.id)}
+        disabled={!canDelete}
+        className={`absolute top-1 right-1 p-1 rounded transition-all opacity-0 group-hover:opacity-100 ${
+          canDelete 
+            ? 'text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer' 
+            : 'text-gray-300 cursor-not-allowed'
+        }`}
+        title={deleteReason || "Xóa lịch"}
       >
-        <Trash2 className="h-3 w-3" />
+        {canDelete ? (
+          <Trash2 className="h-3 w-3" />
+        ) : (
+          <Lock className="h-3 w-3" />
+        )}
       </button>
 
       {/* Time Display - Compact */}
@@ -48,7 +59,7 @@ export const ScheduleCard = ({ schedule, onDelete }: ScheduleCardProps) => {
           ) : (
             <>
               <XCircle className="h-2.5 w-2.5 mr-0.5" />
-              Đặt
+              Đã đặt
             </>
           )}
         </span>

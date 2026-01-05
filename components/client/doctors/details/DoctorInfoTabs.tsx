@@ -7,9 +7,12 @@ import type { Doctor, Review } from '@/types/types';
 interface DoctorInfoTabsProps {
   doctor: Doctor;
   reviews: Review[];
+  showRatingButton?: boolean;
+  onRatingClick?: () => void;
+  hasRated?: boolean;
 }
 
-export default function DoctorInfoTabs({ doctor, reviews }: DoctorInfoTabsProps) {
+export default function DoctorInfoTabs({ doctor, reviews, showRatingButton = false, onRatingClick, hasRated = false }: DoctorInfoTabsProps) {
   const [activeTab, setActiveTab] = useState('overview');
   const averageRating = reviews.length > 0
     ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
@@ -189,6 +192,19 @@ export default function DoctorInfoTabs({ doctor, reviews }: DoctorInfoTabsProps)
                 </div>
               )}
             </div>
+
+            {/* Rating Button - Moved below reviews */}
+            {showRatingButton && onRatingClick && activeTab === 'reviews' && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <button
+                  onClick={onRatingClick}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-semibold transition-colors"
+                >
+                  <Star className="w-5 h-5" />
+                  {hasRated ? 'Chỉnh sửa đánh giá' : 'Đánh giá bác sĩ'}
+                </button>
+              </div>
+            )}
           </div>
         );
 

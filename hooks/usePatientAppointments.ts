@@ -9,7 +9,6 @@ export interface PatientAppointment {
   patient_name: string;
   doctor_id: string;
   doctor_name: string;
-  doctor_specialty?: string;
   doctor_avatar?: string;
   schedule_date: string;
   start_time: string;
@@ -37,7 +36,6 @@ export const usePatientAppointments = () => {
         // Transform data if needed
         const transformedData = res.data.map(apt => ({
           ...apt,
-          doctor_specialty: apt.doctor_specialty || 'Chuyên khoa',
           hospital: apt.hospital || 'Bệnh viện',
         }));
         setAppointments(transformedData);

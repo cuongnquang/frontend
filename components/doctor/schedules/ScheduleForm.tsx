@@ -1,6 +1,6 @@
 import { Save, X, Clock, Calendar } from "lucide-react";
 import { useState } from "react";
-import Alert from "@/components/ui/Alert";
+import { useAlert } from "@/components/ui/AlertContainer";
 
 interface ScheduleFormProps {
   editingSchedule?: any;
@@ -48,13 +48,10 @@ const TimeSlotButton = ({
 );
 
 export const ScheduleForm = ({ editingSchedule, onSubmit, onClose }: ScheduleFormProps) => {
+  const { showAlert } = useAlert();
   const [selectedDate, setSelectedDate] = useState(editingSchedule?.schedule_date || '');
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | null }>({
-    message: '',
-    type: null
-  });
 
   // Các khung giờ có sẵn theo backend service
   const timeSlots = [
@@ -74,7 +71,7 @@ export const ScheduleForm = ({ editingSchedule, onSubmit, onClose }: ScheduleFor
     e.preventDefault();
 
     if (!selectedDate || selectedTimeSlots.length === 0) {
-      setAlert({ message: 'Vui lòng chọn đầy đủ ngày và ít nhất một khung giờ khám', type: 'error' });
+      showAlert('Vui lòng chọn đầy đủ ngày và ít nhất một khung giờ khám', 'error');
       return;
     }
 
@@ -100,6 +97,7 @@ export const ScheduleForm = ({ editingSchedule, onSubmit, onClose }: ScheduleFor
       await onSubmit(schedules);
     } catch (error) {
       console.error('Error submitting form:', error);
+      showAlert('Có lỗi xảy ra khi thêm lịch', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -205,11 +203,6 @@ export const ScheduleForm = ({ editingSchedule, onSubmit, onClose }: ScheduleFor
           </button>
         </div>
       </form>
-
-      {/* Alert thông báo */}
-      {alert.type && (
-        <Alert message={alert.message} type={alert.type} duration={4000} />
-      )}
     </div>
   );
 };

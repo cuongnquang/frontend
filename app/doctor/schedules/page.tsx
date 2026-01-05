@@ -3,21 +3,21 @@
 import { useState, useEffect } from "react";
 import { useSchedule } from "@/contexts/ScheduleContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAlert } from "@/components/ui/AlertContainer";
 import { SchedulePageHeader } from "@/components/doctor/schedules/SchedulePageHeader";
 import { ScheduleStats } from "@/components/doctor/schedules/ScheduleStats";
 import { ScheduleForm } from "@/components/doctor/schedules/ScheduleForm";
 import { ScheduleList } from "@/components/doctor/schedules/ScheduleList";
 import { WeeklyTemplateEditor } from "@/components/doctor/schedules/WeeklyTemplateEditor";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import { Alert } from "@/components/ui/InlineAlert"
 
 export default function SchedulePage() {
   const { user } = useAuth();
+  const { showAlert } = useAlert();
   const { schedules, loading, error, fetchSchedules, createSchedule, createManySchedules, deleteSchedule } = useSchedule();
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [showTemplateEditor, setShowTemplateEditor] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.doctorId) {
@@ -38,7 +38,6 @@ export default function SchedulePage() {
   const handleCloseForm = () => {
     setEditingSchedule(null);
     setShowAddForm(false);
-    setSuccessMessage(null);
   };
 
   const handleSubmit = async (schedules: Array<{ schedule_date: string; start_time: string; end_time: string }>) => {
@@ -51,26 +50,58 @@ export default function SchedulePage() {
       }
 
       if (result.success) {
-        setSuccessMessage(result.message);
-        setTimeout(() => {
-          handleCloseForm();
-        }, 1500);
+        showAlert(result.message, 'success');
+        handleCloseForm();
+      } else {
+        showAlert(result.message || 'Thêm lịch thất bại', 'error');
       }
     } catch (error) {
       console.error('Error creating schedule:', error);
+      showAlert('Có lỗi xảy ra khi thêm lịch', 'error');
     }
   };
 
+  const isPastDate = (dateString: string): boolean => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const [year, month, day] = dateString.split('-').map(Number);
+    const scheduleDate = new Date(year, month - 1, day);
+    scheduleDate.setHours(0, 0, 0, 0);
+    
+    return scheduleDate < today;
+  };
+
   const handleDelete = async (id: string) => {
+    const schedule = schedules.find(s => s.id === id);
+    
+    if (!schedule) {
+      showAlert('Không tìm thấy lịch này', 'error');
+      return;
+    }
+
+    // Kiểm tra xem có thể xóa không
+    if (isPastDate(schedule.schedule_date)) {
+      showAlert('Không thể xóa lịch trong quá khứ', 'error');
+      return;
+    }
+
+    if (!schedule.is_available) {
+      showAlert('Lịch này đã được đặt, không thể xóa', 'error');
+      return;
+    }
+
     if (window.confirm("Bạn có chắc chắn muốn xóa lịch này?")) {
       try {
         const result = await deleteSchedule(id);
         if (result.success) {
-          setSuccessMessage(result.message);
-          setTimeout(() => setSuccessMessage(null), 3000);
+          showAlert(result.message, 'success');
+        } else {
+          showAlert(result.message || 'Xóa lịch thất bại', 'error');
         }
       } catch (error) {
         console.error('Error deleting schedule:', error);
+        showAlert('Có lỗi xảy ra khi xóa lịch', 'error');
       }
     }
   };
@@ -78,13 +109,13 @@ export default function SchedulePage() {
   const handleCreateManySchedules = async (schedulesData: Array<{ schedule_date: string; start_time: string; end_time: string }>) => {
     try {
       const result = await createManySchedules(schedulesData);
-      if (result.success) {
-        setSuccessMessage(result.message);
-        setShowTemplateEditor(false);
-        setTimeout(() => setSuccessMessage(null), 3000);
-      }
+      return result;
     } catch (error) {
       console.error('Error creating many schedules:', error);
+      return {
+        success: false,
+        message: 'Có lỗi xảy ra khi tạo lịch'
+      };
     }
   };
 
@@ -99,7 +130,9 @@ export default function SchedulePage() {
   if (!user) {
     return (
       <div className="flex justify-center items-center h-64">
-        <Alert type="error" message="Vui lòng đăng nhập để xem lịch làm việc" />
+        <div className="text-center">
+          <p className="text-red-600">Vui lòng đăng nhập để xem lịch làm việc</p>
+        </div>
       </div>
     );
   }
@@ -110,14 +143,6 @@ export default function SchedulePage() {
         onAddScheduleClick={handleAddClick}
         onTemplateClick={() => setShowTemplateEditor(true)}
       />
-
-      {error && (
-        <Alert type="error" message={error} />
-      )}
-
-      {successMessage && (
-        <Alert type="success" message={successMessage} />
-      )}
 
       <ScheduleStats schedules={schedules} />
 

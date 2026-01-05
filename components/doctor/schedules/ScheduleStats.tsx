@@ -9,6 +9,7 @@ interface ScheduleStatsProps {
     start_time: string;
     end_time: string;
     is_available: boolean;
+    is_deleted?: boolean;
     createdAt: string;
     updatedAt: string;
   }>;
@@ -21,13 +22,16 @@ const Card = ({ children, className = "" }: { children: React.ReactNode; classNa
 );
 
 export const ScheduleStats = ({ schedules }: ScheduleStatsProps) => {
+  // Filter out deleted schedules
+  const activeSchedules = schedules.filter(s => !s.is_deleted);
+  
   // Tính toán thống kê
-  const totalSchedules = schedules.length;
-  const availableSchedules = schedules.filter(s => s.is_available).length;
+  const totalSchedules = activeSchedules.length;
+  const availableSchedules = activeSchedules.filter(s => s.is_available).length;
   const unavailableSchedules = totalSchedules - availableSchedules;
   
   // Tính tổng giờ làm việc
-  const totalHours = schedules.reduce((total, schedule) => {
+  const totalHours = activeSchedules.reduce((total, schedule) => {
     const startTime = new Date(schedule.start_time);
     const endTime = new Date(schedule.end_time);
     const durationMs = endTime.getTime() - startTime.getTime();
@@ -43,7 +47,7 @@ export const ScheduleStats = ({ schedules }: ScheduleStatsProps) => {
   const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
   const endOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + 6));
   
-  const thisWeekSchedules = schedules.filter(schedule => {
+  const thisWeekSchedules = activeSchedules.filter(schedule => {
     const scheduleDate = new Date(schedule.schedule_date);
     return scheduleDate >= startOfWeek && scheduleDate <= endOfWeek;
   });

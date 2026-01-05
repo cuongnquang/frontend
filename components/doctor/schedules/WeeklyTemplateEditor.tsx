@@ -1,9 +1,9 @@
 import { Calendar, Clock, Save, X } from "lucide-react";
 import { useState } from "react";
-import Alert from "@/components/ui/Alert";
+import { useAlert } from "@/components/ui/AlertContainer";
 
 interface WeeklyTemplateEditorProps {
-  onCreateManySchedules: (schedules: Array<{ schedule_date: string; start_time: string; end_time: string }>) => void;
+  onCreateManySchedules: (schedules: Array<{ schedule_date: string; start_time: string; end_time: string }>) => Promise<{ success: boolean; message: string }>;
   onClose: () => void;
 }
 
@@ -23,15 +23,12 @@ const timeSlots = {
 };
 
 export const WeeklyTemplateEditor = ({ onCreateManySchedules, onClose }: WeeklyTemplateEditorProps) => {
+  const { showAlert } = useAlert();
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [selectedShifts, setSelectedShifts] = useState<{ [day: string]: string[] }>({});
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<{ [day: string]: { [shift: string]: string[] } }>({});
   const [startDate, setStartDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | null }>({
-    message: '',
-    type: null
-  });
 
   const days = Object.keys(dayNames) as Array<keyof typeof dayNames>;
 
@@ -95,6 +92,13 @@ export const WeeklyTemplateEditor = ({ onCreateManySchedules, onClose }: WeeklyT
     }));
   };
 
+  const formatDateToYYYYMMDD = (date: Date) => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const formatDateToDDMMYYYY = (date: Date) => {
     const day = date.getDate().toString().padStart(2, '0');
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -106,7 +110,7 @@ export const WeeklyTemplateEditor = ({ onCreateManySchedules, onClose }: WeeklyT
     const schedules: Array<{ schedule_date: string; start_time: string; end_time: string }> = [];
     
     if (!startDate) {
-      setAlert({ message: 'Vui lòng chọn ngày bắt đầu', type: 'error' });
+      showAlert('Vui lòng chọn ngày bắt đầu', 'error');
       return [];
     }
 
@@ -129,13 +133,13 @@ export const WeeklyTemplateEditor = ({ onCreateManySchedules, onClose }: WeeklyT
           const endTimeString = `${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`;
           
           schedules.push({
-            schedule_date: formatDateToDDMMYYYY(scheduleDate),
+            schedule_date: formatDateToYYYYMMDD(scheduleDate),
             start_time: slot,
             end_time: endTimeString
           });
           
           console.log('WeeklyTemplateEditor - Adding schedule:', {
-            schedule_date: formatDateToDDMMYYYY(scheduleDate),
+            schedule_date: formatDateToYYYYMMDD(scheduleDate),
             start_time: slot,
             end_time: endTimeString
           });
@@ -150,15 +154,22 @@ export const WeeklyTemplateEditor = ({ onCreateManySchedules, onClose }: WeeklyT
     const schedules = generateSchedules();
     
     if (schedules.length === 0) {
-      setAlert({ message: 'Vui lòng chọn ít nhất một ngày, ca và khung giờ cụ thể', type: 'error' });
+      showAlert('Vui lòng chọn ít nhất một ngày, ca và khung giờ cụ thể', 'error');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await onCreateManySchedules(schedules);
+      const result = await onCreateManySchedules(schedules);
+      if (result.success) {
+        showAlert(result.message, 'success');
+        onClose();
+      } else {
+        showAlert(result.message || 'Tạo lịch thất bại', 'error');
+      }
     } catch (error) {
       console.error('Error creating schedules:', error);
+      showAlert('Có lỗi xảy ra khi tạo lịch', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -326,11 +337,6 @@ export const WeeklyTemplateEditor = ({ onCreateManySchedules, onClose }: WeeklyT
           </button>
         </div>
       </div>
-
-      {/* Alert thông báo */}
-      {alert.type && (
-        <Alert message={alert.message} type={alert.type} duration={4000} />
-      )}
     </div>
   );
 };
